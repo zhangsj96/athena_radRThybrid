@@ -148,8 +148,9 @@ void TwoBeams(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
         for(int l=0; l<noct; ++l){
         for(int n=0; n<ang_oct; ++n){
           int n_ang=l*ang_oct + n;
-          Real slope1=prad->mu(1,k,js-j,i,0)/prad->mu(0,k,js-j,i,0);
-          Real slope2=prad->mu(1,k,js-j,i,n_ang)/prad->mu(0,k,js-j,i,n_ang);
+
+          Real slope1=-prad->mu(1,k,js-j,i,0)/prad->mu(0,k,js-j,i,0);
+          Real slope2=prad->mu(1,k,js-j,i,0)/prad->mu(0,k,js-j,i,0);
           Real dis1=fabs(slope1*(x1-0.1)+(x2+2.0));
           Real dis2=fabs(slope2*(x1+0.1)+(x2+2.0));
           if(((l==0)&&(n==0)&&(dis1<pco->dx1v(i))) ||

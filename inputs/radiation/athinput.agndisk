@@ -8,8 +8,9 @@ problem_id = disk        # problem ID: basename of output filenames
 
 <output1>
 file_type  = hdf5       # Binary data dump
-dt         = 0.0005       # time increment between outputs
+dt         = 0.01       # time increment between outputs
 variable   = prim
+xdmf       = 0
 
 #<output2>
 #file_type  = hdf5       # Binary data dump
@@ -18,7 +19,7 @@ variable   = prim
 
 <output3>
 file_type  = rst       # Binary data dump
-dt         = 0.001       # time increment between outputs
+dt         = 0.05       # time increment between outputs
 
 
 <time>
@@ -28,12 +29,10 @@ tlim       = 2000000.0      # time limit
 
 <mesh>
 nx1        = 64       # Number of zones in X1-direction
-x1min      = 2.0     # minimum value of X1
-x1max      = 801.462      # maximum value of X1
+x1min      = 15.0     # minimum value of X1
+x1max      = 6010.96      # maximum value of X1
 ix1_bc     = user  # inner-X1 boundary flag
 ox1_bc     = user  # inner-X1 boundary flag
-ix1_rad_bc = vacuum
-ox1_rad_bc = vacuum
 x1rat      = 1.09817
 
 nx2        = 32       # Number of zones in X2-direction
@@ -41,8 +40,6 @@ x2min      = 0.00      # minimum value of X2
 x2max      = 3.141592653589793       # maximum value of X2
 ix2_bc     = polar  # inner-X2 boundary flag
 ox2_bc     = polar  # inner-X2 boundary flag
-ix2_rad_bc = polar
-ox2_rad_bc = polar
 
 
 nx3        = 64         # Number of zones in X3-direction
@@ -50,24 +47,22 @@ x3min      = 0.0      # minimum value of X3
 x3max      = 6.283185307179586       # maximum value of X3
 ix3_bc     = periodic  # inner-X3 boundary flag
 ox3_bc     = periodic  # inner-X3 boundary flag
-ix3_rad_bc = periodic
-ox3_rad_bc = periodic
 
 refinement = static
 
 <meshblock>
 nx1         = 8 
 nx2         = 4
-nx3         = 8
+nx3         = 16
 
 <refinement1>
-x1min       = 3
-x1max       = 100
-x2min       = 1.43117
-x2max       = 1.71042
+x1min       = 15
+x1max       = 90
+x2min       = 1.483530
+x2max       = 1.658062
 x3min       = 0.0
 x3max       = 6.283185307179586
-level       = 2
+level       = 3
 
 
 <hydro>
