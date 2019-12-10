@@ -44,7 +44,10 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
 {
   // Read and set type of spatial reconstruction
   // --------------------------------
-  std::string input_recon = pin->GetOrAddString("time", "xorder", "2");
+  std::string *p_input_recon = new std::string(
+      pin->GetOrAddString("time", "xorder", "2"));
+  const std::string &input_recon = *p_input_recon;
+
   nvar_ = pmb->nfre_ang;
 
   if (input_recon == "1") {
@@ -679,6 +682,8 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
       delete[] beta[i];
     }
   } // end "if PPM or full 4th order spatial integrator"
+  delete p_input_recon;
+
 }
 
 
