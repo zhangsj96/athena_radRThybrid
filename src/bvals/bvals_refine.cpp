@@ -381,8 +381,11 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
   }
 
   Radiation *prad = nullptr;
-  if(RADIATION_ENABLED)
+  RadBoundaryVariable *pradbvar = nullptr;
+  if(RADIATION_ENABLED){
     prad = pmb->prad;
+    pradbvar = &(prad->rad_bvar);
+  }
 
   CosmicRay *pcr = nullptr;
   if(CR_ENABLED)
@@ -467,6 +470,14 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::inner_x2);
     }
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::inner_x2] != BoundaryFlag::block)){
+      if(prad->rotate_theta == 1){
+        pradbvar->RotateHPi_InnerX2(time, dt, si, ei, pmb->cjs, sk, ek, 1);
+      }
+    }// end radiation    
+
+
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, pmb->cjs, pmb->cje, sk, ek, 1,
@@ -475,6 +486,13 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::outer_x2);
     }
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::outer_x2] != BoundaryFlag::block)){
+      if(prad->rotate_theta == 1){
+        pradbvar->RotateHPi_OuterX2(time, dt, si, ei, pmb->cje, sk, ek, 1);
+      }
+    }// end radiation
+
   }
   if (nb.ni.ox3 == 0 && pmb->block_size.nx3 > 1) {
     if (apply_bndry_fn_[BoundaryFace::inner_x3]) {
@@ -485,6 +503,15 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_, 
                                 BoundaryFace::inner_x3);
     }
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::inner_x3] != BoundaryFlag::block)){
+      if(prad->rotate_phi == 1){
+        pradbvar->RotateHPi_InnerX3(time, dt, si, ei, sj, ej, pmb->cks, 1);
+      }else if(prad->rotate_phi == 2){
+        pradbvar->RotatePi_InnerX3(time, dt, si, ei, sj, ej, pmb->cks,1);
+      }
+    }// end radiation
+
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, sj, ej, pmb->cks, pmb->cke, 1,
@@ -493,6 +520,14 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::outer_x3);
     }
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::outer_x3] != BoundaryFlag::block)){
+      if(prad->rotate_phi == 1){
+        pradbvar->RotateHPi_OuterX3(time, dt, si, ei, sj, ej, pmb->cke, 1);
+      }else if(prad->rotate_phi == 2){
+        pradbvar->RotatePi_OuterX3(time, dt, si, ei, sj, ej, pmb->cke, 1);
+      }
+    }// end radiation        
   }
   return;
 }

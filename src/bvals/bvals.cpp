@@ -435,13 +435,15 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
             ps->r, ph->w, ps->s, pco, bis, bie, pmb->js-NGHOST, pmb->js-1, bks, bke);
       }
 
-      if(RADIATION_ENABLED){
-        if(prad->rotate_theta == 1){
-          pradbvar->RotateHPi_InnerX2(time, dt, bis, bie, pmb->js, bks, bke, NGHOST);
-        }
-      }// end radiation
-
     }
+
+
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::inner_x2] != BoundaryFlag::block)){
+      if(prad->rotate_theta == 1){
+        pradbvar->RotateHPi_InnerX2(time, dt, bis, bie, pmb->js, bks, bke, NGHOST);
+      }
+    }// end radiation    
 
     // Apply boundary function on outer-x2 and update W,bcc (if not periodic)
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
@@ -461,13 +463,15 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
         pmb->peos->PassiveScalarPrimitiveToConserved(
             ps->r, ph->w, ps->s, pco, bis, bie, pmb->je+1, pmb->je+NGHOST, bks, bke);
       }
-
-      if(RADIATION_ENABLED){
-        if(prad->rotate_theta == 1){
-          pradbvar->RotateHPi_OuterX2(time, dt, bis, bie, pmb->je, bks, bke, NGHOST);
-        }
-      }// end radiation
     }
+
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::outer_x2] != BoundaryFlag::block)){
+      if(prad->rotate_theta == 1){
+        pradbvar->RotateHPi_OuterX2(time, dt, bis, bie, pmb->je, bks, bke, NGHOST);
+      }
+    }// end radiation
+
   }
 
   if (pmb->block_size.nx3 > 1) { // 3D
@@ -492,15 +496,18 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
         pmb->peos->PassiveScalarPrimitiveToConserved(
             ps->r, ph->w, ps->s, pco, bis, bie, bjs, bje, pmb->ks-NGHOST, pmb->ks-1);
       }
-      if(RADIATION_ENABLED){
-        if(prad->rotate_phi == 1){
-          pradbvar->RotateHPi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks, NGHOST);
-        }else if(prad->rotate_phi == 2){
-          pradbvar->RotatePi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks,NGHOST);
-        }
-      }// end radiation
+
 
     }
+
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::inner_x3] != BoundaryFlag::block)){
+      if(prad->rotate_phi == 1){
+        pradbvar->RotateHPi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks, NGHOST);
+      }else if(prad->rotate_phi == 2){
+        pradbvar->RotatePi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks,NGHOST);
+      }
+    }// end radiation
 
     // Apply boundary function on outer-x3 and update W,bcc (if not periodic)
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
@@ -520,16 +527,15 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
         pmb->peos->PassiveScalarPrimitiveToConserved(
             ps->r, ph->w, ps->s, pco, bis, bie, bjs, bje, pmb->ke+1, pmb->ke+NGHOST);
       }
-
-      if(RADIATION_ENABLED){
-        if(prad->rotate_phi == 1){
-          pradbvar->RotateHPi_OuterX3(time, dt, bis, bie, bjs, bje, pmb->ke, NGHOST);
-        }else if(prad->rotate_phi == 2){
-          pradbvar->RotatePi_OuterX3(time, dt, bis, bie, bjs, bje, pmb->ke, NGHOST);
-        }
-      }// end radiation
-
     }
+    if(RADIATION_ENABLED && 
+           (block_bcs[BoundaryFace::outer_x3] != BoundaryFlag::block)){
+      if(prad->rotate_phi == 1){
+        pradbvar->RotateHPi_OuterX3(time, dt, bis, bie, bjs, bje, pmb->ke, NGHOST);
+      }else if(prad->rotate_phi == 2){
+        pradbvar->RotatePi_OuterX3(time, dt, bis, bie, bjs, bje, pmb->ke, NGHOST);
+      }
+    }// end radiation    
   }
   return;
 }
