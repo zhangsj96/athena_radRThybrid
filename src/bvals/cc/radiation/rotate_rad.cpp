@@ -38,72 +38,41 @@
 
 
 // Temporary function to copy intensity
+// swap 0 and 3, 1 and 2
+// change sign of both Fx and Fy
+// only do this for 2D spherical polar
 void CopyIntensity2(Real *ir, int n_ang, int direction)
 {
   // here ir is only intensity for each cell and each frequency band
-  if(direction == 1){
-   for(int n=0; n<n_ang; ++n){
-     // from 0 to 4, 4 to 5, 5 to 1, 1 to 0
-     int ang1 = 0 * n_ang + n;
-     int ang2 = 4 * n_ang + n;
-     int ang3 = 5 * n_ang + n;
-     int ang4 = 1 * n_ang + n;
-     Real temp = ir[ang1];
-     ir[ang1] = ir[ang4];
-     ir[ang4] = ir[ang3];
-     ir[ang3] = ir[ang2];
-     ir[ang2] = temp;
-   }
-   for(int n=0; n<n_ang; ++n){
-     // from 0 to 4, 4 to 5, 5 to 1, 1 to 0
-     int ang1 = 2 * n_ang + n;
-     int ang2 = 6 * n_ang + n;
-     int ang3 = 7 * n_ang + n;
-     int ang4 = 3 * n_ang + n;
-     Real temp = ir[ang1];
-     ir[ang1] = ir[ang4];
-     ir[ang4] = ir[ang3];
-     ir[ang3] = ir[ang2];
-     ir[ang2] = temp;
-   }
+  for(int n=0; n<n_ang; ++n){
+   // from 0 to 4, 4 to 5, 5 to 1, 1 to 0
+   int ang1 = 0 * n_ang + n;
+   int ang2 = 3 * n_ang + n;
+
+   int ang3 = 1 * n_ang + n;
+   int ang4 = 2 * n_ang + n;
+
+   Real temp = ir[ang1];
+   ir[ang1] = ir[ang2];
+   ir[ang2] = temp;
+
+
+   temp = ir[ang3];
+   ir[ang3] = ir[ang4];
+   ir[ang4] = temp;
   }
-  else if(direction == -1){
-   for(int n=0; n<n_ang; ++n){
-     // from 0 to 4, 4 to 5, 5 to 1, 1 to 0
-     int ang1 = 0 * n_ang + n;
-     int ang2 = 4 * n_ang + n;
-     int ang3 = 5 * n_ang + n;
-     int ang4 = 1 * n_ang + n;
-     Real temp = ir[ang1];
-     ir[ang1] = ir[ang2];
-     ir[ang2] = ir[ang3];
-     ir[ang3] = ir[ang4];
-     ir[ang4] = temp;
-   }
-   for(int n=0; n<n_ang; ++n){
-     // from 0 to 4, 4 to 5, 5 to 1, 1 to 0
-     int ang1 = 2 * n_ang + n;
-     int ang2 = 6 * n_ang + n;
-     int ang3 = 7 * n_ang + n;
-     int ang4 = 3 * n_ang + n;
-     Real temp = ir[ang1];
-     ir[ang1] = ir[ang2];
-     ir[ang2] = ir[ang3];
-     ir[ang3] = ir[ang4];
-     ir[ang4] = temp;
-   }
-  }
+
 }
 
 void CopyIntensity3(Real *ir, int n_ang, int direction)
 {
   // here ir is only intensity for each cell and each frequency band
    for(int n=0; n<n_ang; ++n){
-     // switch 1 and 4, switch 5 and 0
-     int ang1 = 1 * n_ang + n;
-     int ang2 = 4 * n_ang + n;
-     int ang3 = 0 * n_ang + n;
-     int ang4 = 5 * n_ang + n;
+     // switch 1 and 2, switch 3 and 0
+     int ang1 = 0 * n_ang + n;
+     int ang2 = 3 * n_ang + n;
+     int ang3 = 1 * n_ang + n;
+     int ang4 = 2 * n_ang + n;
      Real temp = ir[ang1];
      ir[ang1] = ir[ang2];
      ir[ang2] = temp;
@@ -113,10 +82,10 @@ void CopyIntensity3(Real *ir, int n_ang, int direction)
      ir[ang3] = temp;
    }
    for(int n=0; n<n_ang; ++n){
-     // switch 3 and 6, switch 2 and 7
-     int ang1 = 3 * n_ang + n;
+     // switch 5 and 6, switch 4 and 7
+     int ang1 = 5 * n_ang + n;
      int ang2 = 6 * n_ang + n;
-     int ang3 = 2 * n_ang + n;
+     int ang3 = 4 * n_ang + n;
      int ang4 = 7 * n_ang + n;
      Real temp = ir[ang1];
      ir[ang1] = ir[ang2];
@@ -168,63 +137,36 @@ void CopyIntensity4(Real *ir, int n_ang, int direction)
 void CopyIntensity5(Real *ir, int n_ang, int direction)
 {
   // here ir is only intensity for each cell and each frequency band
-    if(direction == 1){
-       for(int n=0; n<n_ang; ++n){
-	 // from 0 to 1, 1 to 3, 3 to 2, 2 to 0
-	 int ang1 = 0 * n_ang + n;
-	 int ang2 = 2 * n_ang + (n_ang-1-n);
-	 int ang3 = 1 * n_ang + (n_ang-1-n);
-	 int ang4 = 3 * n_ang + n;
-         Real temp = ir[ang1];
-         ir[ang1] = ir[ang2];
-         ir[ang2] = ir[ang4];
-         ir[ang4] = ir[ang3];
-         ir[ang3] = temp; 
-	     
-       }
-       for(int n=0; n<n_ang; ++n){
-	     // from 4 to 5, 5 to 7, 7 to 6, 6 to 4
-	     int ang1 = 4 * n_ang + n;
-	     int ang2 = 6 * n_ang + (n_ang-1-n);
-	     int ang3 = 5 * n_ang + (n_ang-1-n);
-	     int ang4 = 7 * n_ang + n;
-         Real temp = ir[ang1];
-         ir[ang1] = ir[ang2];
-         ir[ang2] = ir[ang4];
-         ir[ang4] = ir[ang3];
-         ir[ang3] = temp; 
-	     
-	   }
-	}
 
-    if(direction == -1){
-	   for(int n=0; n<n_ang; ++n){
-	     // from 1 to 0, 3 to 1, 2 to 3, 0 to 2
-	     int ang1 = 0 * n_ang + n;
-	     int ang2 = 2 * n_ang + (n_ang-1-n);
-	     int ang3 = 1 * n_ang + (n_ang-1-n);
-	     int ang4 = 3 * n_ang + n;
-         Real temp = ir[ang1];
-         ir[ang1] = ir[ang3];
-         ir[ang3] = ir[ang4];
-         ir[ang4] = ir[ang2];
-         ir[ang2] = temp; 
-	     
-	   }
-	   for(int n=0; n<n_ang; ++n){
-	     // from 5 to 4, 7 to 5, 6 to 7, 4 to 6
-	     int ang1 = 4 * n_ang + n;
-	     int ang2 = 6 * n_ang + (n_ang-1-n);
-	     int ang3 = 5 * n_ang + (n_ang-1-n);
-	     int ang4 = 7 * n_ang + n;
-         Real temp = ir[ang1];
-         ir[ang1] = ir[ang3];
-         ir[ang3] = ir[ang4];
-         ir[ang4] = ir[ang2];
-         ir[ang2] = temp; 
-	     
-	   }
-	}
+    for(int n=0; n<n_ang; ++n){
+     // switch 0 and 4, switch 5 and 1
+       int ang1 = 0 * n_ang + n;
+       int ang2 = 4 * n_ang + n;
+       int ang3 = 5 * n_ang + n;
+       int ang4 = 1 * n_ang + n;
+       Real temp = ir[ang1];
+       ir[ang1] = ir[ang2];
+       ir[ang2] = temp;
+
+       temp = ir[ang4];
+       ir[ang4] = ir[ang3];
+       ir[ang3] = temp;
+
+    } 
+    for(int n=0; n<n_ang; ++n){
+    // from 4 to 5, 5 to 7, 7 to 6, 6 to 4
+      int ang1 = 2 * n_ang + n;
+      int ang2 = 6 * n_ang + n;
+      int ang3 = 7 * n_ang + n;
+      int ang4 = 3 * n_ang + n;
+      Real temp = ir[ang1];
+      ir[ang1] = ir[ang2];
+      ir[ang2] = temp;
+
+      temp = ir[ang4];
+      ir[ang4] = ir[ang3];
+      ir[ang3] = temp;
+    }
 
 }
 
