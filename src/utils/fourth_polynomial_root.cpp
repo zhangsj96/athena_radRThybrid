@@ -31,9 +31,10 @@ int FouthPolyRoot(const Real coef4, const Real tconst, Real &root)
   Real delta1 = 0.25 - 64.0 * ccubic * coef4/27.0;
   if(delta1 < 0.0) return -1;
   else delta1 = sqrt(delta1);
-  if(delta1 < 0.5) return -1;
+  if(delta1 < 0.5)//{ std::cout << " root: " << root <<std::endl;
+      return -1;
   Real zroot = 0.0;
-  if(delta1 > 1.e11){
+  if(delta1 > 1.e10){
     // to avoid small number cancellation
     zroot = pow(delta1,-2.0/3.0)/3.0;
   }else{

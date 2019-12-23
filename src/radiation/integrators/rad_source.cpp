@@ -62,6 +62,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
   Real invredfactor = invredc/invcrat;
 
   Real gm1 = pmb->peos->GetGamma() - 1.0;
+
+  Real rho_floor = pmb->peos->GetDensityFloor();
   
   
   Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
@@ -89,6 +91,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
         // updated u, not from w 
 
          Real rho = u(IDN,k,j,i);
+         rho = std::max(rho,rho_floor);
          Real vx = u(IM1,k,j,i)/rho;
          Real vy = u(IM2,k,j,i)/rho;
          Real vz = u(IM3,k,j,i)/rho;

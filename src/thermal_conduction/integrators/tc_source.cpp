@@ -54,6 +54,7 @@ void TCIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt,
 
   Real gamma_1=pmb->peos->GetGamma()-1.0;
 
+
   Real vlim = ptc->vmax;
 // The information stored in the array
 // b_angle is

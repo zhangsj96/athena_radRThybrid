@@ -57,6 +57,8 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
   Real vlim = pcr->vmax;
   Real invlim = 1.0/vlim;
 
+  Real rho_floor = pmb->peos->GetDensityFloor();
+
 // The information stored in the array
 // b_angle is
 // b_angle[0]=sin_theta_b
@@ -93,6 +95,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
 
       for(int i=is; i<=ie; ++i){
          Real rho = u(IDN,k,j,i);
+         rho = std::max(rho,rho_floor);
          Real v1 = u(IM1,k,j,i)/rho;
          Real v2 = u(IM2,k,j,i)/rho;
          Real v3 = u(IM3,k,j,i)/rho;
