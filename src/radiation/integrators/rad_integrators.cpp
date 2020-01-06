@@ -101,8 +101,41 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   cm_to_lab_.NewAthenaArray(prad->nang);
   ir_cm_.NewAthenaArray(prad->n_fre_ang);
 
+  if(prad->angle_flag == 1){
+    int &nzeta = prad->nzeta;
+    int &npsi = prad->npsi;
+    if(nzeta > 0){
+      g_zeta_.NewAthenaArray(2*nzeta+1);
+      q_zeta_.NewAthenaArray(2*nzeta+1+2*NGHOST);
+      ql_zeta_.NewAthenaArray(2*nzeta+1);
+      qr_zeta_.NewAthenaArray(2*nzeta+1);
+      if(npsi > 0)
+        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,(2*nzeta+1)*2*npsi);
+      else
+        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta+1);
 
+      zeta_area_.NewAthenaArray(2*nzeta+1);
 
+      pmb->pcoord->ZetaArea(prad, zeta_area_);
+    }
+    if(npsi > 0){
+      g_psi_.NewAthenaArray(2*npsi+1);
+      q_psi_.NewAthenaArray(2*npsi+1+2*NGHOST);
+      ql_psi_.NewAthenaArray(2*npsi+1);
+      qr_psi_.NewAthenaArray(2*npsi+1);
+      if(npsi > 0)
+        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta*(2*npsi+1));
+      else
+        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*npsi+1); 
+
+      psi_area_.NewAthenaArray(2*npsi+1);    
+      pmb->pcoord->PsiArea(prad, psi_area_); 
+    }
+
+    dflx_ang_.NewAthenaArray(prad->nang);
+    ang_vol_.NewAthenaArray(prad->nang);
+    pmb->pcoord->AngularVol(prad, ang_vol_);
+  }
  
 
 }
@@ -145,6 +178,35 @@ RadIntegrator::~RadIntegrator()
   tran_coef_.DeleteAthenaArray();
   cm_to_lab_.DeleteAthenaArray();
   ir_cm_.DeleteAthenaArray();
+
+  if(pmy_rad->angle_flag == 1){
+    int &nzeta = pmy_rad->nzeta;
+    int &npsi = pmy_rad->npsi;
+    if(nzeta > 0){
+      g_zeta_.DeleteAthenaArray();
+      q_zeta_.DeleteAthenaArray();
+      ql_zeta_.DeleteAthenaArray();
+      qr_zeta_.DeleteAthenaArray();
+      if(npsi > 0)
+        zeta_flux_.DeleteAthenaArray();
+      else
+        zeta_flux_.DeleteAthenaArray();
+      zeta_area_.DeleteAthenaArray();
+    }
+    if(npsi > 0){
+      g_psi_.DeleteAthenaArray();
+      q_psi_.DeleteAthenaArray();
+      ql_psi_.DeleteAthenaArray();
+      qr_psi_.DeleteAthenaArray();
+      if(npsi > 0)
+        psi_flux_.DeleteAthenaArray();
+      else
+        psi_flux_.DeleteAthenaArray();     
+      psi_area_.DeleteAthenaArray(); 
+    }
+    dflx_ang_.DeleteAthenaArray();
+    ang_vol_.DeleteAthenaArray();
+  }  
   
 }
 

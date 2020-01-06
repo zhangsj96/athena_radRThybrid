@@ -27,6 +27,7 @@
 #include "../parameter_input.hpp"
 #include "../cr/cr.hpp"
 #include "../thermal_conduction/tc.hpp"
+#include "../radiation/radiation.hpp"
 #include "coordinates.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -654,5 +655,38 @@ void SphericalPolar::ConvertAngle(MeshBlock *pmb, const int nang,
       
   }// end radiation transfer
 }
+
+
+// get the geometry factor for zeta flux
+// this needs to go throug all the nzeta
+void SphericalPolar::GetGeometryZeta(Radiation *prad, const int k, const int j, 
+                                  const int i, AthenaArray<Real> &g_zeta)
+{
+  int &nzeta = prad->nzeta;
+  Real radius = x1v(i);
+  for(int n=0; n<nzeta*2+1; ++n){
+    g_zeta(n) = 1./radius;
+  }
+
+}
+
+// get the geometry factor for psi flux
+// this needs to go throug all the nzeta
+void SphericalPolar::GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, const int n_zeta, AthenaArray<Real> &g_psi)
+{
+  int &npsi = prad->npsi;
+  Real radius = x1v(i);
+  Real theta = x2v(j);
+  Real sinzeta_f = 1.0 - prad->coszeta_f(n_zeta) * prad->coszeta_f(n_zeta);
+  sinzeta_f = sqrt(sinzeta_f);
+  Real cottheta = cos(theta)/sin(theta);
+  for(int n=0; n<2*npsi+1; ++n){
+    g_psi(n) = sinzeta_f * cottheta * sin(prad->psi_f(n))/radius;
+  }
+
+}
+
+
 
 //###########################################

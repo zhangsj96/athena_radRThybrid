@@ -3,7 +3,7 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = thermal_conduction.cpp
+PROBLEM_FILE = beam.cpp
 COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
@@ -13,11 +13,11 @@ MPIFFT_FILE =
 
 # General compiler specifications
 
-CXX := mpicxx
+CXX := g++
 CPPFLAGS := 
 CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
-LDLIBS :=  -lhdf5
+LDLIBS := 
 GCOV_CMD := gcov
 
 # Preliminary definitions

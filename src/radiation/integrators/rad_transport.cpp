@@ -453,7 +453,101 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
   }// end k direction
 
+  // calculate flux along angular direction
+  if(prad->angle_flag == 1 && prad->nzeta > 0){
+    for(int k=ks; k<=ke; ++k){
+      for(int j=js; j<=je; ++j){
+        for(int i=is; i<=ie; ++i){
+          int &nzeta = prad->nzeta;
+          int &npsi = prad->npsi;
+          int psi_limit=2*npsi;
+          if(npsi == 0) psi_limit=1;
 
+          for(int m=0; m<psi_limit; ++m){
+            for(int n=0; n<nzeta*2; ++n){
+              int ang_num = n*psi_limit+m;
+              q_zeta_(n+NGHOST) = ir(k,j,i,ang_num);
+            }// end nzeta
+            // Add ghost zones
+            for(int n=1; n<=NGHOST; ++n){
+              q_zeta_(NGHOST-n) = q_zeta_(NGHOST+n-1);
+            }      
+            for(int n=1; n<=NGHOST; ++n){
+              q_zeta_(2*nzeta+NGHOST+n-1) = q_zeta_(2*nzeta+NGHOST-n);
+            }  
+
+            // do reconstruction, first order for now
+            for(int n=0; n<nzeta*2+1; ++n){
+              ql_zeta_(n) = q_zeta_(NGHOST+n-1);
+              qr_zeta_(n) = q_zeta_(NGHOST+n);
+            }   
+            // zeta flux
+            pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
+            for(int n=0; n<nzeta*2+1; ++n){
+              int ang_num = n*psi_limit+m;
+              zeta_flux_(k,j,i,ang_num) =  prad->reduced_c * ql_zeta_(n) 
+                                        * g_zeta_(n); 
+            }
+          }// end npsi
+        }
+      }
+    }
+
+
+  }//end angule_flag==1 and nzeta > 0
+
+
+  // Now calculate phi flux
+  if(prad->angle_flag == 1 && prad->npsi > 0){
+    for(int k=ks; k<=ke; ++k){
+      for(int j=js; j<=je; ++j){
+        for(int i=is; i<=ie; ++i){
+          int &nzeta = prad->nzeta;
+          int &npsi = prad->npsi;
+          int zeta_limit=2*nzeta;
+          if(nzeta == 0) zeta_limit=1;
+
+          for(int n=0; n<zeta_limit; ++n){
+            for(int m=0; m<npsi*2; ++m){
+              int ang_num = n*2*npsi+m;
+              q_psi_(m+NGHOST) = ir(k,j,i,ang_num);
+            }// end nzeta
+            // Add ghost zones
+            // phi is periodic
+            for(int m=1; m<=NGHOST; ++m){
+              q_psi_(NGHOST-m) = q_psi_(2*npsi+NGHOST-m-1);
+            }      
+            for(int m=1; m<=NGHOST; ++m){
+              q_psi_(2*npsi+NGHOST+m-1) = q_psi_(NGHOST+m-1);
+            }  
+
+            // do reconstruction, first order for now
+            for(int m=0; m<npsi*2+1; ++m){
+              ql_psi_(m) = q_psi_(NGHOST+m-1);
+              qr_psi_(m) = q_psi_(NGHOST+m);
+            }   
+            // psi flux
+            if(nzeta > 0)
+              pco->GetGeometryPsi(prad,k,j,i,n,g_psi_);
+            else
+              pco->GetGeometryPsi(prad,k,j,i,g_psi_);
+            for(int m=0; m<npsi*2+1; ++m){
+              int ang_num = n*2*npsi+m;
+              Real g_coef = g_psi_(m);
+              if(g_coef > 0)
+                psi_flux_(k,j,i,ang_num) =  prad->reduced_c * ql_psi_(m) 
+                                        * g_coef;
+              else if(g_coef < 0)
+                psi_flux_(k,j,i,ang_num) =  prad->reduced_c * qr_psi_(m) 
+                                        * g_coef;
+            }
+          }// end nzeta
+        }
+      }
+    }
+
+
+  }// end ang_flag==1 and npsi > 0
 
   
 }// end calculate_flux
@@ -474,6 +568,10 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
   AthenaArray<Real> &x1area = x1face_area_, &x2area = x2face_area_,
                  &x2area_p1 = x2face_area_p1_, &x3area = x3face_area_,
                  &x3area_p1 = x3face_area_p1_, &vol = cell_volume_, &dflx = dflx_;
+
+  AthenaArray<Real> &area_zeta = zeta_area_, &area_psi = psi_area_, 
+                 &ang_vol = ang_vol_, &dflx_ang = dflx_ang_;
+  int &nzeta = prad->nzeta, &npsi = prad->npsi;
 
   for (int k=ks; k<=ke; ++k) { 
     for (int j=js; j<=je; ++j) {
@@ -518,6 +616,49 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
           ir_out(k,j,i,n) = std::max(ir_out(k,j,i,n)-wght*dflx(i,n)/vol(i), TINY_NUMBER);
         }
       }
+
+      // add angular flux
+      if(prad->angle_flag == 1){
+        for(int i=is; i<=ie; ++i){
+          for(int n=0; n<prad->nang; ++n)
+            dflx_ang(n) = 0.0;
+          if(nzeta * npsi > 0){
+            for(int m=0; m<2*npsi; ++m){
+              for(int n=0; n<2*nzeta; ++n){
+                int ang_num = n*2*npsi + m;
+                int ang_num1 = (n+1)*2*npsi+m;
+                dflx_ang(ang_num) += (area_zeta(n+1) * zeta_flux_(k,j,i,ang_num1)
+                                     - area_zeta(n) * zeta_flux_(k,j,i,ang_num));
+              }// end zeta angle
+            }// end psi angles
+            // now psi flux
+            for(int n=0; n<2*nzeta; ++n){
+              for(int m=0; m<2*npsi; ++m){
+                int ang_num = n*2*npsi + m;
+                int ang_num1 = n*2*npsi+m+1;
+                dflx_ang(ang_num) += (area_psi(m+1) * psi_flux_(k,j,i,ang_num1)
+                                     - area_zeta(m) * psi_flux_(k,j,i,ang_num));                
+              }
+            }
+          }else if(nzeta >0){// end if nzeta*npsi > 0
+            for(int n=0; n<2*nzeta; ++n){         
+              dflx_ang(n) += (area_zeta(n+1) * zeta_flux_(k,j,i,n+1)
+                                   - area_zeta(n) * zeta_flux_(k,j,i,n));
+            }// end zeta angle
+          }else if(npsi > 0){
+            for(int m=0; m<2*npsi; ++m){
+              dflx_ang(m) += (area_psi(m+1) * psi_flux_(k,j,i,m+1)
+                                   - area_zeta(m) * psi_flux_(k,j,i,m));                
+            }           
+          }// end npsi > 0
+          // apply the flux divergence back
+#pragma omp simd
+          for(int n=0; n<prad->nang; ++n){
+            ir_out(k,j,i,n) = std::max(ir_out(k,j,i,n)+wght*dflx_ang(n)/ang_vol(n), TINY_NUMBER);
+
+          }// end angle
+        }// end i
+      }// end if angle_flag == 1
  
     }// end j
   }// End k

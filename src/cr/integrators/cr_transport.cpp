@@ -89,10 +89,13 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(0,k,j,i));
         Real taux = taufact_ * totsigma * pco->dx1f(i);
         taux = taux * taux/(2.0 * eddxx);
-        Real diffv = sqrt((1.0 - exp(-taux)) / taux);
+        Real diffv = 1.0;
 
         if(taux < 1.e-3)
           diffv = sqrt((1.0 - 0.5* taux));
+        else
+          diffv = sqrt((1.0 - exp(-taux)) / taux);
+          
 
         pcr->v_diff(0,k,j,i) = pcr->vmax * sqrt(eddxx) * diffv;
       }// end i direction
@@ -109,10 +112,14 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(1,k,j,i));
           Real tauy = taufact_ * totsigma * cwidth2_(i);
           tauy = tauy * tauy/(2.0 * eddyy);
-          Real diffv = sqrt((1.0 - exp(-tauy)) / tauy);
+
+          Real diffv = 1.0;
 
           if(tauy < 1.e-3)
             diffv = sqrt((1.0 - 0.5* tauy));
+          else
+            diffv = sqrt((1.0 - exp(-tauy)) / tauy);
+
 
           pcr->v_diff(1,k,j,i) = pcr->vmax * sqrt(eddyy) * diffv;            
         }// end i
@@ -133,10 +140,13 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(2,k,j,i));
           Real tauz = taufact_ * totsigma * cwidth3_(i);
           tauz = tauz * tauz/(2.0 * eddzz);
-          Real diffv = sqrt((1.0 - exp(-tauz)) / tauz);
+          
+          Real diffv = 1.0;
 
           if(tauz < 1.e-3)
             diffv = sqrt((1.0 - 0.5* tauz));
+          else
+            diffv = sqrt((1.0 - exp(-tauz)) / tauz);
 
           pcr->v_diff(2,k,j,i) = pcr->vmax * sqrt(eddzz) * diffv;            
         }
@@ -444,17 +454,27 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
           else if(-b_grad_pc > TINY_NUMBER) dpc_sign = -1.0;
 
-          pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
-          pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
-          pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
+          if(pcr->stream_flag > 0){
+            pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
+            pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
+            pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
-          if(va > TINY_NUMBER){
-            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(sqrt(pb) * va * 
+            if(va > TINY_NUMBER){
+              pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(sqrt(pb) * va * 
                                    (4.0/3.0) * invlim * cr(CRE,k,j,i));
-            pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-            pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
-          }
+              pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+              pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
+            }
 
+          }else{
+            pcr->v_adv(0,k,j,i) = 0.0;
+            pcr->v_adv(1,k,j,i) = 0.0;
+            pcr->v_adv(2,k,j,i) = 0.0;
+            pcr->sigma_adv(0,k,j,i)  = pcr->max_opacity;
+            pcr->sigma_adv(1,k,j,i)  = pcr->max_opacity;
+            pcr->sigma_adv(2,k,j,i)  = pcr->max_opacity;
+
+          }
 
           Real v1 = w(IVX,k,j,i);
           Real v2 = w(IVY,k,j,i);

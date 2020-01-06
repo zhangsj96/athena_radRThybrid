@@ -60,7 +60,11 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     rad_bvar(pmb, &ir, &coarse_ir_, flux){
   // read in the parameters
   int nmu = pin->GetInteger("radiation","nmu");
-  int angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
+  // total number of polar angles covering 0 to pi/2
+  int nzeta = pin->GetOrAddInteger("radiation","nzeta",0); 
+  // total number of azimuthal angles covering 0 to pi
+  int npsi = pin->GetOrAddInteger("radiation","npsi",0); 
+  angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
   prat = pin->GetReal("radiation","Prat");
   crat = pin->GetReal("radiation","Crat");
   rotate_theta=pin->GetOrAddInteger("radiation","rotate_theta",0);
@@ -91,24 +95,44 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
    
   int n_ang; // number of angles per octant and number of octant
   // total calculate total number of angles based on dimensions
-  if(ndim == 1){
-    n_ang = nmu;
-    noct = 2;
-  }else if(ndim == 2){
-    noct = 4;
-    if(angle_flag == 0){
-      n_ang = nmu * (nmu + 1)/2;
-    }else if(angle_flag == 10){
+  if(angle_flag == 1){
+
+    if(ndim == 1){
+      noct = 2;
+      n_ang = nzeta;
+    }else if(ndim == 2){
+      if(COORDINATE_SYSTEM == "spherical_polar"){
+        n_ang = nzeta;
+      }else{
+        n_ang = npsi/2;
+      }
+      noct = 4;
+    }else if(ndim == 3){
+      n_ang = nzeta*npsi/2;
+      noct = 8;
+    }
+
+  }else{ 
+
+    if(ndim == 1){
       n_ang = nmu;
-    }
-  }else if(ndim == 3){
-    noct = 8;
-    if(angle_flag == 0){
-      n_ang = nmu * (nmu + 1)/2;
-    }else if(angle_flag == 10){
-      n_ang = nmu * nmu/2;
-    }
-  }// end 3D
+      noct = 2;
+    }else if(ndim == 2){
+      noct = 4;
+      if(angle_flag == 0){
+        n_ang = nmu * (nmu + 1)/2;
+      }else if(angle_flag == 10){
+        n_ang = nmu;
+      }
+    }else if(ndim == 3){
+      noct = 8;
+      if(angle_flag == 0){
+        n_ang = nmu * (nmu + 1)/2;
+      }else if(angle_flag == 10){
+        n_ang = nmu * nmu/2;
+      }
+    }// end 3D
+  }
   
   nang = n_ang * noct;
   
@@ -157,8 +181,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   wfreq.NewAthenaArray(nfreq);
   
-  AngularGrid(angle_flag, nmu);
-  
+  if(angle_flag == 1)
+    AngularGrid(angle_flag, nzeta, npsi);
+  else
+    AngularGrid(angle_flag, nmu);    
 
   
   // Initialize the frequency weight
@@ -198,6 +224,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"rotate_theta  %d  \n",rotate_theta);
     fprintf(pfile,"rotate_phi    %d  \n",rotate_phi);
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
+    fprintf(pfile,"nzeta:        %d  \n",nzeta);
+    fprintf(pfile,"npsi:         %d  \n",npsi);
     
     for(int n=0; n<nang; ++n){
       fprintf(pfile,"%2d   %e   %e   %e    %e\n",n,mu(0,0,0,0,n),mu(1,0,0,0,n),

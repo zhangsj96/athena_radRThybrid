@@ -69,6 +69,14 @@ public:
                          // effective electron scattering temperature
   
   int nang, nfreq, noct, n_fre_ang; // n_fre_ang=nang*nfreq
+  int angle_flag;
+  // variables related to the angular space transport
+  int nzeta, npsi;
+  AthenaArray<Real> coszeta_v, zeta_v_full, zeta_f_full, dzeta_v, dzeta_f, 
+                    coszeta_f, len_zeta;
+  AthenaArray<Real> psi_v, psi_f, len_psi, psi_v_full, psi_f_full, 
+                    dpsi_v, dpsi_f;
+
 
 //  int ir_output; // the number of specific intensity to dump
 //  AthenaArray<int> ir_index; // the array
@@ -99,6 +107,7 @@ public:
   void CalculateComMoment();
  
   void AngularGrid(int angle_flag, int nmu);
+  void AngularGrid(int angle_flag, int nzeta, int npsi);
 
   void FrequencyGrid();
 

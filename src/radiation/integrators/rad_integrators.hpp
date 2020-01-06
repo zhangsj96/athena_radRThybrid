@@ -76,7 +76,11 @@ private:
   AthenaArray<Real> temp_i1_, temp_i2_; // temporary array to store Div q
   AthenaArray<Real> vncsigma_, vncsigma2_, wmu_cm_, tran_coef_, ir_cm_;
   AthenaArray<Real> cm_to_lab_;
-                                    // temporary 1D array with size of nang
+  AthenaArray<Real> g_zeta_, q_zeta_, ql_zeta_, qr_zeta_, zeta_flux_, zeta_area_;
+  AthenaArray<Real> g_psi_, q_psi_, ql_psi_, qr_psi_, psi_flux_, psi_area_;
+  AthenaArray<Real> dflx_ang_, ang_vol_;
+                                    
+ // temporary 1D array with size of nang
   Real taufact_;
   int compton_flag_; // flag to add simple Compton scattering
   int planck_flag_; // flag to add additional Planck absorption opacity

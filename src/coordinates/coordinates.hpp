@@ -138,6 +138,17 @@ class Coordinates {
   virtual void AxisDirection(int *axisx, int *axisy, int *axisz);
   virtual void ConvertAngle(MeshBlock *pmb, const int nang, AthenaArray<Real> &mu);
 
+// Functions for angular flux
+  virtual void ZetaArea(Radiation *prad, AthenaArray<Real> &area);
+  virtual void PsiArea(Radiation *prad, AthenaArray<Real> &area);
+  virtual void AngularVol(Radiation *prad, AthenaArray<Real> &vol);
+  virtual void GetGeometryZeta(Radiation *prad, const int k, const int j, 
+                                  const int i, AthenaArray<Real> &g_zeta);
+  virtual void GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, const int n_zeta, AthenaArray<Real> &g_psi);
+  // function overwirte in case nzeta = 0
+  virtual void GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, AthenaArray<Real> &g_psi);
 
 
   // ...to determine if index is a pole
@@ -431,6 +442,11 @@ class SphericalPolar : public Coordinates {
   //for radiation functions...
   void AxisDirection(int *axisx, int *axisy, int *axisz) final;
   void ConvertAngle(MeshBlock *pmb, const int nang, AthenaArray<Real> &mu) final;
+
+  void GetGeometryZeta(Radiation *prad, const int k, const int j, 
+                                  const int i, AthenaArray<Real> &g_zeta) final;
+  void GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, const int n_zeta, AthenaArray<Real> &g_psi) final;
 
 };
 
