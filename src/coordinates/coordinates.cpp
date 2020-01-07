@@ -832,7 +832,7 @@ void Coordinates::AngularVol(Radiation *prad, AthenaArray<Real> &vol)
         vol(m) = prad->len_psi(m);
     }else if(nzeta > 0){
       for(int n=0; n<2*nzeta; ++n)
-        vol(n) = prad->len_psi(n);
+        vol(n) = prad->len_zeta(n);
     }
 
   }// end ang_flag = =1

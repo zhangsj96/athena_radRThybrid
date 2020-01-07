@@ -485,7 +485,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
             for(int n=0; n<nzeta*2+1; ++n){
               int ang_num = n*psi_limit+m;
-              zeta_flux_(k,j,i,ang_num) =  prad->reduced_c * ql_zeta_(n) 
+              zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_zeta_(n) 
                                         * g_zeta_(n); 
             }
           }// end npsi
@@ -535,10 +535,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
               int ang_num = n*2*npsi+m;
               Real g_coef = g_psi_(m);
               if(g_coef > 0)
-                psi_flux_(k,j,i,ang_num) =  prad->reduced_c * ql_psi_(m) 
+                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_psi_(m) 
                                         * g_coef;
               else if(g_coef < 0)
-                psi_flux_(k,j,i,ang_num) =  prad->reduced_c * qr_psi_(m) 
+                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_psi_(m) 
                                         * g_coef;
             }
           }// end nzeta
@@ -654,7 +654,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
           // apply the flux divergence back
 #pragma omp simd
           for(int n=0; n<prad->nang; ++n){
-            ir_out(k,j,i,n) = std::max(ir_out(k,j,i,n)+wght*dflx_ang(n)/ang_vol(n), TINY_NUMBER);
+            ir_out(k,j,i,n) = std::max(ir_out(k,j,i,n)-wght*dflx_ang(n)/ang_vol(n), TINY_NUMBER);
 
           }// end angle
         }// end i

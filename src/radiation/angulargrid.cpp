@@ -478,7 +478,7 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
       psi_v_full.NewAthenaArray(2*npsi+2*NGHOST);
       psi_f_full.NewAthenaArray(2*npsi+1+2*NGHOST);
       dpsi_v.NewAthenaArray(2*npsi+2*NGHOST);
-      dpsi_f.NewAthenaArray(2*npsi+2*NGHOST);
+      dpsi_f.NewAthenaArray(2*npsi+2*NGHOST+1);
 
 
       Real dpsi=PI/npsi;

@@ -61,9 +61,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // read in the parameters
   int nmu = pin->GetInteger("radiation","nmu");
   // total number of polar angles covering 0 to pi/2
-  int nzeta = pin->GetOrAddInteger("radiation","nzeta",0); 
+  nzeta = pin->GetOrAddInteger("radiation","nzeta",0); 
   // total number of azimuthal angles covering 0 to pi
-  int npsi = pin->GetOrAddInteger("radiation","npsi",0); 
+  npsi = pin->GetOrAddInteger("radiation","npsi",0); 
   angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
   prat = pin->GetReal("radiation","Prat");
   crat = pin->GetReal("radiation","Crat");
