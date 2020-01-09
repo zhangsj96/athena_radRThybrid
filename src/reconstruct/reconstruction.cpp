@@ -237,6 +237,12 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
   scr3_in_.NewAthenaArray(nvar_, nc1);
   scr4_in_.NewAthenaArray(nvar_, nc1);
 
+  // temporary array for reconstruction in angular space
+  scr1_nn_.NewAthenaArray(nvar_+2*NGHOST,nvar_+2*NGHOST);
+  scr2_nn_.NewAthenaArray(nvar_+2*NGHOST,nvar_+2*NGHOST);
+  scr3_nn_.NewAthenaArray(nvar_+2*NGHOST,nvar_+2*NGHOST);
+  scr4_nn_.NewAthenaArray(nvar_+2*NGHOST,nvar_+2*NGHOST);
+
   scr1_in2_.NewAthenaArray(nc1, nvar_);
   scr2_in2_.NewAthenaArray(nc1, nvar_);
   scr3_in2_.NewAthenaArray(nc1, nvar_);

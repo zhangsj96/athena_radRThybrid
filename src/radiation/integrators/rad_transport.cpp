@@ -464,29 +464,42 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           if(npsi == 0) psi_limit=1;
 
           for(int m=0; m<psi_limit; ++m){
+#pragma omp simd
             for(int n=0; n<nzeta*2; ++n){
               int ang_num = n*psi_limit+m;
               q_zeta_(n+NGHOST) = ir(k,j,i,ang_num);
             }// end nzeta
             // Add ghost zones
+#pragma omp simd
             for(int n=1; n<=NGHOST; ++n){
               q_zeta_(NGHOST-n) = q_zeta_(NGHOST+n-1);
             }      
+#pragma omp simd
             for(int n=1; n<=NGHOST; ++n){
               q_zeta_(2*nzeta+NGHOST+n-1) = q_zeta_(2*nzeta+NGHOST-n);
             }  
-
-            // do reconstruction, first order for now
-            for(int n=0; n<nzeta*2+1; ++n){
-              ql_zeta_(n) = q_zeta_(NGHOST+n-1);
-              qr_zeta_(n) = q_zeta_(NGHOST+n);
-            }   
+            int zl = NGHOST-1;
+            int zu = 2*nzeta+NGHOST;
+            if (order == 1) {
+              pmb->precon->DonorCellZeta(prad,zl,zu,q_zeta_,
+                                          ql_zeta_,qr_zeta_);
+            } else {
+              pmb->precon->PiecewiseLinearZeta(prad,zl,zr,q_zeta_,
+                                          ql_zeta_,qr_zeta_);
+            } 
+  
             // zeta flux
             pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
             for(int n=0; n<nzeta*2+1; ++n){
               int ang_num = n*psi_limit+m;
-              zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_zeta_(n) 
+              Real g_coef = g_psi_(m);
+              if(g_coef > 0)
+                zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_zeta_(n+NGHOST) 
                                         * g_zeta_(n); 
+              else if(g_coef < 0)
+                zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_zeta_(n+NGHOST) 
+                                       * g_zeta_(n); 
+
             }
           }// end npsi
         }
@@ -508,6 +521,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           if(nzeta == 0) zeta_limit=1;
 
           for(int n=0; n<zeta_limit; ++n){
+#pragma omp simd
             for(int m=0; m<npsi*2; ++m){
               int ang_num = n*2*npsi+m;
               q_psi_(m+NGHOST) = ir(k,j,i,ang_num);
@@ -520,12 +534,16 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             for(int m=1; m<=NGHOST; ++m){
               q_psi_(2*npsi+NGHOST+m-1) = q_psi_(NGHOST+m-1);
             }  
-
-            // do reconstruction, first order for now
-            for(int m=0; m<npsi*2+1; ++m){
-              ql_psi_(m) = q_psi_(NGHOST+m-1);
-              qr_psi_(m) = q_psi_(NGHOST+m);
-            }   
+            int pl = NGHOST-1;
+            int pu = 2*npsi+NGHOST;
+            if (order == 1) {
+              pmb->precon->DonorCellPsi(prad,pl,pu,q_psi_,
+                                          ql_psi_,qr_psi_);
+            } else {
+              pmb->precon->PiecewiseLinearPsi(prad,pl,pu,q_psi_,
+                                          ql_psi_,qr_psi_);
+            } 
+ 
             // psi flux
             if(nzeta > 0)
               pco->GetGeometryPsi(prad,k,j,i,n,g_psi_);
@@ -535,10 +553,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
               int ang_num = n*2*npsi+m;
               Real g_coef = g_psi_(m);
               if(g_coef > 0)
-                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_psi_(m) 
+                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_psi_(m+NGHOST) 
                                         * g_coef;
               else if(g_coef < 0)
-                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_psi_(m) 
+                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_psi_(m+NGHOST) 
                                         * g_coef;
             }
           }// end nzeta

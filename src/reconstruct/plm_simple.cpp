@@ -478,3 +478,117 @@ void Reconstruction::PiecewiseLinearX3(
   }// end array ordering
   return;
 }
+
+// reconstruction in the angular space
+// q, ql, and qr are 2D array in zeta, psi
+// zs, ze are starting/end index for zeta
+// ps, pe are starting/end index for psi
+// q is always in the order (zeta, psi)
+// q, ql and qr can change
+void Reconstruction::PiecewiseLinearZeta(
+    Radiation *prad, const int zs, const int ze,
+    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
+
+  // set work arrays to shallow copies of scratch arrays
+    AthenaArray<Real> &qc = scr1_n_, &dql = scr2_n_, &dqr = scr3_n_,
+                   &dqm = scr4_n_;
+
+#pragma omp simd
+    for (int n=ns; n<=ne; ++n) {
+      // renamed dw* -> dq* from plm.cpp
+      dql(n) = (q(n) - q(n-1));
+      dqr(n) = (q(n+1) - q(n));
+      qc(n) = q(n);
+    }
+
+
+
+
+    for(int n=ns; n<=ne; ++n){
+      Real cf = prad->dzeta_v(n)/(prad->zeta_f_full(n+1) 
+                - prad->zeta_v_full(n)); // (Mignone eq 33)
+      Real cb = prad->dzeta_v(n-1)/(prad->zeta_v_full(n) - prad->zeta_f_full(n));
+      Real dqF =  dqr(n)*prad->dzeta_f(n)/prad->dzeta_v(n);
+      Real dqB =  dql(n)*prad->dzeta_f(n)/prad->dzeta_v(n-1);
+      Real dq2 = dqF*dqB;
+      // (modified) VL limiter (Mignone eq 37)
+      // (dQ^F term from eq 31 pulled into eq 37, then multiply by (dQ^F/dQ^F)^2)
+      dqm(n) = (dq2*(cf*dqB + cb*dqF)/
+                (SQR(dqB) + SQR(dqF) + dq2*(cf + cb - 2.0)));
+      if (dq2 <= 0.0) dqm(n) = 0.0; // ---> no concern for divide-by-0 in above line
+      // Real v = dqB/dqF;
+      // monotoniced central (MC) limiter (Mignone eq 38)
+      // (std::min calls should avoid issue if divide-by-zero causes v=Inf)
+      //dqm(n,i) = dqF*std::max(0.0, std::min(0.5*(1.0 + v), std::min(cf, cb*v)));
+    }
+
+   
+
+    for(int n=ns; n<=ne; ++n){
+      Real ratio_l=(prad->zeta_f_full(n+1) - prad->zeta_v_full(n))/prad->dzeta_f(n);
+      Real ratio_r=(pco->zeta_v_full(n) - prad->zeta_f_full(n))/prad->dzeta_f(n);
+      // Mignone equation 30
+      ql(n+1) = qc(n) + ratio_l*dqm(n);
+      qr(n  ) = qc(n) - ratio_r*dqm(n);
+    }
+
+
+  return;
+}
+
+void Reconstruction::PiecewiseLinearPsi(
+    Radiation *prad, const int ps, const int pe,
+    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
+
+  // set work arrays to shallow copies of scratch arrays
+    AthenaArray<Real> &qc = scr1_n_, &dql = scr2_n_, &dqr = scr3_n_,
+                   &dqm = scr4_n_;
+
+
+#pragma omp simd
+    for(int m=ps; m<=pe; ++m){
+      // renamed dw* -> dq* from plm.cpp
+      dql(m) = (q(m) - q(n,m-1));
+      dqr(m) = (q(m+1) - q(n,m));
+      qc(m) = q(m);
+    }
+    
+
+
+
+#pragma omp simd
+    for (int m=ps; m<=pe; ++m) {
+      Real cf = prad->dpsi_v(m)/(prad->psi_f_full(m+1) 
+                  - prad->psi_v_full(m)); // (Mignone eq 33)
+      Real cb = prad->dpsi_v(m-1)/(prad->psi_v_full(m) - prad->psi_f_full(m));
+      Real dqF =  dqr(m)*prad->dpsi_f(m)/prad->dpsi_v(m);
+      Real dqB =  dql(m)*prad->dpsi_f(m)/prad->dpsi_v(m-1);
+      Real dq2 = dqF*dqB;
+      // (modified) VL limiter (Mignone eq 37)
+      // (dQ^F term from eq 31 pulled into eq 37, then multiply by (dQ^F/dQ^F)^2)
+      dqm(m) = (dq2*(cf*dqB + cb*dqF)/
+                (SQR(dqB) + SQR(dqF) + dq2*(cf + cb - 2.0)));
+      if (dq2 <= 0.0) dqm(m) = 0.0; // ---> no concern for divide-by-0 in above line
+      // Real v = dqB/dqF;
+      // monotoniced central (MC) limiter (Mignone eq 38)
+      // (std::min calls should avoid issue if divide-by-zero causes v=Inf)
+      //dqm(n,i) = dqF*std::max(0.0, std::min(0.5*(1.0 + v), std::min(cf, cb*v)));
+    }
+    
+   
+
+#pragma omp simd
+    for (int m=ps; m<=pe; ++m) {
+
+      Real ratio_l=(prad->psi_f_full(m+1) - prad->psi_v_full(m))/prad->dpsi_f(m);
+      Real ratio_r=(pco->psi_v_full(m) - prad->psi_f_full(m))/prad->dpsi_f(m);
+      // Mignone equation 30
+      ql(m+1) = qc(m) + ratio_l*dqm(m);
+      qr(m  ) = qc(m) - ratio_r*dqm(m);
+    }
+    
+
+  return;
+}

@@ -106,9 +106,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     int &npsi = prad->npsi;
     if(nzeta > 0){
       g_zeta_.NewAthenaArray(2*nzeta+1);
-      q_zeta_.NewAthenaArray(2*nzeta+1+2*NGHOST);
-      ql_zeta_.NewAthenaArray(2*nzeta+1);
-      qr_zeta_.NewAthenaArray(2*nzeta+1);
+      q_zeta_.NewAthenaArray(2*nzeta+2*NGHOST);
+      ql_zeta_.NewAthenaArray(2*nzeta+2*NGHOST);
+      qr_zeta_.NewAthenaArray(2*nzeta+2*NGHOST);
+      
+
       if(npsi > 0)
         zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,(2*nzeta+1)*2*npsi);
       else
@@ -118,12 +120,15 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
       pmb->pcoord->ZetaArea(prad, zeta_area_);
     }
+
     if(npsi > 0){
       g_psi_.NewAthenaArray(2*npsi+1);
-      q_psi_.NewAthenaArray(2*npsi+1+2*NGHOST);
-      ql_psi_.NewAthenaArray(2*npsi+1);
-      qr_psi_.NewAthenaArray(2*npsi+1);
-      if(npsi > 0)
+      q_psi_.NewAthenaArray(2*npsi+2*NGHOST);
+      ql_psi_.NewAthenaArray(2*npsi+2*NGHOST);
+      qr_psi_.NewAthenaArray(2*npsi+2*NGHOST);      
+
+
+      if(nzeta > 0)
         psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta*(2*npsi+1));
       else
         psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*npsi+1); 
@@ -187,10 +192,7 @@ RadIntegrator::~RadIntegrator()
       q_zeta_.DeleteAthenaArray();
       ql_zeta_.DeleteAthenaArray();
       qr_zeta_.DeleteAthenaArray();
-      if(npsi > 0)
-        zeta_flux_.DeleteAthenaArray();
-      else
-        zeta_flux_.DeleteAthenaArray();
+      zeta_flux_.DeleteAthenaArray();
       zeta_area_.DeleteAthenaArray();
     }
     if(npsi > 0){
@@ -198,10 +200,7 @@ RadIntegrator::~RadIntegrator()
       q_psi_.DeleteAthenaArray();
       ql_psi_.DeleteAthenaArray();
       qr_psi_.DeleteAthenaArray();
-      if(npsi > 0)
-        psi_flux_.DeleteAthenaArray();
-      else
-        psi_flux_.DeleteAthenaArray();     
+      psi_flux_.DeleteAthenaArray();     
       psi_area_.DeleteAthenaArray(); 
     }
     dflx_ang_.DeleteAthenaArray();

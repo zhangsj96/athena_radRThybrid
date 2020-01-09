@@ -166,6 +166,23 @@ class Reconstruction {
                             const AthenaArray<Real> &q, const int array_order,
                             AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
+  void DonorCellZeta(Radiation *prad, const int zs, const int ze,
+      const AthenaArray<Real> &q, 
+      AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+
+  void DonorCellPsi(Radiation *prad, const int ps, const int pe,
+      const AthenaArray<Real> &q, 
+      AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+
+  void PiecewiseLinearZeta(Radiation *prad, const int zs, const int ze,
+      const int ps, const int pe, const AthenaArray<Real> &q, 
+      AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+
+
+  void PiecewiseLinearPsi(Radiation *prad, const int zs, const int ze,
+      const int ps, const int pe, const AthenaArray<Real> &q, 
+      AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+
  private:
   MeshBlock* pmy_block_;  // ptr to MeshBlock containing this Reconstruction
 
@@ -180,6 +197,7 @@ class Reconstruction {
   int nvar_;// the maximum numver of variables for reconstruction
   AthenaArray<Real> scr1_in_, scr2_in_, scr3_in_, scr4_in_, scr5_in_;
   AthenaArray<Real> scr1_in2_, scr2_in2_, scr3_in2_, scr4_in2_;
+  AthenaArray<Real> scr1_nn_, scr2_nn_, scr3_nn_, scr4_nn_;
   AthenaArray<Real> scr6_in_, scr7_in_, scr8_in_;
 
 };

@@ -124,3 +124,35 @@ void Reconstruction::DonorCellX3(const int k, const int j, const int il, const i
   }
   return;
 }
+
+void Reconstruction::DonorCellZeta(
+    Radiation *prad, const int zs, const int ze,
+    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
+
+
+#pragma omp simd
+    for (int n=ns; n<=ne; ++n) {
+      ql(n+1) =  qr(n) = q(n);
+    }
+
+  return;
+}
+
+
+void Reconstruction::DonorCellPsi(
+    Radiation *prad, const int ps, const int pe,
+    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
+
+
+#pragma omp simd
+    for(int m=ps; m<=pe; ++m){
+      // renamed dw* -> dq* from plm.cpp
+      ql(m+1) =  qr(m) = q(m);
+    }
+    
+
+  return;
+}
+
