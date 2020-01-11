@@ -4,3 +4,5 @@ src/bvals/.DS_Store
 src/bvals/cc/.DS_Store
 .DS_Store
 src/cr/.DS_Store
+bin/
+obj/

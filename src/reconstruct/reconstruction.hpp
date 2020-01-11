@@ -174,13 +174,13 @@ class Reconstruction {
       const AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
-  void PiecewiseLinearZeta(Radiation *prad, const int zs, const int ze,
-      const int ps, const int pe, const AthenaArray<Real> &q, 
+  void PiecewiseLinearZeta(Radiation *prad, 
+      const int zs, const int ze, const AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
 
-  void PiecewiseLinearPsi(Radiation *prad, const int zs, const int ze,
-      const int ps, const int pe, const AthenaArray<Real> &q, 
+  void PiecewiseLinearPsi(Radiation *prad, 
+      const int zs, const int ze, const AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
  private:

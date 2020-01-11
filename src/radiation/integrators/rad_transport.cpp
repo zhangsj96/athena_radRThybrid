@@ -484,7 +484,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
               pmb->precon->DonorCellZeta(prad,zl,zu,q_zeta_,
                                           ql_zeta_,qr_zeta_);
             } else {
-              pmb->precon->PiecewiseLinearZeta(prad,zl,zr,q_zeta_,
+              pmb->precon->PiecewiseLinearZeta(prad,zl,zu,q_zeta_,
                                           ql_zeta_,qr_zeta_);
             } 
   
@@ -492,7 +492,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
             for(int n=0; n<nzeta*2+1; ++n){
               int ang_num = n*psi_limit+m;
-              Real g_coef = g_psi_(m);
+              Real g_coef = g_zeta_(n);
               if(g_coef > 0)
                 zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_zeta_(n+NGHOST) 
                                         * g_zeta_(n); 

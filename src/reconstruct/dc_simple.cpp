@@ -132,7 +132,7 @@ void Reconstruction::DonorCellZeta(
 
 
 #pragma omp simd
-    for (int n=ns; n<=ne; ++n) {
+    for (int n=zs; n<=ze; ++n) {
       ql(n+1) =  qr(n) = q(n);
     }
 

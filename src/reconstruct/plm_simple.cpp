@@ -23,6 +23,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../eos/eos.hpp"
 #include "reconstruction.hpp"
+#include "../radiation/radiation.hpp"
 
 //----------------------------------------------------------------------------------------
 //! \fn Reconstruction::PiecewiseLinearX1()
@@ -491,11 +492,11 @@ void Reconstruction::PiecewiseLinearZeta(
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
   // set work arrays to shallow copies of scratch arrays
-    AthenaArray<Real> &qc = scr1_n_, &dql = scr2_n_, &dqr = scr3_n_,
-                   &dqm = scr4_n_;
+    AthenaArray<Real> &qc = scr1_nn_, &dql = scr2_nn_, &dqr = scr3_nn_,
+                   &dqm = scr4_nn_;
 
 #pragma omp simd
-    for (int n=ns; n<=ne; ++n) {
+    for (int n=zs; n<=ze; ++n) {
       // renamed dw* -> dq* from plm.cpp
       dql(n) = (q(n) - q(n-1));
       dqr(n) = (q(n+1) - q(n));
@@ -505,7 +506,7 @@ void Reconstruction::PiecewiseLinearZeta(
 
 
 
-    for(int n=ns; n<=ne; ++n){
+    for(int n=zs; n<=ze; ++n){
       Real cf = prad->dzeta_v(n)/(prad->zeta_f_full(n+1) 
                 - prad->zeta_v_full(n)); // (Mignone eq 33)
       Real cb = prad->dzeta_v(n-1)/(prad->zeta_v_full(n) - prad->zeta_f_full(n));
@@ -525,9 +526,9 @@ void Reconstruction::PiecewiseLinearZeta(
 
    
 
-    for(int n=ns; n<=ne; ++n){
+    for(int n=zs; n<=ze; ++n){
       Real ratio_l=(prad->zeta_f_full(n+1) - prad->zeta_v_full(n))/prad->dzeta_f(n);
-      Real ratio_r=(pco->zeta_v_full(n) - prad->zeta_f_full(n))/prad->dzeta_f(n);
+      Real ratio_r=(prad->zeta_v_full(n) - prad->zeta_f_full(n))/prad->dzeta_f(n);
       // Mignone equation 30
       ql(n+1) = qc(n) + ratio_l*dqm(n);
       qr(n  ) = qc(n) - ratio_r*dqm(n);
@@ -543,15 +544,15 @@ void Reconstruction::PiecewiseLinearPsi(
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
   // set work arrays to shallow copies of scratch arrays
-    AthenaArray<Real> &qc = scr1_n_, &dql = scr2_n_, &dqr = scr3_n_,
-                   &dqm = scr4_n_;
+    AthenaArray<Real> &qc = scr1_nn_, &dql = scr2_nn_, &dqr = scr3_nn_,
+                   &dqm = scr4_nn_;
 
 
 #pragma omp simd
     for(int m=ps; m<=pe; ++m){
       // renamed dw* -> dq* from plm.cpp
-      dql(m) = (q(m) - q(n,m-1));
-      dqr(m) = (q(m+1) - q(n,m));
+      dql(m) = (q(m) - q(m-1));
+      dqr(m) = (q(m+1) - q(m));
       qc(m) = q(m);
     }
     
@@ -583,7 +584,7 @@ void Reconstruction::PiecewiseLinearPsi(
     for (int m=ps; m<=pe; ++m) {
 
       Real ratio_l=(prad->psi_f_full(m+1) - prad->psi_v_full(m))/prad->dpsi_f(m);
-      Real ratio_r=(pco->psi_v_full(m) - prad->psi_f_full(m))/prad->dpsi_f(m);
+      Real ratio_r=(prad->psi_v_full(m) - prad->psi_f_full(m))/prad->dpsi_f(m);
       // Mignone equation 30
       ql(m+1) = qc(m) + ratio_l*dqm(m);
       qr(m  ) = qc(m) - ratio_r*dqm(m);
