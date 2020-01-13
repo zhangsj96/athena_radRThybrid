@@ -645,8 +645,8 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
               for(int n=0; n<2*nzeta; ++n){
                 int ang_num = n*2*npsi + m;
                 int ang_num1 = (n+1)*2*npsi+m;
-                dflx_ang(ang_num) += (area_zeta(n+1) * zeta_flux_(k,j,i,ang_num1)
-                                     - area_zeta(n) * zeta_flux_(k,j,i,ang_num));
+                dflx_ang(ang_num) += (area_zeta(m,n+1) * zeta_flux_(k,j,i,ang_num1)
+                                     - area_zeta(m,n) * zeta_flux_(k,j,i,ang_num));
               }// end zeta angle
             }// end psi angles
             // now psi flux
@@ -654,8 +654,8 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
               for(int m=0; m<2*npsi; ++m){
                 int ang_num = n*2*npsi + m;
                 int ang_num1 = n*2*npsi+m+1;
-                dflx_ang(ang_num) += (area_psi(m+1) * psi_flux_(k,j,i,ang_num1)
-                                     - area_zeta(m) * psi_flux_(k,j,i,ang_num));                
+                dflx_ang(ang_num) += (area_psi(n,m+1) * psi_flux_(k,j,i,ang_num1)
+                                     - area_psi(n,m) * psi_flux_(k,j,i,ang_num));                
               }
             }
           }else if(nzeta >0){// end if nzeta*npsi > 0
@@ -666,7 +666,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
           }else if(npsi > 0){
             for(int m=0; m<2*npsi; ++m){
               dflx_ang(m) += (area_psi(m+1) * psi_flux_(k,j,i,m+1)
-                                   - area_zeta(m) * psi_flux_(k,j,i,m));                
+                                   - area_psi(m) * psi_flux_(k,j,i,m));                
             }           
           }// end npsi > 0
           // apply the flux divergence back

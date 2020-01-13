@@ -771,12 +771,10 @@ void Coordinates::ZetaArea(Radiation *prad, AthenaArray<Real> &area)
     int nzeta = prad->nzeta;
     int npsi = prad->npsi;
     if(npsi * nzeta > 0){
-      for(int n=0; n<2*nzeta+1; ++n){
-        for(int m=0; m<2*npsi; ++m){
-          int ang_num = n*(2*npsi)+m;
+      for(int m=0; m<2*npsi; ++m){
+        for(int n=0; n<2*nzeta+1; ++n){
           Real sinzeta_sq= 1.0 - prad->coszeta_f(n) * prad->coszeta_f(n);
-          area(ang_num) = sinzeta_sq * prad->len_psi(m);
-
+          area(m,n) = sinzeta_sq * prad->len_psi(m);
         }// end psi
       }// end zeta
     }else if(nzeta > 0){
@@ -798,14 +796,12 @@ void Coordinates::PsiArea(Radiation *prad, AthenaArray<Real> &area)
     if(npsi * nzeta > 0){
       for(int n=0; n<2*nzeta; ++n){
         for(int m=0; m<2*npsi+1; ++m){
-          int ang_num = n*(2*npsi+1)+m;
-          area(ang_num) = prad->len_zeta(n);
-
+          area(n,m) = prad->len_zeta(n);
         }// end psi
       }// end zeta
     }else if(npsi > 0){
-      for(int n=0; n<2*npsi+1; ++n){
-        area(n) = 1.0;
+      for(int m=0; m<2*npsi+1; ++m){
+        area(m) = 1.0;
       }
     }
 

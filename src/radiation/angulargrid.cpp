@@ -547,14 +547,17 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
     }else if(ndim == 2){
       for(int j=0; j<n2z; ++j){
         for(int i=0; i<n1z; ++i){
-          if(axisz == 0){
+          if(npsi == 1){
             for(int n=0; n<2*nzeta; ++n){
               for(int m=0; m<2*npsi; ++m){
                 int ang_num = n*(2*npsi)+m;
                 Real sinzeta_v = sqrt(1.0 - coszeta_v(n) 
                                       * coszeta_v(n));
-                mu(axisz,0,j,i,ang_num) = sinzeta_v * cos(psi_v(m));
-                mu(axisx,0,j,i,ang_num) = coszeta_v(n);
+                mu(axisz,0,j,i,ang_num) = coszeta_v(n);
+                if(m==0)
+                  mu(axisx,0,j,i,ang_num) = sinzeta_v;
+                else
+                  mu(axisx,0,j,i,ang_num) = -sinzeta_v;
               }
             }
           }else{// the case in x -y plane

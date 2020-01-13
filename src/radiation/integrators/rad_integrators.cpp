@@ -111,12 +111,14 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       qr_zeta_.NewAthenaArray(2*nzeta+2*NGHOST);
       
 
-      if(npsi > 0)
+      if(npsi > 0){
         zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,(2*nzeta+1)*2*npsi);
-      else
+        zeta_area_.NewAthenaArray(2*npsi,2*nzeta+1);
+      }
+      else{
         zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta+1);
-
-      zeta_area_.NewAthenaArray(2*nzeta+1);
+        zeta_area_.NewAthenaArray(2*nzeta+1);
+      }
 
       pmb->pcoord->ZetaArea(prad, zeta_area_);
     }
@@ -128,12 +130,15 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       qr_psi_.NewAthenaArray(2*npsi+2*NGHOST);      
 
 
-      if(nzeta > 0)
+      if(nzeta > 0){
         psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta*(2*npsi+1));
-      else
+        psi_area_.NewAthenaArray(2*nzeta,2*npsi+1);
+      }
+      else{
         psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*npsi+1); 
+        psi_area_.NewAthenaArray(2*npsi+1);
+      }
 
-      psi_area_.NewAthenaArray(2*npsi+1);    
       pmb->pcoord->PsiArea(prad, psi_area_); 
     }
 
