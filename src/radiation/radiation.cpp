@@ -101,10 +101,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
       noct = 2;
       n_ang = nzeta;
     }else if(ndim == 2){
-      if(COORDINATE_SYSTEM == "spherical_polar"){
+      if(npsi <= 1){
         n_ang = nzeta;
-      }else{
+      }else if(nzeta == 0){
         n_ang = npsi/2;
+      }else{
+        n_ang = nzeta*npsi;
       }
       noct = 4;
     }else if(ndim == 3){

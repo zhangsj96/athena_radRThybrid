@@ -144,10 +144,12 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
         noct = 2;
         n_ang = nzeta;
       }else if(ndim == 2){
-        if(COORDINATE_SYSTEM == "spherical_polar"){
+        if(npsi <= 1){
           n_ang = nzeta;
-        }else{
+        }else if(nzeta == 0){
           n_ang = npsi/2;
+        }else{
+          n_ang = nzeta*npsi;
         }
         noct = 4;
       }else if(ndim == 3){
@@ -363,10 +365,12 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
         noct = 2;
         n_ang = nzeta;
       }else if(ndim == 2){
-        if(COORDINATE_SYSTEM == "spherical_polar"){
+        if(npsi <= 1){
           n_ang = nzeta;
-        }else{
+        }else if(nzeta == 0){
           n_ang = npsi/2;
+        }else{
+          n_ang = nzeta*npsi;
         }
         noct = 4;
       }else if(ndim == 3){
@@ -393,8 +397,9 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
           n_ang = nmu * nmu/2;
         }
       }// end 3D
+
     }
-   
+  
     nfre_ang = n_ang * noct * nfreq;
 
   }

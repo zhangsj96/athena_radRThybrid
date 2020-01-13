@@ -694,5 +694,27 @@ void SphericalPolar::GetGeometryPsi(Radiation *prad, const int k, const int j,
 }
 
 
+void SphericalPolar::GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, AthenaArray<Real> &g_psi)
+{
+  int &npsi = prad->npsi;
+  Real radius = x1v(i);
+  Real theta = x2v(j);
+
+  Real cottheta = cos(theta)/sin(theta);
+  if(npsi == 1){
+    for(int n=0; n<2*npsi+1; ++n){
+      g_psi(n) = 0.0;
+    }
+  }else{
+    for(int n=0; n<2*npsi+1; ++n){
+      g_psi(n) = cottheta * sin(prad->psi_f(n))/radius;
+    }
+  }
+
+}
+
+
+
 
 //###########################################

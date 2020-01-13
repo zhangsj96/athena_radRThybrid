@@ -448,6 +448,9 @@ class SphericalPolar : public Coordinates {
   void GetGeometryPsi(Radiation *prad, const int k, const int j, 
                         const int i, const int n_zeta, AthenaArray<Real> &g_psi) final;
 
+  void GetGeometryPsi(Radiation *prad, const int k, const int j, 
+                        const int i, AthenaArray<Real> &g_psi) final;
+
 };
 
 //----------------------------------------------------------------------------------------

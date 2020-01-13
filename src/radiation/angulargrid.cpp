@@ -456,7 +456,33 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
         dzeta_f(i) = zeta_f_full(i+1)-zeta_f_full(i);
       }
 
-    }// end if nzeta > 0
+    // end if nzeta > 0
+    }else{
+      coszeta_v.NewAthenaArray(1);
+      zeta_v_full.NewAthenaArray(1);
+      zeta_f_full.NewAthenaArray(1);
+      dzeta_v.NewAthenaArray(1);
+      dzeta_f.NewAthenaArray(1);
+      coszeta_f.NewAthenaArray(1);
+      len_zeta.NewAthenaArray(1); // This id Delta (cos\theta)
+
+
+      coszeta_f(0) = 1.0;
+
+      coszeta_v(0) = 1.0;
+
+      len_zeta(0) = 1.0; 
+
+      zeta_v_full(0) = 0.0;
+
+      zeta_f_full(0) = 0.0;
+
+
+      dzeta_v(0) = 1.0;
+
+      dzeta_f(0) = 1.0;
+
+    }
 
     //set ghostzones
 //    for(i=1; i<=NGHOST; ++i){
@@ -562,8 +588,8 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
             }
           }else{// the case in x -y plane
             for(int m=0; m<2*npsi; ++m){
-              mu(axisx,0,j,i,m) = cos(psi_v(m));
-              mu(axisy,0,j,i,m) = sin(psi_v(m));
+              mu(0,0,j,i,m) = cos(psi_v(m));
+              mu(1,0,j,i,m) = sin(psi_v(m));
             }
           }
         }// end i
