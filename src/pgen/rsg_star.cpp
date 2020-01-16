@@ -50,13 +50,14 @@ static AthenaArray<Real> logttable_planck;
 static AthenaArray<Real> logrhottable_planck;
 
 static AthenaArray<Real> ini_profile;
+static AthenaArray<Real> bd_data;
 
 
 
 // The global variable
 
 static Real consFr = 6.90424e-6;
-static Real grav0 = 9.7876186e-03;
+static Real grav0 = 9.78764e-03;
 static Real kappaes = 515.204;
 
 static Real rhounit = 2.3149e-8;
@@ -66,7 +67,7 @@ static Real tfloor;
 static Real rhofloor;
 
 static Real lbottom=502.0566;
-static int ninputline=178;
+static int in_line=1137;
 
 static Real rmax=1.02e3;
 
@@ -119,21 +120,22 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
   
   EnrollUserExplicitSourceFunction(GravityPotential);
 
-  ini_profile.NewAthenaArray(178,5);
+  ini_profile.NewAthenaArray(in_line,5);
   FILE *fini;
-  if ( (fini=fopen("./MESA_profile.txt","r"))==NULL )
+  if ( (fini=fopen("./MESA_profile_combined.txt","r"))==NULL )
   {
      printf("Open input file error MESA profile");
      return;
   }  
 
-  for(int j=0; j<178; j++){
+  for(int j=0; j<in_line; j++){
     for(int i=0; i<5; i++){
       fscanf(fini,"%lf",&(ini_profile(j,i)));
     }
   }
 
   fclose(fini);
+  bd_data.NewAthenaArray(2,NGHOST);
   
 
   if(RADIATION_ENABLED){
@@ -240,6 +242,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 {
 
   ini_profile.DeleteAthenaArray();
+  bd_data.DeleteAthenaArray();
 
   // free memory
   if(RADIATION_ENABLED){
@@ -260,6 +263,32 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 {
   
+  // get bottom boundary condition
+  Real rbottom = pcoord->x1v(is-1);
+  if(rbottom < pmy_mesh->mesh_size.x1min){
+    for(int i=1; i<=NGHOST; ++i){
+      Real radius = pcoord->x1v(is-i);
+      int lleft=0;
+
+      int lright=1;
+      while((radius > ini_profile(lright,0)) && (lright < in_line-1)){
+        lright = lright+1;
+      }
+      if(lright - lleft > 1) lleft = lright -1;
+
+      Real rho = ini_profile(lleft,2) + (radius - ini_profile(lleft,0)) *
+                                (ini_profile(lright,2) - ini_profile(lleft,2))
+                               /(ini_profile(lright,0) - ini_profile(lleft,0));
+      Real tem = ini_profile(lleft,1) + (radius - ini_profile(lleft,0)) *
+                                (ini_profile(lright,1) - ini_profile(lleft,1))
+                               /(ini_profile(lright,0) - ini_profile(lleft,0));
+
+      bd_data(0,i-1) = rho;
+      bd_data(1,i-1) = tem;
+    }
+
+  }
+ 
   
   if(RADIATION_ENABLED){
     
@@ -448,7 +477,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
 
   //initialize random number
-  
+  std::srand(gid);
+ 
 
   
   Real crat, prat;
@@ -478,7 +508,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   // First, find density and temperature at rmax
   int lleft=0;
   int lright=1;
-  while((rmax > ini_profile(lright,0)) && (lright < ninputline-1)){
+  while((rmax > ini_profile(lright,0)) && (lright < in_line-1)){
      lright = lright+1;
   }
   if(lright - lleft > 1) lleft = lright -1;
@@ -502,7 +532,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     int lleft=0;
 
     int lright=1;
-    while((x1 > ini_profile(lright,0)) && (lright < ninputline-1)){
+    while((x1 > ini_profile(lright,0)) && (lright < in_line-1)){
        lright = lright+1;
     }
     if(lright - lleft > 1) lleft = lright -1;
@@ -793,25 +823,10 @@ void Inflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceFi
     for (int j=js; j<=je; ++j) {
       for (int i=1; i<=ngh; ++i) {
 
-        Real &x1 = pco->x1v(is-i);    
-        // get the position
-        int lleft=0;
+        Real rho = bd_data(0,i-1);
+        Real tem = bd_data(1,i-1);
 
-        int lright=1;
-        while((x1 > ini_profile(lright,0)) && (lright < ninputline-1)){
-          lright = lright+1;
-        }
-        if(lright - lleft > 1) lleft = lright -1;
-
-        Real rho = ini_profile(lleft,2) + (x1 - ini_profile(lleft,0)) *
-                                  (ini_profile(lright,2) - ini_profile(lleft,2))
-                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
-        Real tem = ini_profile(lleft,1) + (x1 - ini_profile(lleft,0)) *
-                                  (ini_profile(lright,1) - ini_profile(lleft,1))
-                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
-
-
-        prim(IDN,k,j,is-i) = rho;
+        prim(IDN,k,j,is-i) = bd_data(0,i-1);
         prim(IVX,k,j,is-i) = 0.0;
         prim(IVY,k,j,is-i) = prim(IVY,k,j,is);
         prim(IVZ,k,j,is-i) = prim(IVZ,k,j,is);
@@ -921,27 +936,12 @@ void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
     for (int j=js; j<=je; ++j) {
       for (int i=1; i<=ngh; ++i) {
 
-
         Real &x1 = pco->x1v(is-i);    
-        // get the position
-        int lleft=0;
-
-        int lright=1;
-        while((x1 > ini_profile(lright,0)) && (lright < ninputline-1)){
-          lright = lright+1;
-        }
-        if(lright - lleft > 1) lleft = lright -1;
-
-        Real rho = ini_profile(lleft,2) + (x1 - ini_profile(lleft,0)) *
-                                  (ini_profile(lright,2) - ini_profile(lleft,2))
-                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
-        Real tem = ini_profile(lleft,1) + (x1 - ini_profile(lleft,0)) *
-                                  (ini_profile(lright,1) - ini_profile(lleft,1))
-                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
         Real radflx = consFr * lbottom * lbottom /(x1 * x1);
 
-
+        Real tem = bd_data(1,i-1);
         Real er = tem * tem * tem * tem;
+
         
         for(int ifr=0; ifr<prad->nfreq; ++ifr){
           Real coefa = 0.0, coefb = 0.0;

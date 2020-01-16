@@ -1054,25 +1054,28 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
   MeshBlock *pmb;
   //calculate radiation quantities for dump
   // Only need to do once for all output type
-  if(RADIATION_ENABLED){
-    pmb=pm->pblock;
-    while(pmb != NULL){
-     // Calculate Com-moving moments and grey opacity for dump
-      pmb->prad->CalculateComMoment();
-      pmb=pmb->next;
-    }
-  }
-
 
   bool first=true;
+  bool rad_mom=true;
   OutputType* ptype = pfirst_type_;
   while (ptype != nullptr) {
     if ((pm->time == pm->start_time) ||
         (pm->time >= ptype->output_params.next_time) ||
         (pm->time >= pm->tlim) ||
         (wtflag && ptype->output_params.file_type == "rst")) {
+      if(rad_mom && RADIATION_ENABLED){
+        pmb=pm->pblock;
+        while(pmb != NULL){
+         // Calculate Com-moving moments and grey opacity for dump
+          pmb->prad->CalculateComMoment();
+          pmb=pmb->next;
+        } 
+        rad_mom = false;           
+      }
+
       if (first && ptype->output_params.file_type != "hst") {
         pm->ApplyUserWorkBeforeOutput(pin);
+        // calculate co-moving frame moments for output
         first = false;
       }
       ptype->WriteOutputFile(pm, pin, wtflag);
