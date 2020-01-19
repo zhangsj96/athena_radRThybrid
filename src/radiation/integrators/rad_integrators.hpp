@@ -41,8 +41,8 @@ public:
   void AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
         AthenaArray<Real> &w, AthenaArray<Real> &bcc, AthenaArray<Real> &ir);
 
-  void AbsorptionScattering(const AthenaArray<Real> &wmu_cm,
-          const AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
+  void AbsorptionScattering(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &ir_cm);
   

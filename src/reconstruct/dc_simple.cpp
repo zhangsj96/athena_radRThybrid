@@ -38,16 +38,19 @@ void Reconstruction::DonorCellX1(const int k, const int j, const int il, const i
 
 
 void Reconstruction::DonorCellX1(const int k, const int j, const int il, const int iu,
-                                 const AthenaArray<Real> &q, const int array_order,
+                                 AthenaArray<Real> &q, const int array_order,
                                  AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
   if(array_order < 0){
     const int nu = q.GetDim1() - 1;
 
   // compute L/R states for each variable
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+      Real *qn = &(q(k,j,i,0));
+      Real *qln = &(ql(i+1,0));
+      Real *qrn = &(qr(i,0));
+#pragma omp simd aligned(qn,qln,qrn)
       for (int n=0; n<=nu; ++n) {
-        ql(i+1,n) =  qr(i,n) = q(k,j,i,n);
+        qln[n] =  qrn[n] = qn[n];
       }
     }
 
@@ -74,16 +77,19 @@ void Reconstruction::DonorCellX2(const int k, const int j, const int il, const i
 }
 
 void Reconstruction::DonorCellX2(const int k, const int j, const int il, const int iu,
-                                 const AthenaArray<Real> &q, const int array_order,
+                                 AthenaArray<Real> &q, const int array_order,
                                  AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
   if(array_order < 0){
     const int nu = q.GetDim1() - 1;
    // compute L/R states for each variable
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+      Real *qln = &(ql(i,0));
+      Real *qrn = &(qr(i,0));
+      Real *qn = &(q(k,j,i,0));
+#pragma omp simd aligned(qln,qrn,qn)
       for (int n=0; n<=nu; ++n) {
-	    ql(i,n) = qr(i,n) = q(k,j,i,n);
+	    qln[n] = qrn[n] = qn[n];
 	  }
 	}
 
@@ -112,14 +118,17 @@ void Reconstruction::DonorCellX3(const int k, const int j, const int il, const i
 
 
 void Reconstruction::DonorCellX3(const int k, const int j, const int il, const int iu,
-                                 const AthenaArray<Real> &q, const int array_order,
+                                 AthenaArray<Real> &q, const int array_order,
                                  AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
   const int nu = q.GetDim1() - 1;
   // compute L/R states for each variable
   for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+    Real *qln = &(ql(i,0));
+    Real *qrn = &(qr(i,0));
+    Real *qn = &(q(k,j,i,0));
+#pragma omp simd aligned(qln,qrn,qn)
     for (int n=0; n<=nu; ++n) {
-      ql(i,n) = qr(i,n) = q(k,j,i,n);
+      qln[n] = qrn[n] = qn[n];
     }
   }
   return;
@@ -127,13 +136,15 @@ void Reconstruction::DonorCellX3(const int k, const int j, const int il, const i
 
 void Reconstruction::DonorCellZeta(
     Radiation *prad, const int zs, const int ze,
-    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &q, 
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
-
-
-#pragma omp simd
-    for (int n=zs; n<=ze; ++n) {
-      ql(n+1) =  qr(n) = q(n);
+  
+    Real *qln = &(ql(zs+1));
+    Real *qrn = &(qr(zs));
+    Real *qn = &(q(zs));
+#pragma omp simd aligned(qln,qrn,qn)
+    for (int n=0; n<=ze-zs; ++n) {
+      qln[n] =  qrn[n] = qn[n];
     }
 
   return;
@@ -142,14 +153,16 @@ void Reconstruction::DonorCellZeta(
 
 void Reconstruction::DonorCellPsi(
     Radiation *prad, const int ps, const int pe,
-    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &q, 
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
-
-#pragma omp simd
-    for(int m=ps; m<=pe; ++m){
+    Real *qln = &(ql(ps+1));
+    Real *qrn = &(qr(ps));
+    Real *qn = &(q(ps));
+#pragma omp simd aligned(qln,qrn,qn)
+    for(int m=0; m<=pe-ps; ++m){
       // renamed dw* -> dq* from plm.cpp
-      ql(m+1) =  qr(m) = q(m);
+      qln[m] =  qrn[m] = qn[m];
     }
     
 

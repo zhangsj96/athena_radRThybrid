@@ -106,7 +106,7 @@ void Reconstruction::PiecewiseLinearX1(
 
 void Reconstruction::PiecewiseLinearX1(
     const int k, const int j, const int il, const int iu,
-    const AthenaArray<Real> &q, const int array_order, 
+    AthenaArray<Real> &q, const int array_order, 
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
   Coordinates *pco = pmy_block_->pcoord;
   if(array_order < 0){
@@ -117,12 +117,18 @@ void Reconstruction::PiecewiseLinearX1(
 
   // compute L/R slopes for each variable
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+      Real *dqln = &(dql(i,0));
+      Real *dqrn = &(dqr(i,0));
+      Real *qn = &(q(k,j,i,0));
+      Real *q1n = &(q(k,j,i+1,0));
+      Real *q2n = &(q(k,j,i-1,0));
+      Real *qcn = &(qc(i,0));
+#pragma omp simd aligned(dqln,dqrn,qn,q1n,q2n,qcn)
       for (int n=0; n<=nu; ++n) {
+        dqln[n] = (qn[n] - q2n[n]);
+        dqrn[n] = (q1n[n] - qn[n]);
+        qcn[n] = qn[n];
       // renamed dw* -> dq* from plm.cpp
-        dql(i,n) = (q(k,j,i  ,n) - q(k,j,i-1,n));
-        dqr(i,n) = (q(k,j,i+1,n) - q(k,j,i  ,n));
-        qc(i,n) = q(k,j,i,n);
       }
     }
 
@@ -137,8 +143,6 @@ void Reconstruction::PiecewiseLinearX1(
           if (dq2 <= 0.0) dqm(i,n) = 0.0;
         }
       }
-
-    // Apply general VL limiter expression w/ the Mignone correction for a Cartesian-like
     // coordinate with nonuniform mesh spacing or for any curvilinear coordinate spacing
     } else {
       for (int i=il; i<=iu; ++i) {
@@ -148,16 +152,19 @@ void Reconstruction::PiecewiseLinearX1(
         // nonuniformity)
           Real cf = pco->dx1v(i  )/(pco->x1f(i+1) - pco->x1v(i)); // (Mignone eq 33)
           Real cb = pco->dx1v(i-1)/(pco->x1v(i  ) - pco->x1f(i));
-#pragma omp simd simdlen(SIMD_WIDTH)
+          Real *dqrn = &(dqr(i,0));
+          Real *dqln = &(dql(i,0));
+          Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(dqrn,dqln,dqmn)
         for (int n=0; n<=nu; ++n) {
-          Real dqF =  dqr(i,n)*pco->dx1f(i)/pco->dx1v(i);
-          Real dqB =  dql(i,n)*pco->dx1f(i)/pco->dx1v(i-1);
+          Real dqF =  dqrn[n]*pco->dx1f(i)/pco->dx1v(i);
+          Real dqB =  dqln[n]*pco->dx1f(i)/pco->dx1v(i-1);
           Real dq2 = dqF*dqB;
         // (modified) VL limiter (Mignone eq 37)
         // (dQ^F term from eq 31 pulled into eq 37, then multiply by (dQ^F/dQ^F)^2)
-          dqm(i,n) = (dq2*(cf*dqB + cb*dqF)/
+          dqmn[n] = (dq2*(cf*dqB + cb*dqF)/
                     (SQR(dqB) + SQR(dqF) + dq2*(cf + cb - 2.0)));
-          if (dq2 <= 0.0) dqm(i,n) = 0.0; // ---> no concern for divide-by-0 in above line
+          if (dq2 <= 0.0) dqmn[n] = 0.0; // ---> no concern for divide-by-0 in above line
         // Real v = dqB/dqF;
         // monotoniced central (MC) limiter (Mignone eq 38)
         // (std::min calls should avoid issue if divide-by-zero causes v=Inf)
@@ -170,11 +177,15 @@ void Reconstruction::PiecewiseLinearX1(
     for (int i=il; i<=iu; ++i) {
       Real ratio_l=(pco->x1f(i+1) - pco->x1v(i))/pco->dx1f(i);
       Real ratio_r=(pco->x1v(i  ) - pco->x1f(i))/pco->dx1f(i);
-#pragma omp simd simdlen(SIMD_WIDTH)
+      Real *qln = &(ql(i+1,0));
+      Real *qrn = &(qr(i,0));
+      Real *qcn = &(qc(i,0));
+      Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(qln,qrn,qcn,dqmn)
       for (int n=0; n<=nu; ++n) {
       // Mignone equation 30
-        ql(i+1,n) = qc(i,n) + ratio_l*dqm(i,n);
-        qr(i  ,n) = qc(i,n) - ratio_r*dqm(i,n);
+        qln[n] = qcn[n] + ratio_l*dqmn[n];
+        qrn[n] = qcn[n] - ratio_r*dqmn[n];
       }
     }
 
@@ -262,7 +273,7 @@ void Reconstruction::PiecewiseLinearX2(
 
 void Reconstruction::PiecewiseLinearX2(
     const int k, const int j, const int il, const int iu,
-    const AthenaArray<Real> &q, const int array_order,
+    AthenaArray<Real> &q, const int array_order,
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
   Coordinates *pco = pmy_block_->pcoord;
 
@@ -275,12 +286,18 @@ void Reconstruction::PiecewiseLinearX2(
 
   // compute L/R slopes for each variable
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+      Real *dqln = &(dql(i,0));
+      Real *dqrn = &(dqr(i,0));
+      Real *qcn = &(qc(i,0));
+      Real *qn  = &(q(k,j  ,i,0));
+      Real *q1n = &(q(k,j+1,i,0));
+      Real *q2n = &(q(k,j-1,i,0));
+#pragma omp simd aligned(dqln,dqrn,qcn,q1n,q2n)
       for (int n=0; n<=nu; ++n) {
       // renamed dw* -> dq* from plm.cpp
-        dql(i,n) = (q(k,j  ,i,n) - q(k,j-1,i,n));
-        dqr(i,n) = (q(k,j+1,i,n) - q(k,j  ,i,n));
-        qc(i,n) = q(k,j,i,n);
+        dqln[n] = (qn[n] - q2n[n]);
+        dqrn[n] = (q1n[n] - qn[n]);
+        qcn[n] = qn[n];
       }
     }
 
@@ -288,11 +305,14 @@ void Reconstruction::PiecewiseLinearX2(
   // with uniform mesh spacing
     if (uniform[X2DIR] && !curvilinear[X2DIR]) {
       for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+        Real *dqln = &(dql(i,0));
+        Real *dqrn = &(dqr(i,0));
+        Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(dqln,dqrn,dqmn)
         for (int n=0; n<=nu; ++n) {
-          Real dq2 = dql(i,n)*dqr(i,n);
-          dqm(i,n) = 2.0*dq2/(dql(i,n) + dqr(i,n));
-          if (dq2 <= 0.0) dqm(i,n) = 0.0;
+          Real dq2 = dqln[n]*dqrn[n];
+          dqmn[n] = 2.0*dq2/(dqln[n] + dqrn[n]);
+          if (dq2 <= 0.0) dqmn[n] = 0.0;
         }
       }
 
@@ -305,15 +325,18 @@ void Reconstruction::PiecewiseLinearX2(
       Real dxB = pco->dx2f(j)/pco->dx2v(j-1);
 
       for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+        Real *dqrn = &(dqr(i,0));
+        Real *dqln = &(dql(i,0));
+        Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(dqrn,dqln,dqmn)
         for (int n=0; n<=nu; ++n) {
-          Real dqF =  dqr(i,n)*dxF;
-          Real dqB =  dql(i,n)*dxB;
+          Real dqF =  dqrn[n]*dxF;
+          Real dqB =  dqln[n]*dxB;
           Real dq2 = dqF*dqB;
         // (modified) VL limiter (Mignone eq 37)
-          dqm(i,n) = (dq2*(cf*dqB + cb*dqF)/
+          dqmn[n] = (dq2*(cf*dqB + cb*dqF)/
                     (SQR(dqB) + SQR(dqF) + dq2*(cf + cb - 2.0)));
-          if (dq2 <= 0.0) dqm(i,n) = 0.0; // ---> no concern for divide-by-0 in above line
+          if (dq2 <= 0.0) dqmn[n] = 0.0; // ---> no concern for divide-by-0 in above line
 
           // Real v = dqB/dqF;
           // // monotoniced central (MC) limiter (Mignone eq 38)
@@ -328,10 +351,14 @@ void Reconstruction::PiecewiseLinearX2(
     Real dxp = (pco->x2f(j+1) - pco->x2v(j))/pco->dx2f(j);
     Real dxm = (pco->x2v(j  ) - pco->x2f(j))/pco->dx2f(j);
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+      Real *qln = &(ql(i,0));
+      Real *qrn = &(qr(i,0));
+      Real *dqmn = &(dqm(i,0));
+      Real *qcn = &(qc(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(qln,qrn,qcn,dqmn)
       for (int n=0; n<=nu; ++n) {
-        ql(i,n) = qc(i,n) + dxp*dqm(i,n);
-        qr(i,n) = qc(i,n) - dxm*dqm(i,n);
+        qln[n] = qcn[n] + dxp*dqmn[n];
+        qrn[n] = qcn[n] - dxm*dqmn[n];
       }
     }
   }// End array_order
@@ -410,7 +437,7 @@ void Reconstruction::PiecewiseLinearX3(
 
 void Reconstruction::PiecewiseLinearX3(
     const int k, const int j, const int il, const int iu,
-    const AthenaArray<Real> &q, const int array_order,
+    AthenaArray<Real> &q, const int array_order,
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
   Coordinates *pco = pmy_block_->pcoord;
 
@@ -422,12 +449,18 @@ void Reconstruction::PiecewiseLinearX3(
 
     // compute L/R slopes for each variable
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd
+      Real *dqln = &(dql(i,0));
+      Real *dqrn = &(dqr(i,0));
+      Real *qcn = &(qc(i,0));
+      Real *qn  = &(q(k,j  ,i,0));
+      Real *q1n = &(q(k+1,j,i,0));
+      Real *q2n = &(q(k-1,j,i,0));
+#pragma omp simd aligned(dqln,dqrn,qn,qcn,q1n,q2n)
       for (int n=0; n<=nu; ++n) {
       // renamed dw* -> dq* from plm.cpp
-        dql(i,n) = (q(k  ,j,i,n) - q(k-1,j,i,n));
-        dqr(i,n) = (q(k+1,j,i,n) - q(k  ,j,i,n));
-        qc(i,n) = q(k,j,i,n);
+        dqln[n] = (qn[n] - q2n[n]);
+        dqrn[n] = (q1n[n] - qn[n]);
+        qcn[n] = qn[n];
       }
     }
 
@@ -435,11 +468,14 @@ void Reconstruction::PiecewiseLinearX3(
   // with uniform mesh spacing
     if (uniform[X3DIR]) {
       for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+        Real *dqln = &(dql(i,0));
+        Real *dqrn = &(dqr(i,0));
+        Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(dqln,dqrn,dqmn)
         for (int n=0; n<=nu; ++n) {
-          Real dq2 = dql(i,n)*dqr(i,n);
-          dqm(i,n) = 2.0*dq2/(dql(i,n) + dqr(i,n));
-          if (dq2 <= 0.0) dqm(i,n) = 0.0;
+          Real dq2 = dqln[n]*dqrn[n];
+          dqmn[n] = 2.0*dq2/(dqln[n] + dqrn[n]);
+          if (dq2 <= 0.0) dqmn[n] = 0.0;
         }
       }
 
@@ -450,16 +486,19 @@ void Reconstruction::PiecewiseLinearX3(
       Real dxB = pco->dx3f(k)/pco->dx3v(k-1);
 
       for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+        Real *dqmn = &(dqm(i,0));
+        Real *dqrn = &(dqr(i,0));
+        Real *dqln = &(dql(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(dqmn,dqrn,dqln)
         for (int n=0; n<=nu; ++n) {
-          Real dqF =  dqr(i,n)*dxF;
-          Real dqB =  dql(i,n)*dxB;
+          Real dqF =  dqrn[n]*dxF;
+          Real dqB =  dqln[n]*dxB;
           Real dq2 = dqF*dqB;
         // original VL limiter (Mignone eq 36)
-          dqm(i,n) = 2.0*dq2/(dqF + dqB);
+          dqmn[n] = 2.0*dq2/(dqF + dqB);
          // dq2 > 0 ---> dqF, dqB are nonzero and have the same sign ----> no risk for
          // (dqF + dqB) = 0 cancellation causing a divide-by-0 in the above line
-          if (dq2 <= 0.0) dqm(i,n) = 0.0;
+          if (dq2 <= 0.0) dqmn[n] = 0.0;
         }
       }
     }
@@ -469,10 +508,14 @@ void Reconstruction::PiecewiseLinearX3(
     Real dxm = (pco->x3v(k  ) - pco->x3f(k))/pco->dx3f(k);
 
     for (int i=il; i<=iu; ++i) {
-#pragma omp simd simdlen(SIMD_WIDTH)
+      Real *qln = &(ql(i,0));
+      Real *qrn = &(qr(i,0));
+      Real *qcn = &(qc(i,0));
+      Real *dqmn = &(dqm(i,0));
+#pragma omp simd simdlen(SIMD_WIDTH) aligned(qln,qrn,qcn,dqmn)
       for (int n=0; n<=nu; ++n) {
-        ql(i,n) = qc(i,n) + dxp*dqm(i,n);
-        qr(i,n) = qc(i,n) - dxm*dqm(i,n);
+        qln[n] = qcn[n] + dxp*dqmn[n];
+        qrn[n] = qcn[n] - dxm*dqmn[n];
       }
     }
 
@@ -488,13 +531,12 @@ void Reconstruction::PiecewiseLinearX3(
 // q, ql and qr can change
 void Reconstruction::PiecewiseLinearZeta(
     Radiation *prad, const int zs, const int ze,
-    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &q, 
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
   // set work arrays to shallow copies of scratch arrays
     AthenaArray<Real> &qc = scr1_nn_, &dql = scr2_nn_, &dqr = scr3_nn_,
                    &dqm = scr4_nn_;
-
 #pragma omp simd
     for (int n=zs; n<=ze; ++n) {
       // renamed dw* -> dq* from plm.cpp
@@ -540,7 +582,7 @@ void Reconstruction::PiecewiseLinearZeta(
 
 void Reconstruction::PiecewiseLinearPsi(
     Radiation *prad, const int ps, const int pe,
-    const AthenaArray<Real> &q, 
+    AthenaArray<Real> &q, 
     AthenaArray<Real> &ql, AthenaArray<Real> &qr) {
 
   // set work arrays to shallow copies of scratch arrays

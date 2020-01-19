@@ -41,8 +41,8 @@
 // tgas is gas temperature
 // This function updates normal absorption plus scattering opacity together
 
-void RadIntegrator::AbsorptionScattering(const AthenaArray<Real> &wmu_cm,
-          const AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
+void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &ir_cm)
 {
@@ -85,15 +85,19 @@ void RadIntegrator::AbsorptionScattering(const AthenaArray<Real> &wmu_cm,
       dtcsigmap = ct * sigma_p[ifr];
       rdtcsigmap = redfactor * dtcsigmap;
     }
-    
-#pragma omp simd reduction(+:jr_cm,suma1,suma2)
+    Real *ircm = &(ir_cm(nang*ifr));
+    Real *vn = &(vncsigma(0));
+    Real *vn2 = &(vncsigma2(0));
+    Real *coef = &(tran_coef(0));
+    Real *wmu = &(wmu_cm(0));     
+#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,coef,ircm,wmu)
     for(int n=0; n<nang; n++){
-       vncsigma(n) = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * tran_coef(n));
-       vncsigma2(n) = tran_coef(n) * vncsigma(n);
-       Real ir_weight = ir_cm(n+nang*ifr) * wmu_cm(n);
+       vn[n] = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * coef[n]);
+       vn2[n] = coef[n] * vn[n];
+       Real ir_weight = ircm[n] * wmu[n];
        jr_cm += ir_weight;
-       suma1 += (wmu_cm(n) * vncsigma2(n));
-       suma2 += (ir_weight * vncsigma(n));
+       suma1 += (wmu[n] * vn2[n]);
+       suma2 += (ir_weight * vn[n]);
     }
     suma3 = suma1 * (rdtcsigmas - rdtcsigmap);
     suma1 *= (rdtcsigmat + rdtcsigmap);
@@ -126,11 +130,12 @@ void RadIntegrator::AbsorptionScattering(const AthenaArray<Real> &wmu_cm,
       jr_cm = (suma1 * emission + suma2)/(1.0-suma3);
     
     // Update the co-moving frame specific intensity
-#pragma omp simd
+      Real *irn = &(ir_cm(nang*ifr));
+      Real *vn2 = &(vncsigma2(0));
+#pragma omp simd aligned(irn,vn2)
       for(int n=0; n<nang; n++){
-        ir_cm(n+nang*ifr) +=
-                         ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
-                            - (rdtcsigmas + rdtcsigmae) * ir_cm(n+nang*ifr)) * vncsigma2(n);
+        irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
+                        - (rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
       }
     }
   }// End Frequency

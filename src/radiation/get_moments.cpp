@@ -43,18 +43,18 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
   
   Real *weight = &(wmu(0));
   
-  AthenaArray<Real> &i_mom = rad_mom;
 
   
   // reset the moment arrays to be zero
   // There are 13 3D arrays
   for(int n=0; n<13; ++n)
     for(int k=0; k<n3z; ++k)
-      for(int j=0; j<n2z; ++j)
-#pragma omp simd
+      for(int j=0; j<n2z; ++j){
+          Real *i_mom = &(rad_mom(n,k,j,0));
+#pragma omp simd aligned(i_mom)
         for(int i=0; i<n1z; ++i){
-          i_mom(n,k,j,i) = 0.0;
-        }
+          i_mom[i] = 0.0;
+        }}
 
   
   for(int k=0; k<n3z; ++k){
@@ -68,7 +68,7 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
           Real *cosx = &(mu(0,k,j,i,0));
           Real *cosy = &(mu(1,k,j,i,0));
           Real *cosz = &(mu(2,k,j,i,0));
-#pragma omp simd reduction(+:er,frx,fry,frz,prxx,pryy,przz,prxy,prxz,pryz)
+#pragma omp simd aligned(cosx,weight,intensity,cosy,cosz) reduction(+:er,frx,fry,frz,prxx,pryy,przz,prxy,prxz,pryz)
           for(int n=0; n<nang; ++n){
             Real irweight = weight[n] * intensity[n];
             er   += irweight;
@@ -97,19 +97,19 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
 
           
           //assign the moments
-          i_mom(IER,k,j,i) += er;
-          i_mom(IFR1,k,j,i) += frx;
-          i_mom(IFR2,k,j,i) += fry;
-          i_mom(IFR3,k,j,i) += frz;
-          i_mom(IPR11,k,j,i) += prxx;
-          i_mom(IPR22,k,j,i) += pryy;
-          i_mom(IPR33,k,j,i) += przz;
-          i_mom(IPR12,k,j,i) += prxy;
-          i_mom(IPR13,k,j,i) += prxz;
-          i_mom(IPR23,k,j,i) += pryz;
-          i_mom(IPR21,k,j,i) += prxy;
-          i_mom(IPR31,k,j,i) += prxz;
-          i_mom(IPR32,k,j,i) += pryz;
+          rad_mom(IER,k,j,i) += er;
+          rad_mom(IFR1,k,j,i) += frx;
+          rad_mom(IFR2,k,j,i) += fry;
+          rad_mom(IFR3,k,j,i) += frz;
+          rad_mom(IPR11,k,j,i) += prxx;
+          rad_mom(IPR22,k,j,i) += pryy;
+          rad_mom(IPR33,k,j,i) += przz;
+          rad_mom(IPR12,k,j,i) += prxy;
+          rad_mom(IPR13,k,j,i) += prxz;
+          rad_mom(IPR23,k,j,i) += pryz;
+          rad_mom(IPR21,k,j,i) += prxy;
+          rad_mom(IPR31,k,j,i) += prxz;
+          rad_mom(IPR32,k,j,i) += pryz;
           
           
         }// End frequency loop
@@ -192,7 +192,7 @@ void Radiation::CalculateComMoment()
         for(int ifr=0; ifr<nfreq; ++ifr){
           er=0.0; frx=0.0; fry=0.0; frz=0.0;
           Real numsum = 0.0;
-#pragma omp simd reduction(+:numsum,er,frx,fry,frz)
+#pragma omp simd aligned(cosx,cosy,cosz) reduction(+:numsum,er,frx,fry,frz)
           for(int n=0; n<nang; ++n){
             Real vdotn = vx * cosx[n] + vy * cosy[n] + vz * cosz[n];
             Real vnc = 1.0 - vdotn * invcrat;

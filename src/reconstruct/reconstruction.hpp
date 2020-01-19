@@ -131,27 +131,27 @@ class Reconstruction {
 
   // overloads for cell centered variables with different ordering 
   void DonorCellX1(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q, const int array_order,
+                   AthenaArray<Real> &q, const int array_order,
                    AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void DonorCellX2(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q, const int array_order,
+                   AthenaArray<Real> &q, const int array_order,
                    AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void DonorCellX3(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q, const int array_order,
+                   AthenaArray<Real> &q, const int array_order,
                    AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void PiecewiseLinearX1(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q, const int array_order,
+                         AthenaArray<Real> &q, const int array_order,
                          AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void PiecewiseLinearX2(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q, const int array_order,
+                         AthenaArray<Real> &q, const int array_order,
                          AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void PiecewiseLinearX3(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q, const int array_order,
+                         AthenaArray<Real> &q, const int array_order,
                          AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void PiecewiseParabolicX1(const int k, const int j, const int il, const int iu,
@@ -167,20 +167,20 @@ class Reconstruction {
                             AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void DonorCellZeta(Radiation *prad, const int zs, const int ze,
-      const AthenaArray<Real> &q, 
+      AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void DonorCellPsi(Radiation *prad, const int ps, const int pe,
-      const AthenaArray<Real> &q, 
+      AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
   void PiecewiseLinearZeta(Radiation *prad, 
-      const int zs, const int ze, const AthenaArray<Real> &q, 
+      const int zs, const int ze, AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
 
   void PiecewiseLinearPsi(Radiation *prad, 
-      const int zs, const int ze, const AthenaArray<Real> &q, 
+      const int zs, const int ze, AthenaArray<Real> &q, 
       AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
  private:
