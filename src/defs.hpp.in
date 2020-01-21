@@ -90,6 +90,7 @@
 // debug build macros (DEBUG or NOT_DEBUG)
 #define @DEBUG_OPTION@
 
+#define ALI_LEN @ALI_LEN@
 // try/throw/catch C++ exception handling (ENABLE_EXCEPTIONS or DISABLE_EXCEPTIONS)
 // (enabled by default)
 #define @EXCEPTION_HANDLING_OPTION@

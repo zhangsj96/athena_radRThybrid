@@ -232,6 +232,11 @@ parser.add_argument('--hdf5_path',
                     default='',
                     help='path to HDF5 libraries')
 
+# --ali=[value] argument
+parser.add_argument('--ali',
+                    default='32',
+                    help='set number of bytes in alignment')
+
 # The main choices for --cxx flag, using "ctype[-suffix]" formatting, where "ctype" is the
 # major family/suite/group of compilers and "suffix" may represent variants of the
 # compiler version and/or predefined sets of compiler options. The C++ compiler front ends
@@ -408,8 +413,13 @@ definitions['RSOLVER'] = makefile_options['RSOLVER_FILE'] = args['flux']
 # --nghost=[value] argument
 definitions['NUMBER_GHOST_CELLS'] = args['nghost']
 
+
+
 # --nscalars=[value] argument
 definitions['NUMBER_PASSIVE_SCALARS'] = args['nscalars']
+
+# --ali=[value] argument
+definitions['ALI_LEN'] = args['ali']
 
 # -b argument
 # set variety of macros based on whether MHD/hydro or adi/iso are defined
@@ -550,6 +560,7 @@ if args['cxx'] == 'icpc-phi':
     )
     makefile_options['LINKER_FLAGS'] = ''
     makefile_options['LIBRARY_FLAGS'] = ''
+    definitions['ALI_LEN'] = '64'
 if args['cxx'] == 'cray':
     # Cray Compiling Environment 8.4 (2015-09-24) introduces C++11 feature completeness
     # (except "alignas"). v8.6 is C++14 feature-complete
@@ -847,6 +858,7 @@ print('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF'))
 print('  Thermal Conduction:         ' + ('ON' if args['tc'] else 'OFF'))
 print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
 print('  Self-Gravity:               ' + self_grav_string)
+print('  Aligned Option:             ' + args['ali'])
 print('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF'))
 print('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF'))
 print('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF'))
@@ -881,6 +893,7 @@ flog.write('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF') + 
 flog.write('  Thermal Conduction:         ' + ('ON' if args['tc'] else 'OFF') + '\n')
 flog.write('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF') + '\n')
 flog.write('  Self-Gravity:               ' + self_grav_string + '\n')
+flog.write('  Aligned Option:             ' + args['ali'] + '\n')
 flog.write('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF') + '\n')
 flog.write('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF') + '\n')
 flog.write('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF') + '\n')

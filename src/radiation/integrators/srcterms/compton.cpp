@@ -41,8 +41,8 @@
 // tgas is gas temperature
 // This function only update the absorption term in each cell
 
-void RadIntegrator::Compton(const AthenaArray<Real> &wmu_cm,
-          const AthenaArray<Real> &tran_coef, Real *sigma_s,
+void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, Real *sigma_s,
           Real dt, Real rho, Real &tgas, AthenaArray<Real> &ir_cm)
 {
 
@@ -76,10 +76,13 @@ void RadIntegrator::Compton(const AthenaArray<Real> &wmu_cm,
     
      // Calculate the sum \int gamma (1-vdotn/c) dw_0 4 dt csigma_s /T_e
       Real suma1 = 0.0, suma2 = 0.0, jr_cm=0.0, source=0.0;
-#pragma omp simd reduction(+:jr_cm,suma1)
+      Real *irn = &(ir_cm(nang*ifr));
+      Real *wmun = &(wmu_cm(0));
+      Real *tcoef = &(tran_coef(0));
+#pragma omp simd reduction(+:jr_cm,suma1) aligned(irn,wmun,tcoef:ALI_LEN)
       for(int n=0; n<nang; n++){
-         jr_cm += ir_cm(n+nang*ifr) * wmu_cm(n);
-         suma1 += tran_coef(n) * wmu_cm(n) * 4.0 * rdtcsigma * telectron;
+         jr_cm += irn[n] * wmun[n];
+         suma1 += tcoef[n] * wmun[n] * 4.0 * rdtcsigma * telectron;
       }
       suma2 = 4.0 * prat * dtcsigma*(gamma-1.0)*telectron/rho;
       
@@ -104,9 +107,10 @@ void RadIntegrator::Compton(const AthenaArray<Real> &wmu_cm,
        }
       }
       // Update the co-moving frame specific intensity
-#pragma omp simd
+
+#pragma omp simd aligned(irn,tcoef:ALI_LEN)
       for(int n=0; n<nang; n++){
-        ir_cm(n+nang*ifr) += source * tran_coef(n);
+        irn[n] += source * tcoef[n];
       }
       
     }// End Compton

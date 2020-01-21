@@ -46,8 +46,8 @@ public:
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &ir_cm);
   
-  void Compton(const AthenaArray<Real> &wmu_cm,
-          const AthenaArray<Real> &tran_coef, Real *sigma_s,
+  void Compton(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, Real *sigma_s,
           Real dt, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
   
   void LabToCom(const Real vx, const Real vy, const Real vz,

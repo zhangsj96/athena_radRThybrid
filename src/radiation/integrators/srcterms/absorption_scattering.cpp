@@ -88,12 +88,12 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     Real *ircm = &(ir_cm(nang*ifr));
     Real *vn = &(vncsigma(0));
     Real *vn2 = &(vncsigma2(0));
-    Real *coef = &(tran_coef(0));
+    Real *tcoef = &(tran_coef(0));
     Real *wmu = &(wmu_cm(0));     
-#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,coef,ircm,wmu)
+#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       vn[n] = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * coef[n]);
-       vn2[n] = coef[n] * vn[n];
+       vn[n] = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
+       vn2[n] = tcoef[n] * vn[n];
        Real ir_weight = ircm[n] * wmu[n];
        jr_cm += ir_weight;
        suma1 += (wmu[n] * vn2[n]);
@@ -132,7 +132,7 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     // Update the co-moving frame specific intensity
       Real *irn = &(ir_cm(nang*ifr));
       Real *vn2 = &(vncsigma2(0));
-#pragma omp simd aligned(irn,vn2)
+#pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
         irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
                         - (rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];

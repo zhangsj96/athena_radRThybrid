@@ -18,14 +18,15 @@ def prepare(**kwargs):
   athena.configure('radiation','mpi','hdf5',
       prob='beam',
       coord='cartesian',
-      flux='hllc')
+      flux='hllc',
+      nghost='4')
   athena.make()
 
 # Run Athena++
 def run(**kwargs):
   #case 1
   arguments = ['time/rad_xorder=3']
-  athena.mpirun(4,'radiation/athinput.beam_smr', arguments)
+  athena.run(4,'radiation/athinput.beam_smr', arguments)
   bashcommand="mv bin/*athdf* ../../"
 #  os.system(bashcommand)
 # Analyze outputs

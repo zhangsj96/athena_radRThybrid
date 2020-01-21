@@ -23,6 +23,7 @@
 #include "./integrators/rad_integrators.hpp"
 #include "../mesh/mesh.hpp"
 #include "../hydro/hydro.hpp"
+#include "../defs.hpp"
 
 //--------------------------------------------------------------------------------------
 // \!fn void CalculateMoment()
@@ -51,7 +52,7 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
     for(int k=0; k<n3z; ++k)
       for(int j=0; j<n2z; ++j){
           Real *i_mom = &(rad_mom(n,k,j,0));
-#pragma omp simd aligned(i_mom)
+#pragma omp simd aligned(i_mom:ALI_LEN)
         for(int i=0; i<n1z; ++i){
           i_mom[i] = 0.0;
         }}
@@ -68,7 +69,7 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
           Real *cosx = &(mu(0,k,j,i,0));
           Real *cosy = &(mu(1,k,j,i,0));
           Real *cosz = &(mu(2,k,j,i,0));
-#pragma omp simd aligned(cosx,weight,intensity,cosy,cosz) reduction(+:er,frx,fry,frz,prxx,pryy,przz,prxy,prxz,pryz)
+#pragma omp simd aligned(cosx,weight,intensity,cosy,cosz:ALI_LEN) reduction(+:er,frx,fry,frz,prxx,pryy,przz,prxy,prxz,pryz)
           for(int n=0; n<nang; ++n){
             Real irweight = weight[n] * intensity[n];
             er   += irweight;
@@ -192,7 +193,7 @@ void Radiation::CalculateComMoment()
         for(int ifr=0; ifr<nfreq; ++ifr){
           er=0.0; frx=0.0; fry=0.0; frz=0.0;
           Real numsum = 0.0;
-#pragma omp simd aligned(cosx,cosy,cosz) reduction(+:numsum,er,frx,fry,frz)
+#pragma omp simd aligned(cosx,cosy,cosz:ALI_LEN) reduction(+:numsum,er,frx,fry,frz)
           for(int n=0; n<nang; ++n){
             Real vdotn = vx * cosx[n] + vy * cosy[n] + vz * cosz[n];
             Real vnc = 1.0 - vdotn * invcrat;
