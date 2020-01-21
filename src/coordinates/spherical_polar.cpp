@@ -678,8 +678,8 @@ void SphericalPolar::GetGeometryPsi(Radiation *prad, const int k, const int j,
   int &npsi = prad->npsi;
   Real radius = x1v(i);
   Real theta = x2v(j);
-  Real sinzeta_f = 1.0 - prad->coszeta_f(n_zeta) * prad->coszeta_f(n_zeta);
-  sinzeta_f = sqrt(sinzeta_f);
+  Real sinzeta_v = 1.0 - prad->coszeta_v(n_zeta) * prad->coszeta_v(n_zeta);
+  sinzeta_v = sqrt(sinzeta_v);
   Real cottheta = cos(theta)/sin(theta);
   if(npsi == 1){
     for(int n=0; n<2*npsi+1; ++n){
@@ -687,7 +687,7 @@ void SphericalPolar::GetGeometryPsi(Radiation *prad, const int k, const int j,
     }
   }else{
     for(int n=0; n<2*npsi+1; ++n){
-      g_psi(n) = sinzeta_f * cottheta * sin(prad->psi_f(n))/radius;
+      g_psi(n) = sinzeta_v * cottheta * sin(prad->psi_f(n))/radius;
     }
   }
 

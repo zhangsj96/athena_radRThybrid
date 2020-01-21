@@ -534,7 +534,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   }//end angule_flag==1 and nzeta > 0
 
 
-  // Now calculate phi flux
+  // Now calculate psi flux
   if(prad->angle_flag == 1 && prad->npsi > 0){
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
@@ -553,8 +553,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             }// end nzeta
             // Add ghost zones
             // phi is periodic
+            // the first one qpsi[NGHOST]
+            // The last one is qpsi[NGHOST+2*npsi-1]
             for(int m=1; m<=NGHOST; ++m){
-              q_psi_(NGHOST-m) = q_psi_(2*npsi+NGHOST-m-1);
+              q_psi_(NGHOST-m) = q_psi_(2*npsi+NGHOST-m);
             }      
             for(int m=1; m<=NGHOST; ++m){
               q_psi_(2*npsi+NGHOST+m-1) = q_psi_(NGHOST+m-1);
