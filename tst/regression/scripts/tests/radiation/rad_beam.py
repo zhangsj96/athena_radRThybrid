@@ -26,7 +26,7 @@ def prepare(**kwargs):
 def run(**kwargs):
   #case 1
   arguments = ['time/rad_xorder=3']
-  athena.run(4,'radiation/athinput.beam_smr', arguments)
+  athena.run('radiation/athinput.beam_smr', arguments)
   bashcommand="mv bin/*athdf* ../../"
 #  os.system(bashcommand)
 # Analyze outputs

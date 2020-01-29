@@ -82,7 +82,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
   // This part is used for all three directions when adv_flag is turned on
   if(adv_flag_ > 0){
-    for(int k=0; k<ncells3; ++k)
+    for(int k=0; k<ncells3; ++k){
       for(int j=0; j<ncells2; ++j){
           if (ncells2 > 1) pco->CenterWidth2(k,j,0,ncells1-1,cwidth2_);
           if (ncells3 > 1) pco->CenterWidth3(k,j,0,ncells1-1,cwidth3_);
@@ -117,35 +117,24 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                
              }
           }
-        }
-      }
-  } // End adv_flag
-    
+        }// end i
+      }// end j
+    }// end k
 
-  for (int k=kl; k<=ku; ++k){
-    for (int j=jl; j<=ju; ++j){
+    for (int k=kl; k<=ku; ++k){
+      for (int j=jl; j<=ju; ++j){
         // get the velocity at the interface
-      for(int i=is-1; i<=ie+1; ++i){
-        Real dxl = pco->x1f(i)-pco->x1v(i-1);
-        Real dxr = pco->x1v(i) - pco->x1f(i);
-        Real factl = dxr/(dxl+dxr);
-        Real factr = dxl/(dxl+dxr);
-        for(int ifr=0; ifr<nfreq; ++ifr){
-          Real *cosx = &(prad->mu(0,k,j,i-1,0));
-          Real *cosx1 = &(prad->mu(0,k,j,i,0));
-          Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosx,cosx1,veln:ALI_LEN)
-          for(int n=0; n<nang; ++n){
-            // linear intepolation between x1v(i-1), x1f(i), x1v(i)
-            veln[n] = prad->reduced_c *
-                                (factl * cosx[n] + factr * cosx1[n]);                       
-          }
-          if(adv_flag_ > 0){
+        for(int i=is-1; i<=ie+1; ++i){
+          Real dxl = pco->x1f(i)-pco->x1v(i-1);
+          Real dxr = pco->x1v(i) - pco->x1f(i);
+          Real factl = dxr/(dxl+dxr);
+          Real factr = dxl/(dxl+dxr);
+          for(int ifr=0; ifr<nfreq; ++ifr){
             Real *cosx = &(prad->mu(0,k,j,i-1,0));
             Real *cosx1 = &(prad->mu(0,k,j,i,0));
             Real *tempi2 = &(temp_i2_(k,j,i-1,ifr*nang));
             Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-            Real *veln = &(vel2_(k,j,i,ifr*nang));
+            Real *veln = &(vel_(k,j,i,ifr*nang));
 #pragma omp simd aligned(cosx,cosx1,tempi2,tempi2_1,veln:ALI_LEN)
             for(int n=0; n<nang; ++n){
               // linear intepolation between x1v(i-1), x1f(i), x1v(i)
@@ -154,11 +143,15 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                      + factr * cosx1[n] * tempi2_1[n]);
             }
 
-          }// end adv_flag_
-        }
-      }
-    }
-  }
+
+          }// end ifr
+        }// end i
+      }// end j
+    }// endk
+
+  } // End adv_flag
+
+
     // First, do reconstruction of the specific intensities
 
   for (int k=kl; k<=ku; ++k) {
@@ -174,7 +167,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
       // calculate flux with velocity times the interface state
       for(int i=is; i<=ie+1; ++i){
-        Real *vel = &(vel_(k,j,i,0));
+        Real *vel = &(velx_(k,j,i,0));
         for(int n=0; n<prad->n_fre_ang; ++n){
           if(vel[n] > 0.0)
             x1flux(k,j,i,n) = vel[n] * il_(i,n);
@@ -203,7 +196,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
         // calculate flux with velocity times the interface state
         for(int i=is; i<=ie+1; ++i){
-          Real *vel = &(vel2_(k,j,i,0));
+          Real *vel = &(vel_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
             if(vel[n] > 0.0)
               x1flux(k,j,i,n) += vel[n] * il_(i,n);
@@ -228,45 +221,36 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     else // 3D
       kl = ks-1, ku = ke+1;
 
-    for (int k=kl; k<=ku; ++k){
+
+    if(adv_flag_ > 0){
+
+      for (int k=kl; k<=ku; ++k){
 #pragma omp for schedule(static)
-      for (int j=js; j<=je+1; ++j){
+        for (int j=js; j<=je+1; ++j){
         // get the velocity
-        for(int i=il; i<=iu; ++i){
-          Real dxl = pco->x2f(j)-pco->x2v(j-1);
-          Real dxr = pco->x2v(j) - pco->x2f(j);
-          Real factl = dxr/(dxl+dxr);
-          Real factr = dxl/(dxl+dxr);
-          for(int ifr=0; ifr<nfreq; ++ifr){
-            Real *cosy = &(prad->mu(1,k,j-1,i,0));
-            Real *cosy1 = &(prad->mu(1,k,j,i,0));
-            Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosy,cosy1,veln:ALI_LEN)
-            for(int n=0; n<nang; ++n){
-            // linear intepolation between x2v(j-1), x2f(j), x2v(j)
-              veln[n] = prad->reduced_c *
-                          (factl * cosy[n] + factr * cosy1[n]);
-            }
-            if(adv_flag_ > 0){
+          for(int i=il; i<=iu; ++i){
+            Real dxl = pco->x2f(j)-pco->x2v(j-1);
+            Real dxr = pco->x2v(j) - pco->x2f(j);
+            Real factl = dxr/(dxl+dxr);
+            Real factr = dxl/(dxl+dxr);
+            for(int ifr=0; ifr<nfreq; ++ifr){
               Real *cosy = &(prad->mu(1,k,j-1,i,0));
               Real *cosy1 = &(prad->mu(1,k,j,i,0));
               Real *tempi2 = &(temp_i2_(k,j-1,i,ifr*nang));
               Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-              Real *veln = &(vel2_(k,j,i,ifr*nang));
+              Real *veln = &(vel_(k,j,i,ifr*nang));
 #pragma omp simd aligned(cosy,cosy1,tempi2,tempi2_1,veln:ALI_LEN)
-               for(int n=0; n<nang; ++n){
+              for(int n=0; n<nang; ++n){
               // linear intepolation between x2v(j-1), x2f(j), x2v(j)                 
-                 veln[n] = prad->reduced_c *
+                veln[n] = prad->reduced_c *
                     (factl * cosy[n] * tempi2[n]
                      + factr * cosy1[n] * tempi2_1[n]);
-               }
-
-            }// end adv_flag
-
-          }// end ifr
-        }
-      }// end j
-    }// end k
+              }
+            }// end ifr
+          }// end i
+        }// end j
+      }// end k
+    }// end adv_flag
 
     for (int k=kl; k<=ku; ++k) {
       //reconstruct the first row
@@ -290,7 +274,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         //calculate the flux
       // calculate flux with velocity times the interface state
         for(int i=il; i<=iu; ++i){
-          Real *vel = &(vel_(k,j,i,0));
+          Real *vel = &(vely_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
             if(vel[n] > 0.0)
               x2flux(k,j,i,n) = vel[n] * il_(i,n);
@@ -329,7 +313,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         //calculate the flux
       // calculate flux with velocity times the interface state
           for(int i=il; i<=iu; ++i){
-            Real *vel = &(vel2_(k,j,i,0));
+            Real *vel = &(vel_(k,j,i,0));
             for(int n=0; n<prad->n_fre_ang; ++n){
               if(vel[n] > 0.0)
                 x2flux(k,j,i,n) += vel[n] * il_(i,n);
@@ -360,44 +344,34 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
     // First, calculate the transport velocity
 
-    for (int k=ks; k<=ke+1; ++k){
+    if(adv_flag_ > 0){
+
+      for (int k=ks; k<=ke+1; ++k){
 #pragma omp for schedule(static)
-      for (int j=jl; j<=ju; ++j){
+        for (int j=jl; j<=ju; ++j){
         // get the velocity
-        for(int i=il; i<=iu; ++i){
-          Real dxl = pco->x3f(k) - pco->x3v(k-1);
-          Real dxr = pco->x3v(k) - pco->x3f(k);
-          Real factl = dxr/(dxl+dxr);
-          Real factr = dxl/(dxl+dxr);
-          for(int ifr=0; ifr<nfreq; ++ifr){
-            Real *cosz = &(prad->mu(2,k-1,j,i,0));
-            Real *cosz1 = &(prad->mu(2,k,j,i,0));
-            Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosz,cosz1,veln:ALI_LEN)
-            for(int n=0; n<nang; ++n){
-            // linear intepolation between x2v(j-1), x2f(j), x2v(j)
-              veln[n] = prad->reduced_c *
-                          (factl * cosz[n] + factr * cosz1[n]);
-            }
-            if(adv_flag_ > 0){
-               Real *cosz = &(prad->mu(2,k-1,j,i,0));
-               Real *cosz1 = &(prad->mu(2,k,j,i,0));
-               Real *tempi2 = &(temp_i2_(k-1,j,i,ifr*nang));
-               Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-               Real *veln = &(vel2_(k,j,i,ifr*nang));
+          for(int i=il; i<=iu; ++i){
+            Real dxl = pco->x3f(k) - pco->x3v(k-1);
+            Real dxr = pco->x3v(k) - pco->x3f(k);
+            Real factl = dxr/(dxl+dxr);
+            Real factr = dxl/(dxl+dxr);
+            for(int ifr=0; ifr<nfreq; ++ifr){
+              Real *cosz = &(prad->mu(2,k-1,j,i,0));
+              Real *cosz1 = &(prad->mu(2,k,j,i,0));
+              Real *tempi2 = &(temp_i2_(k-1,j,i,ifr*nang));
+              Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
+              Real *veln = &(vel_(k,j,i,ifr*nang));
 #pragma omp simd aligned(cosz,cosz1,tempi2,tempi2_1,veln:ALI_LEN)
-               for(int n=0; n<nang; ++n){
+              for(int n=0; n<nang; ++n){
               // linear intepolation between x2v(j-1), x2f(j), x2v(j)                 
-                 veln[n] = prad->reduced_c *
-                     (factl * cosz[n] * tempi2[n] + factr * cosz1[n] * tempi2_1[n]);
-               }
-
-            }// end adv_flag
-
-          }// end ifr
-        }
-      }// end j
-    }// end k
+                veln[n] = prad->reduced_c *
+                  (factl * cosz[n] * tempi2[n] + factr * cosz1[n] * tempi2_1[n]);
+              }
+            }// end ifr
+          }
+        }// end j
+      }// end k
+    }// end adv_flag
 
     for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
       // reconstruct the first row
@@ -420,7 +394,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
       // calculate flux with velocity times the interface state
         for(int i=il; i<=iu; ++i){
-            Real *vel = &(vel_(k,j,i,0));
+            Real *vel = &(velz_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
             if(vel[n] > 0.0)
                 x3flux(k,j,i,n) = vel[n] * il_(i,n);
@@ -459,7 +433,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
       // calculate flux with velocity times the interface state
           for(int i=il; i<=iu; ++i){
-              Real *vel = &(vel2_(k,j,i,0));
+              Real *vel = &(vel_(k,j,i,0));
             for(int n=0; n<prad->n_fre_ang; ++n){
               if(vel[n] > 0.0)
                   x3flux(k,j,i,n) += vel[n] * il_(i,n);

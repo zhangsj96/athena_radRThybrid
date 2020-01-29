@@ -70,7 +70,7 @@ public:
 
   int rad_xorder; 
 private:
-  AthenaArray<Real> vel_, vel2_;
+  AthenaArray<Real> vel_, velx_,vely_,velz_;
   AthenaArray<Real> il_, ilb_, ir_;// for recontruction
                           // temporary array to store the flux, velocity
   AthenaArray<Real> temp_i1_, temp_i2_; // temporary array to store Div q
