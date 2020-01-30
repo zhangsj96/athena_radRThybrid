@@ -69,8 +69,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
   Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
   Real *lab_ir;
   
-  int& nang =prad->nang;
-  int& nfreq=prad->nfreq;
+  int &nang =prad->nang;
+  int &nfreq=prad->nfreq;
   
   
   // Get the temporary array
@@ -330,7 +330,7 @@ void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i,
       Real *cosx = &(prad->mu(0,k,j,i,0));
       Real *cosy = &(prad->mu(1,k,j,i,0));
       Real *cosz = &(prad->mu(2,k,j,i,0));
-#pragma omp simd aligned(cosx,weight,intensity,cosy,cosz:ALI_LEN) reduction(+:er_f,fr1_f,fr2_f,fr3_f,pr11_f,pr12_f,pr13_f,pr22_f,pr23_f,pr33_f)
+#pragma omp simd aligned(cosx,weight,irn,cosy,cosz:ALI_LEN) reduction(+:er_f,fr1_f,fr2_f,fr3_f,pr11_f,pr12_f,pr13_f,pr22_f,pr23_f,pr33_f)
       for(int n=0; n<nang; ++n){
         Real irweight = weight[n] * irn[n];
         er_f   += irweight;
