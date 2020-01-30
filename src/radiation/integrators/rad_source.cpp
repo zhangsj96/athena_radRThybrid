@@ -105,12 +105,26 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
          tgas = gm1*tgas/rho;
          tgas = std::max(tgas,prad->t_floor_);
 
+         // calculate radiation energy density
+         Real er = 0.0;
+         for(int ifr=0; ifr<nfreq; ++ifr){ 
+           Real *irn = &(ir(k,j,i,ifr*nang));
+           Real *weight = &(prad->wmu(0));
+           Real er_freq = 0.0;
+#pragma omp simd reduction(+:er_freq)
+           for(int n=0; n<nang; ++n){
+             er_freq += weight[n] * irn[n];
+           }
+           er_freq *= prad->wfreq(ifr);
+           er += er_freq;
+         }       
+
          // Do not use the velocity directly in strongly radiation pressure
          // dominated regime
          // use the predicted velocity based on moment equation
-         if(prat * prad->rad_mom(IER,k,j,i) * invcrat * invcrat > rho){
+         if(prat * er * invcrat * invcrat > rho){
 
-            PredictVel(k,j,i, 0.5 * dt, rho, &vx, &vy, &vz);
+            PredictVel(ir,k,j,i, 0.5 * dt, rho, &vx, &vy, &vz);
             vel = vx * vx + vy * vy + vz * vz;
 
          }
@@ -292,27 +306,67 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
 }
 
 
-void RadIntegrator::PredictVel(int k, int j, int i, Real dt, Real rho, Real *vx,
-                              Real *vy, Real *vz)
+void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i, 
+      Real dt, Real rho, Real *vx, Real *vy, Real *vz)
 {
     Radiation *prad = pmy_rad;
   
     Real &prat = prad->prat;
     Real invcrat = 1.0/prad->crat;
     Real ct = dt * prad->reduced_c;
-  
-    Real &er =prad->rad_mom(IER,k,j,i);
-  
-    Real &fr1=prad->rad_mom(IFR1,k,j,i);
-    Real &fr2=prad->rad_mom(IFR2,k,j,i);
-    Real &fr3=prad->rad_mom(IFR3,k,j,i);
-  
-    Real &pr11=prad->rad_mom(IPR11,k,j,i);
-    Real &pr12=prad->rad_mom(IPR12,k,j,i);
-    Real &pr13=prad->rad_mom(IPR13,k,j,i);
-    Real &pr22=prad->rad_mom(IPR22,k,j,i);
-    Real &pr23=prad->rad_mom(IPR23,k,j,i);
-    Real &pr33=prad->rad_mom(IPR33,k,j,i);
+    int& nang =prad->nang;
+    int& nfreq=prad->nfreq;
+    // first, calculate the moments
+    Real er =0.0, fr1=0.0, fr2=0.0, fr3=0.0,
+         pr11=0.0,pr12=0.0,pr13=0.0,pr22=0.0,
+         pr23=0.0,pr33=0.0;
+    Real *weight = &(prad->wmu(0));
+    for(int ifr=0; ifr<nfreq; ++ifr){
+      Real er_f = 0.0,fr1_f=0.0,fr2_f=0.0,fr3_f=0.0,
+           pr11_f=0.0,pr12_f=0.0,pr13_f=0.0,pr22_f=0.0,
+           pr23_f=0.0,pr33_f=0.0;
+
+      Real *irn = &(ir(k,j,i,ifr*nang));
+      Real *cosx = &(prad->mu(0,k,j,i,0));
+      Real *cosy = &(prad->mu(1,k,j,i,0));
+      Real *cosz = &(prad->mu(2,k,j,i,0));
+#pragma omp simd aligned(cosx,weight,intensity,cosy,cosz:ALI_LEN) reduction(+:er_f,fr1_f,fr2_f,fr3_f,pr11_f,pr12_f,pr13_f,pr22_f,pr23_f,pr33_f)
+      for(int n=0; n<nang; ++n){
+        Real irweight = weight[n] * irn[n];
+        er_f   += irweight;
+        fr1_f  += irweight * cosx[n];
+        fr2_f  += irweight * cosy[n];
+        fr3_f  += irweight * cosz[n];
+        pr11_f += irweight * cosx[n] * cosx[n];
+        pr12_f += irweight * cosx[n] * cosy[n];
+        pr13_f += irweight * cosx[n] * cosz[n];
+        pr22_f += irweight * cosy[n] * cosy[n];
+        pr23_f += irweight * cosy[n] * cosz[n];
+        pr33_f += irweight * cosz[n] * cosz[n];
+      }
+      er_f *= prad->wfreq(ifr);
+      fr1_f *= prad->wfreq(ifr);
+      fr2_f *= prad->wfreq(ifr);
+      fr3_f *= prad->wfreq(ifr);
+      pr11_f *= prad->wfreq(ifr);
+      pr12_f *= prad->wfreq(ifr);
+      pr13_f *= prad->wfreq(ifr);
+      pr22_f *= prad->wfreq(ifr);
+      pr23_f *= prad->wfreq(ifr);
+      pr33_f *= prad->wfreq(ifr);
+
+      er   += er_f;
+      fr1  += fr1_f;
+      fr2  += fr2_f;
+      fr3  += fr3_f;
+      pr11 += pr11_f;
+      pr12 += pr12_f;
+      pr13 += pr13_f;
+      pr22 += pr22_f;
+      pr23 += pr23_f;
+      pr33 += pr33_f;
+
+    }
   
     Real dtcsigma = ct * (prad->grey_sigma(OPAS,k,j,i) + prad->grey_sigma(OPAA,k,j,i));
   

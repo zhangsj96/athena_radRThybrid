@@ -1659,7 +1659,8 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesRad(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::RadMomOpacity(MeshBlock *pmb, int stage) {
   if (stage <= nstages) {
-    pmb->prad->CalculateMoment(pmb->prad->ir);
+   // only need 
+//    pmb->prad->CalculateMoment(pmb->prad->ir);
     pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);
     return TaskStatus::success;
   }

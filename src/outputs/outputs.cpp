@@ -1067,6 +1067,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         pmb=pm->pblock;
         while(pmb != NULL){
          // Calculate Com-moving moments and grey opacity for dump
+          pmb->prad->CalculateMoment(pmb->prad->ir);
           pmb->prad->CalculateComMoment();
           pmb=pmb->next;
         } 

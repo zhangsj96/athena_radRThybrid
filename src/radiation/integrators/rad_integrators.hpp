@@ -65,7 +65,7 @@ public:
   void GetTaufactor(const Real vx, const Real vy, const Real vz,
                                  const Real ds, const Real sigma, Real *factor);
 
-  void PredictVel(int k, int j, int i, Real dt, Real rho,
+  void PredictVel(AthenaArray<Real> &ir, int k, int j, int i, Real dt, Real rho,
                   Real *vx, Real *vy, Real *vz);
 
   int rad_xorder; 
