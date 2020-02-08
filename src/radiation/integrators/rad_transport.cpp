@@ -78,10 +78,11 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 //--------------------------------------------------------------------------------------
 // i-direction
 
-  temp_i1_ = ir;
+
 
   // This part is used for all three directions when adv_flag is turned on
   if(adv_flag_ > 0){
+
     for(int k=0; k<ncells3; ++k){
       for(int j=0; j<ncells2; ++j){
           if (ncells2 > 1) pco->CenterWidth2(k,j,0,ncells1-1,cwidth2_);
@@ -157,12 +158,23 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
       // reconstruct L/R states
-      if (order == 1) {
-        pmb->precon->DonorCellX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
-      } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
-      } else {
-        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
+      if(adv_flag_ > 0)
+      {
+        if (order == 1) {
+          pmb->precon->DonorCellX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
+        }
+      }else{
+        if (order == 1) {
+          pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+        }        
       }
 
       // calculate flux with velocity times the interface state
@@ -254,21 +266,44 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
     for (int k=kl; k<=ku; ++k) {
       //reconstruct the first row
-      if (order == 1) {
-        pmb->precon->DonorCellX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
-      } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
-      } else {
-        pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
+      if(adv_flag_ > 0){
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
+        }
+      }else{// end adv_flag
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        }        
       }
 
       for(int j=js; j<=je+1; ++j){
-        if (order == 1) {
-          pmb->precon->DonorCellX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+
+        if(adv_flag_ > 0){
+
+          if (order == 1) {
+            pmb->precon->DonorCellX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          } else if (order == 2) {
+            pmb->precon->PiecewiseLinearX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          } else {
+            pmb->precon->PiecewiseParabolicX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          }
+
+        }else{
+          if (order == 1) {
+            pmb->precon->DonorCellX2(k, j, il, iu, ir, -1, ilb_, ir_);
+          } else if (order == 2) {
+            pmb->precon->PiecewiseLinearX2(k, j, il, iu, ir, -1, ilb_, ir_);
+          } else {
+            pmb->precon->PiecewiseParabolicX2(k, j, il, iu, ir, -1, ilb_, ir_);
+          }       
         }
 
         //calculate the flux
@@ -375,21 +410,43 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
     for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
       // reconstruct the first row
-      if (order == 1) {
-        pmb->precon->DonorCellX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
-      } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
-      } else {
-        pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
+      if(adv_flag_ > 0){
+        if (order == 1) {
+          pmb->precon->DonorCellX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
+        }
+      }else{
+        if (order == 1) {
+          pmb->precon->DonorCellX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+        }        
       }
+
       for (int k=ks; k<=ke+1; ++k) {
         // reconstruct L/R states at k
-        if (order == 1) {
-          pmb->precon->DonorCellX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+        if(adv_flag_ > 0){
+          if (order == 1) {
+            pmb->precon->DonorCellX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          } else if (order == 2) {
+            pmb->precon->PiecewiseLinearX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          } else {
+            pmb->precon->PiecewiseParabolicX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
+          }
+        }else{
+          if (order == 1) {
+            pmb->precon->DonorCellX3(k, j, il, iu, ir_, -1, ilb_, ir_);
+          } else if (order == 2) {
+            pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
+          } else {
+            pmb->precon->PiecewiseParabolicX3(k, j, il, iu, ir, -1, ilb_, ir_);
+          }
+
         }
 
       // calculate flux with velocity times the interface state

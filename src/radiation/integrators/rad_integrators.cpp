@@ -92,9 +92,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
   
-  temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-  temp_i2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-  
+  if(adv_flag_ > 0){
+    temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    temp_i2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+  }
+
   vel_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   velx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   vely_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -281,8 +283,10 @@ RadIntegrator::~RadIntegrator()
 
   ir_.DeleteAthenaArray();
 
-  temp_i1_.DeleteAthenaArray();
-  temp_i2_.DeleteAthenaArray();
+  if(adv_flag_ > 0){
+    temp_i1_.DeleteAthenaArray();
+    temp_i2_.DeleteAthenaArray();
+  }
 
   vel_.DeleteAthenaArray();
   velx_.DeleteAthenaArray();

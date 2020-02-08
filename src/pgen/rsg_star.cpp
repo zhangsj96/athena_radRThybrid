@@ -56,20 +56,20 @@ static AthenaArray<Real> bd_data;
 
 // The global variable
 
-static Real consFr = 6.90424e-6;
-static Real grav0 = 9.78764e-03;
+static Real consFr = 1.68545e-6;
+static Real grav0 = 3.18807e-03;
 static Real kappaes = 515.204;
 
-static Real rhounit = 2.3149e-8;
-static Real tunit = 7.0783e4;
-static Real lunit = 6.955e10;
+static const Real rhounit = 2.3149e-8;
+static const Real tunit = 7.0783e4;
+static const Real lunit = 6.955e10;
 static Real tfloor;
 static Real rhofloor;
 
-static Real lbottom=502.0566;
-static int in_line=1137;
+static Real lbottom=1016.3;
+static int in_line=81921;
 
-static Real rmax=1.02e3;
+static Real rmax=1.0163e3;
 
 
 //======================================================================================
@@ -114,9 +114,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
   
   tfloor = pin->GetOrAddReal("radiation", "tfloor", 0.001);
   rhofloor = pin->GetOrAddReal("hydro", "dfloor", 1.e-8);
-  rhounit = pin->GetOrAddReal("radiation", "rhounit", 1.e-8);
-  tunit = pin->GetOrAddReal("radiation", "Tunit", 1.e6);
-  lunit = pin->GetOrAddReal("radiation", "lunit", 1.48428e12);
   
   EnrollUserExplicitSourceFunction(GravityPotential);
 
@@ -232,7 +229,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
   return;
 }
 
+void MeshBlock::InitAfterRestart(ParameterInput *pin)
+{
 
+}
 
 //======================================================================================
 //! \fn void Mesh::TerminateUserMeshProperties(void)
@@ -513,46 +513,53 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   if(lright - lleft > 1) lleft = lright -1;
   
-  Real rho_rmax = ini_profile(lleft,2) + (rmax - ini_profile(lleft,0)) *
-                              (ini_profile(lright,2) - ini_profile(lleft,2))
-                             /(ini_profile(lright,0) - ini_profile(lleft,0));
-  Real tem_rmax = ini_profile(lleft,1) + (rmax - ini_profile(lleft,0)) *
-                              (ini_profile(lright,1) - ini_profile(lleft,1))
-                             /(ini_profile(lright,0) - ini_profile(lleft,0));
+//  Real rho_rmax = ini_profile(lleft,2) + (rmax - ini_profile(lleft,0)) *
+//                              (ini_profile(lright,2) - ini_profile(lleft,2))
+//                             /(ini_profile(lright,0) - ini_profile(lleft,0));
+//  Real tem_rmax = ini_profile(lleft,1) + (rmax - ini_profile(lleft,0)) *
+//                              (ini_profile(lright,1) - ini_profile(lleft,1))
+//                             /(ini_profile(lright,0) - ini_profile(lleft,0));
 
+  Real rho_rmax = ini_profile(in_line-1,2);
+  Real tem_rmax = ini_profile(in_line-1,1);
 
+  Real grav_rmax = grav0*pow(lbottom/rmax,2.0);
 
-  Real grav_rmax = grav0*pow(lbottom/rmax,1.572);
 
   
   // Initialize hydro variable
   for(int i=is; i<=ie; ++i) {
-    Real &x1 = pcoord->x1v(i);    
-    // get the position
-    int lleft=0;
+    Real &x1 = pcoord->x1v(i); 
+    Real tem = tem_rmax;
+    Real rho = rho_rmax;   
 
-    int lright=1;
-    while((x1 > ini_profile(lright,0)) && (lright < in_line-1)){
-       lright = lright+1;
-    }
-    if(lright - lleft > 1) lleft = lright -1;
-    
-    Real rho = ini_profile(lleft,2) + (x1 - ini_profile(lleft,0)) *
-                                (ini_profile(lright,2) - ini_profile(lleft,2))
-                               /(ini_profile(lright,0) - ini_profile(lleft,0));
-    Real tem = ini_profile(lleft,1) + (x1 - ini_profile(lleft,0)) *
-                                (ini_profile(lright,1) - ini_profile(lleft,1))
-                               /(ini_profile(lright,0) - ini_profile(lleft,0));
-    Real radflx = ini_profile(lleft,3) + (x1 - ini_profile(lleft,0)) *
-                                (ini_profile(lright,3) - ini_profile(lleft,3))
-                               /(ini_profile(lright,0) - ini_profile(lleft,0));
+    // get the position
+
 
     if(x1 > rmax){
       tem = tem_rmax;
       Real grav_local = grav_rmax * pow(x1/rmax,2.0);
       rho = rho_rmax * exp(-grav_local*(x1-rmax)/(tem_rmax));
       rho = std::max(rho,1.e-8);
+    }else{
+      int lleft=0;
+
+      int lright=1;
+      while((x1 > ini_profile(lright,0)) && (lright < in_line-1)){
+         lright = lright+1;
+      }
+      if(lright - lleft > 1) lleft = lright -1;
+      
+      rho = ini_profile(lleft,2) + (x1 - ini_profile(lleft,0)) *
+                                  (ini_profile(lright,2) - ini_profile(lleft,2))
+                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
+      tem = ini_profile(lleft,1) + (x1 - ini_profile(lleft,0)) *
+                                  (ini_profile(lright,1) - ini_profile(lleft,1))
+                                 /(ini_profile(lright,0) - ini_profile(lleft,0));
+
     }
+
+    Real radflx = consFr * (lbottom/x1) * (lbottom/x1);
 
     
     if(rho > 0.1 ) amp = 5.e-2;
@@ -560,12 +567,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
     
  //   rho *= (1.0 + amp * ((double)rand()/(double)RAND_MAX-0.5));
-
+    
     
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
-        phydro->u(IDN,k,j,i) = rho;
-        phydro->u(IM1,k,j,i) = rho * (amp * ((double)rand()/(double)RAND_MAX-0.5));
+        phydro->u(IDN,k,j,i) = rho * (1.0 + amp * ((double)rand()/(double)RAND_MAX-0.5));
+        phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
         phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS){
@@ -989,21 +996,16 @@ Real grav_pot(const Real radius, const Real theta, const Real phi)
   // the companion is located at \theta=90, phi=0, r=rm1
   //x=rm1, y=0, z=0
   // current point r\sin\theta \cosphi, r\sin\theta\sin phi, r\cos\theta
-  Real coef = -grav0*pow(lbottom,1.572)/0.572;
-  Real potphi = coef * pow(radius,-0.572);
-  if(radius > rmax){
-    Real pot_rmax = coef * pow(rmax,-0.572);
-    // potential goes as r^-1 with a fixed core mass
-    potphi = pot_rmax * (rmax/radius);
-  }
+  Real coef = -grav0*pow(lbottom,2.0);
+  Real potphi = coef * pow(radius,-1.0);
   return potphi;
 }
 
 
 //Gravitaional acceration takes the form
-// GM = grav0(r/r_0)^-1.572
+// GM = grav0(r/r_0)^-2
 // The potential is 
-//phi = -grav0*r0^1.572 r^-0.572/0.572
+//phi = -grav0*r0 r^-1
 // grav=-\partial \phi/\partial r
 
 void GravityPotential(MeshBlock *pmb, const Real time, const Real dt,
