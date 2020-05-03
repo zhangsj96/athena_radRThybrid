@@ -440,7 +440,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           }
         }else{
           if (order == 1) {
-            pmb->precon->DonorCellX3(k, j, il, iu, ir_, -1, ilb_, ir_);
+            pmb->precon->DonorCellX3(k, j, il, iu, ir, -1, ilb_, ir_);
           } else if (order == 2) {
             pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
           } else {
