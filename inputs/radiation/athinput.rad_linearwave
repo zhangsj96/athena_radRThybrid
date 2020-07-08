@@ -6,9 +6,9 @@ configure = --prob=radwave
 <job>
 problem_id = radwave        # problem ID: basename of output filenames
 
-#<output1>
-#file_type  = hst       # History data dump
-#dt         = 0.01      # time increment between outputs
+<output1>
+file_type  = hst       # History data dump
+dt         = 0.01      # time increment between outputs
 
 
 #<output2>
