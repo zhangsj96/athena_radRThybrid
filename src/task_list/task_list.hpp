@@ -23,6 +23,7 @@ class MeshBlock;
 class TaskList;
 class FFTGravitySolverTaskList;
 class TaskID;
+class IMRadiation;
 
 // TODO(felker): these 4x declarations can be nested in TaskList if MGTaskList is derived
 
@@ -111,6 +112,7 @@ class TaskList {
 //  \brief data and function definitions for TimeIntegratorTaskList derived class
 
 class TimeIntegratorTaskList : public TaskList {
+  friend class IMRadiation;
  public:
   TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm);
 

@@ -50,21 +50,16 @@
 #endif
 
 
-void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
-        AthenaArray<Real> &w, AthenaArray<Real> &bcc, AthenaArray<Real> &ir)
+void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt, 
+        AthenaArray<Real> &u,
+        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
 {
   Radiation *prad=pmb->prad;
   Coordinates *pco = pmb->pcoord;
   
   Real& prat = prad->prat;
   Real invcrat = 1.0/prad->crat;
-  Real invredc = 1.0/prad->reduced_c;
-  Real invredfactor = invredc/invcrat;
 
-  Real gm1 = pmb->peos->GetGamma() - 1.0;
-
-  Real rho_floor = pmb->peos->GetDensityFloor();
-  
   
   Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
   Real *lab_ir;
@@ -91,61 +86,14 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
         // updated u, not from w 
 
          Real rho = u(IDN,k,j,i);
-         rho = std::max(rho,rho_floor);
-         Real vx = u(IM1,k,j,i)/rho;
-         Real vy = u(IM2,k,j,i)/rho;
-         Real vz = u(IM3,k,j,i)/rho;
-         Real pb = 0.0;
-         if(MAGNETIC_FIELDS_ENABLED)
-           pb = 0.5*(SQR(bcc(IB1,k,j,i))+SQR(bcc(IB2,k,j,i))
-                +SQR(bcc(IB3,k,j,i)));
-
-         Real vel = vx * vx + vy * vy + vz * vz;
-         Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vel;
-         tgas = gm1*tgas/rho;
-         tgas = std::max(tgas,prad->t_floor_);
-
-         // calculate radiation energy density
-         Real er = 0.0;
-         for(int ifr=0; ifr<nfreq; ++ifr){ 
-           Real *irn = &(ir(k,j,i,ifr*nang));
-           Real *weight = &(prad->wmu(0));
-           Real er_freq = 0.0;
-#pragma omp simd reduction(+:er_freq)
-           for(int n=0; n<nang; ++n){
-             er_freq += weight[n] * irn[n];
-           }
-           er_freq *= prad->wfreq(ifr);
-           er += er_freq;
-         }       
-
-         // Do not use the velocity directly in strongly radiation pressure
-         // dominated regime
-         // use the predicted velocity based on moment equation
-         if(prat * er * invcrat * invcrat > rho){
-
-            PredictVel(ir,k,j,i, 0.5 * dt, rho, &vx, &vy, &vz);
-            vel = vx * vx + vy * vy + vz * vz;
-
-         }
-        
-         Real ratio = sqrt(vel) * invcrat;
-         // Limit the velocity to be smaller than the speed of light
-         if(ratio > prad->vmax){
-           Real factor = prad->vmax/ratio;
-           vx *= factor;
-           vy *= factor;
-           vz *= factor;
-           
-           vel *= (factor*factor);
-         }
-
-
+         Real vx = vel_source_(k,j,i,0);
+         Real vy = vel_source_(k,j,i,1);
+         Real vz = vel_source_(k,j,i,2);
+         Real vel = vx*vx + vy*vy + vz*vz;
         
         
          Real lorzsq = 1.0/(1.0 - vel  * invcrat * invcrat);
         
-
         
          sigma_at=&(prad->sigma_a(k,j,i,0));
          sigma_aer=&(prad->sigma_ae(k,j,i,0));
@@ -172,80 +120,118 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
          for(int n=0; n<nang; ++n){
             wmu_cm(n) *= numsum;
          }
-        
-         lab_ir=&(ir(k,j,i,0));
-        
+                
          for(int ifr=0; ifr<nfreq; ++ifr){
+           lab_ir=&(ir_ini(k,j,i,ifr*nang));
 #pragma omp simd
            for(int n=0; n<nang; ++n){
-             ir_cm(n+ifr*nang) = lab_ir[n+ifr*nang] * cm_to_lab(n);
+             ir_cm(n+ifr*nang) = lab_ir[n] * cm_to_lab(n);
            }
          }// End frequency
         
          // Add absorption and scattering opacity source
          AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, rho, tgas, ir_cm);
+                              sigma_s, dt, rho, tgas_(k,j,i), ir_cm);
         
          // Add compton scattering
          if(compton_flag_ > 0)
-           Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas, ir_cm);
+           Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_(k,j,i), ir_cm);
        
-        //After all the source terms are applied
-        // Calculate energy and momentum source terms
-        
+         //update specific intensity in the lab frame
+         // do not modify ir_ini
+         for(int ifr=0; ifr<nfreq; ++ifr){
+             lab_ir = &(ir(k,j,i,nang*ifr));
+           for(int n=0; n<nang; ++n){
+             lab_ir[n] = std::max(ir_cm(n+ifr*nang)/cm_to_lab(n), TINY_NUMBER);
+           }
+         }
+
+      }// end i
+    }// end j
+  }// end k
+
+}
+
+void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
+        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
+{
+
+  Radiation *prad=pmb->prad;
+
+  Real& prat = prad->prat;
+  Real invcrat = 1.0/prad->crat;
+  Real invredc = 1.0/prad->reduced_c;
+  Real invredfactor = invredc/invcrat;
+
+  Real gm1 = pmb->peos->GetGamma() - 1.0;
+
+  Real rho_floor = pmb->peos->GetDensityFloor();
+  
+  
+  Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
+
+  
+  int &nang =prad->nang;
+  int &nfreq=prad->nfreq;
+
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+ 
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
+      for(int i=is; i<=ie; ++i){
+      
         // first, calculate Er and Fr in lab frame before the step
         Real er0 = 0.0;
         Real frx0 = 0.0;
         Real fry0 = 0.0;
         Real frz0 = 0.0;
-      if(prad->set_source_flag == 0){
         
         for(int ifr=0; ifr<nfreq; ++ifr){
-#pragma omp simd reduction (+:er0,frx0,fry0,frz0)
-           for(int n=0; n<nang; ++n){
-               Real ir_weight = lab_ir[n+ifr*prad->nang] * prad->wmu(n);
-               er0 += ir_weight;
-               frx0 += ir_weight * prad->mu(0,k,j,i,n);
-               fry0 += ir_weight * prad->mu(1,k,j,i,n);
-               frz0 += ir_weight * prad->mu(2,k,j,i,n);
-           }
-           er0 *= prad->wfreq(ifr);
-           frx0 *= prad->wfreq(ifr);
-           fry0 *= prad->wfreq(ifr);
-           frz0 *= prad->wfreq(ifr);
-        }
-      }
-       
-       // now update the lab frame intensity
-        for(int ifr=0; ifr<nfreq; ++ifr){
+          Real *p_ir0 =  &(ir_ini(k,j,i,ifr*nang));
+          Real er_fr = 0.0;
+          Real frx_fr = 0.0;
+          Real fry_fr = 0.0;
+          Real frz_fr = 0.0;
+#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
           for(int n=0; n<nang; ++n){
-              lab_ir[n+ifr*nang] = std::max(ir_cm(n+ifr*nang)/cm_to_lab(n), TINY_NUMBER);
+            Real ir_weight = p_ir0[n] * prad->wmu(n);
+            er_fr  += ir_weight;
+            frx_fr += ir_weight * prad->mu(0,k,j,i,n);
+            fry_fr += ir_weight * prad->mu(1,k,j,i,n);
+            frz_fr += ir_weight * prad->mu(2,k,j,i,n);
           }
+          er0 += er_fr*prad->wfreq(ifr);
+          frx0 += frx_fr*prad->wfreq(ifr);
+          fry0 += fry_fr*prad->wfreq(ifr);
+          frz0 += frz_fr*prad->wfreq(ifr);
         }
 
-       // now calculate the new moments
-               // first, calculate Er and Fr in lab frame before the step
-      if(prad->set_source_flag == 0){
         Real er = 0.0;
         Real frx = 0.0;
         Real fry = 0.0;
         Real frz = 0.0;
         
         for(int ifr=0; ifr<nfreq; ++ifr){
-#pragma omp simd reduction (+:er,frx,fry,frz)
-           for(int n=0; n<nang; ++n){
-               Real ir_weight = lab_ir[n+ifr*prad->nang] * prad->wmu(n);
-               er += ir_weight;
-               frx += ir_weight * prad->mu(0,k,j,i,n);
-               fry += ir_weight * prad->mu(1,k,j,i,n);
-               frz += ir_weight * prad->mu(2,k,j,i,n);
-           }
-           er *= prad->wfreq(ifr);
-           frx *= prad->wfreq(ifr);
-           fry *= prad->wfreq(ifr);
-           frz *= prad->wfreq(ifr);
-        }
-        
+          Real *p_ir =  &(ir(k,j,i,ifr*nang));
+          Real er_fr = 0.0;
+          Real frx_fr = 0.0;
+          Real fry_fr = 0.0;
+          Real frz_fr = 0.0;
+#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
+          for(int n=0; n<nang; ++n){
+            Real ir_weight = p_ir[n] * prad->wmu(n);
+            er_fr  += ir_weight;
+            frx_fr += ir_weight * prad->mu(0,k,j,i,n);
+            fry_fr += ir_weight * prad->mu(1,k,j,i,n);
+            frz_fr += ir_weight * prad->mu(2,k,j,i,n);
+          }
+          er += er_fr*prad->wfreq(ifr);
+          frx += frx_fr*prad->wfreq(ifr);
+          fry += fry_fr*prad->wfreq(ifr);
+          frz += frz_fr*prad->wfreq(ifr);
+        }// end ifr
         
         // Now apply the radiation source terms to gas with energy and
         // momentum conservation
@@ -255,12 +241,12 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
         u(IEN,k,j,i) += (-prat*(er - er0 ) * invredfactor);
         
         //limit the velocity by speed of light
-        vx = u(IM1,k,j,i)/u(IDN,k,j,i);
-        vy = u(IM2,k,j,i)/u(IDN,k,j,i);
-        vz = u(IM3,k,j,i)/u(IDN,k,j,i);
-        vel = vx*vx+vy*vy+vz*vz;
+        Real vx = u(IM1,k,j,i)/u(IDN,k,j,i);
+        Real vy = u(IM2,k,j,i)/u(IDN,k,j,i);
+        Real vz = u(IM3,k,j,i)/u(IDN,k,j,i);
+        Real vel = vx*vx+vy*vy+vz*vz;
         vel = sqrt(vel);
-        ratio = vel * invcrat;
+        Real ratio = vel * invcrat;
         if(ratio > prad->vmax){
           Real factor = prad->vmax/ratio;
           u(IM1,k,j,i) *= factor;
@@ -268,6 +254,9 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
           u(IM3,k,j,i) *= factor;
         
         }
+      }// end i
+    }// end j
+  }// end k
         
         // check internal energy
 //        Real ekin=0.5 * (u(IM1,k,j,i) * u(IM1,k,j,i)
@@ -294,16 +283,101 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Re
 //          u(IEN,k,j,i) = eint  + pb + ekin;
 //        }
         
-       }//source flag
+
+}
+
+
+
+void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
+    AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
+    AthenaArray<Real> &ir)
+{
+
+
+  Real gm1 = pmb->peos->GetGamma() - 1.0;
+
+  Real rho_floor = pmb->peos->GetDensityFloor();
+
+  Radiation *prad=pmb->prad;  
+
+  Real& prat = prad->prat;
+  Real invcrat = 1.0/prad->crat;
+
+  int &nang =prad->nang;
+  int &nfreq=prad->nfreq;
+
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+ 
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
+      for(int i=is; i<=ie; ++i){
+
+        // for implicit update, using the quantities from the partially 
+        // updated u, not from w 
+
+         Real rho = u(IDN,k,j,i);
+         rho = std::max(rho,rho_floor);
+         Real vx = u(IM1,k,j,i)/rho;
+         Real vy = u(IM2,k,j,i)/rho;
+         Real vz = u(IM3,k,j,i)/rho;
+         Real pb = 0.0;
+         if(MAGNETIC_FIELDS_ENABLED)
+           pb = 0.5*(SQR(bcc(IB1,k,j,i))+SQR(bcc(IB2,k,j,i))
+                +SQR(bcc(IB3,k,j,i)));
+
+         Real vel = vx * vx + vy * vy + vz * vz;
+         Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vel;
+         tgas = gm1*tgas/rho;
+         tgas = std::max(tgas,pmb->prad->t_floor_);
+         tgas_(k,j,i) = tgas;
+        // Do not use the velocity directly in strongly radiation pressure
+         // dominated regime
+         // use the predicted velocity based on moment equatio
+
+         // calculate radiation energy density
+         Real er = 0.0;
+         for(int ifr=0; ifr<nfreq; ++ifr){ 
+           Real *irn = &(ir(k,j,i,ifr*nang));
+           Real *weight = &(prad->wmu(0));
+           Real er_freq = 0.0;
+#pragma omp simd reduction(+:er_freq)
+           for(int n=0; n<nang; ++n){
+             er_freq += weight[n] * irn[n];
+           }
+           er_freq *= prad->wfreq(ifr);
+           er += er_freq;
+         }   
+
+         if(prat * er * invcrat * invcrat > rho){
+
+            PredictVel(ir,k,j,i, 0.5 * dt, rho, &vx, &vy, &vz);
+            vel = vx * vx + vy * vy + vz * vz;
+
+         }
         
+         Real ratio = sqrt(vel) * invcrat;
+         // Limit the velocity to be smaller than the speed of light
+         if(ratio > prad->vmax){
+           Real factor = prad->vmax/ratio;
+           vx *= factor;
+           vy *= factor;
+           vz *= factor;
+           
+         }
+         vel_source_(k,j,i,0) = vx;
+         vel_source_(k,j,i,1) = vy;
+         vel_source_(k,j,i,2) = vz;
+
+
+   
       }// end i
     }// end j
-  }// end k
-    
+  }// end k  
 
+}// end the function
 
-  
-}
 
 
 void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i, 

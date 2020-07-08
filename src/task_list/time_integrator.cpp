@@ -1538,7 +1538,7 @@ TaskStatus TimeIntegratorTaskList::IntegrateRad(MeshBlock *pmb, int stage) {
       pmb->WeightedAve(prad->ir, prad->ir1, prad->ir2, ave_wghts,1);
 
     const Real wght = stage_wghts[stage-1].beta*pmb->pmy_mesh->dt;
-    prad->pradintegrator->FluxDivergence(wght, prad->ir); //ir is already partially updated
+    prad->pradintegrator->FluxDivergence(wght, prad->ir, prad->ir); //ir is already partially updated
 
     // no geometric source term for radiation
 
@@ -1553,7 +1553,7 @@ TaskStatus TimeIntegratorTaskList::IntegrateRad(MeshBlock *pmb, int stage) {
       const Real wght = beta*pmb->pmy_mesh->dt;
       // writing out to u2 register
       pmb->WeightedAve(prad->ir2, prad->ir1, prad->ir2, ave_wghts,1);
-      prad->pradintegrator->FluxDivergence(wght, prad->ir2);
+      prad->pradintegrator->FluxDivergence(wght, prad->ir2, prad->ir2);
 
     }
     return TaskStatus::next;
@@ -1597,7 +1597,10 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
     Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
     // Evaluate the time-dependent source terms
     // Both u and ir are partially updated, only w is from the beginning of the step
-    prad->pradintegrator->AddSourceTerms(pmb, dt, ph->u, ph->w, pf->bcc, prad->ir);
+    prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
+    prad->ir_ini = prad->ir;
+    prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir_ini, prad->ir);
+    prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_ini, prad->ir);
   } else {
     return TaskStatus::fail;
   }

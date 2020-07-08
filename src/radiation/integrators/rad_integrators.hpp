@@ -31,20 +31,26 @@ public:
   
   Radiation *pmy_rad;
   
-  void FluxDivergence(const Real wght, AthenaArray<Real> &ir_out);
+  void FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
+                                       AthenaArray<Real> &ir_out);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
-
-
   
-  void AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
-        AthenaArray<Real> &w, AthenaArray<Real> &bcc, AthenaArray<Real> &ir);
+  void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
+        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
+
+  void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
+        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
   void AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &ir_cm);
+
+  void GetTgasVel(MeshBlock *pmb, const Real dt, 
+       AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
+       AthenaArray<Real> &ir);
   
   void Compton(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_s,
@@ -79,6 +85,8 @@ private:
   AthenaArray<Real> g_zeta_, q_zeta_, ql_zeta_, qr_zeta_, zeta_flux_, zeta_area_;
   AthenaArray<Real> g_psi_, q_psi_, ql_psi_, qr_psi_, psi_flux_, psi_area_;
   AthenaArray<Real> dflx_ang_, ang_vol_;
+  AthenaArray<Real> tgas_, vel_source_; // array to store gas temperature, 
+                                        // velocity for source term
                                     
  // temporary 1D array with size of nang
   Real taufact_;

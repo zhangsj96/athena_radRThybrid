@@ -109,6 +109,10 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   cm_to_lab_.NewAthenaArray(nang);
   ir_cm_.NewAthenaArray(prad->n_fre_ang);
 
+  tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
+  vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
+  // the three velocity components used in the source terms
+
   if(prad->angle_flag == 1){
     int &nzeta = prad->nzeta;
     int &npsi = prad->npsi;
@@ -300,6 +304,7 @@ RadIntegrator::~RadIntegrator()
   tran_coef_.DeleteAthenaArray();
   cm_to_lab_.DeleteAthenaArray();
   ir_cm_.DeleteAthenaArray();
+  tgas_.DeleteAthenaArray();
 
   if(pmy_rad->angle_flag == 1){
     int &nzeta = pmy_rad->nzeta;

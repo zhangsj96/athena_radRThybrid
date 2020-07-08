@@ -15,10 +15,10 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "bbhdisk"
+#define PROBLEM_GENERATOR "rad_linearwave"
 
 // coordinate system
-#define COORDINATE_SYSTEM "spherical_polar"
+#define COORDINATE_SYSTEM "cartesian"
 
 // Riemann solver
 #define RIEMANN_SOLVER "hllc"
@@ -49,7 +49,10 @@
 #define SELF_GRAVITY_ENABLED 0
 
 // include radiative transfer? default=0 (false)
-#define RADIATION_ENABLED 0
+#define RADIATION_ENABLED 1
+
+#define IM_RADIATION_ENABLED 0
+
 
 // include cosmic ray transport? default=0 (false)
 #define CR_ENABLED 0
@@ -79,13 +82,13 @@
 #define NO_FFT
 
 // MPI parallelization (MPI_PARALLEL or NOT_MPI_PARALLEL)
-#define MPI_PARALLEL
+#define NOT_MPI_PARALLEL
 
 // OpenMP parallelization (OPENMP_PARALLEL or NOT_OPENMP_PARALLEL)
 #define NOT_OPENMP_PARALLEL
 
 // HDF5 output (HDF5OUTPUT or NO_HDF5OUTPUT)
-#define HDF5OUTPUT
+#define NO_HDF5OUTPUT
 
 // debug build macros (DEBUG or NOT_DEBUG)
 #define NOT_DEBUG
@@ -97,8 +100,8 @@
 
 // compiler options
 #define COMPILED_WITH "g++"
-#define COMPILER_COMMAND "mpicxx"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
+#define COMPILER_COMMAND "g++"
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11  " // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)

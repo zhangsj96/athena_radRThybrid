@@ -156,6 +156,12 @@ parser.add_argument('-radiation',
                     default=False,
                     help='enable radiative transfer')
 
+# -radiation argument
+parser.add_argument('-implicit_radiation',
+                    action='store_true',
+                    default=False,
+                    help='enable radiative transfer')
+
 # -cosmic ray argument
 parser.add_argument('-cr',
                     action='store_true',
@@ -480,6 +486,11 @@ if args['radiation']:
     definitions['RADIATION_ENABLED'] = '1'
 else:
     definitions['RADIATION_ENABLED'] = '0'
+
+if args['implicit_radiation']:
+    definitions['IM_RADIATION_ENABLED'] = '1'
+else:
+    definitions['IM_RADIATION_ENABLED'] = '0'
 
 # -cr argument
 if args['cr']:

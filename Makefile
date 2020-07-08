@@ -3,8 +3,8 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = bbhdisk.cpp
-COORDINATES_FILE = spherical_polar.cpp
+PROBLEM_FILE = rad_linearwave.cpp
+COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
 RSOLVER_FILE = hllc.cpp
@@ -13,11 +13,11 @@ MPIFFT_FILE =
 
 # General compiler specifications
 
-CXX := mpicxx
+CXX := g++
 CPPFLAGS := 
 CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
-LDLIBS :=  -lhdf5
+LDLIBS := 
 GCOV_CMD := gcov
 
 # Preliminary definitions

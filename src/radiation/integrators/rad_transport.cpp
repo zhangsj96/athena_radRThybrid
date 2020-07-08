@@ -629,7 +629,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 }// end calculate_flux
 
 
-void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
+void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
+                                                    AthenaArray<Real> &ir_out)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
@@ -696,11 +697,12 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
       // update variable with flux divergence
       pmb->pcoord->CellVolume(k,j,is,ie,vol);
       for(int i=is; i<=ie; ++i){
+        Real *irin = &(ir_in(k,j,i,0));
         Real *iro = &(ir_out(k,j,i,0));
         Real *flxn = &(dflx(i,0));
-#pragma omp simd aligned(iro,flxn:ALI_LEN)
+#pragma omp simd aligned(irin,iro,flxn:ALI_LEN)
         for(int n=0; n<prad->n_fre_ang; ++n){
-          iro[n] = std::max(iro[n]-wght*flxn[n]/vol(i), TINY_NUMBER);
+          iro[n] = std::max(irin[n]-wght*flxn[n]/vol(i), TINY_NUMBER);
         }
       }
 
@@ -750,6 +752,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
             }           
           }// end npsi > 0
           // apply the flux divergence back
+          // We need ir_out, not ir_in, as ir_out is already partially updated
           Real *iro = &(ir_out(k,j,i,0));
           Real *flxn = &(dflx_ang(0));
           Real *angv = &(ang_vol(0));

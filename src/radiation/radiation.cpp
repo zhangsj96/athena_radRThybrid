@@ -161,6 +161,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     // future extension may add "int nregister" to Hydro class
     ir2.NewAthenaArray(nc3, nc2, nc1, n_fre_ang);
   }
+
+  ir_ini.NewAthenaArray(nc3,nc2,nc1,n_fre_ang);
+
+  if(IM_RADIATION_ENABLED){
+    ir_old.NewAthenaArray(nc3,nc2,nc1,n_fre_ang);
+
+  }
   
  // Do not add to cell-centered refinement, as 
 // radiation variables need to be done in different order      
