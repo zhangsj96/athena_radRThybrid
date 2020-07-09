@@ -23,7 +23,6 @@ class MeshBlock;
 class TaskList;
 class FFTGravitySolverTaskList;
 class TaskID;
-class IMRadiation;
 
 // TODO(felker): these 4x declarations can be nested in TaskList if MGTaskList is derived
 

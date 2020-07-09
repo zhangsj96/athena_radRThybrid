@@ -48,6 +48,7 @@ SRC_FILES := $(wildcard src/*.cpp) \
              $(wildcard src/radiation/*.cpp) \
              $(wildcard src/radiation/integrators/*.cpp) \
              $(wildcard src/radiation/integrators/srcterms/*.cpp) \
+             $(wildcard src/radiation/implicit/*.cpp) \
              $(wildcard src/cr/*.cpp) \
              $(wildcard src/cr/integrators/*.cpp) \
              $(wildcard src/thermal_conduction/*.cpp) \
