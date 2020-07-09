@@ -43,6 +43,7 @@
 #include "outputs/outputs.hpp"
 #include "parameter_input.hpp"
 #include "utils/utils.hpp"
+#include "radiation/implicit/radiation_implicit.hpp"
 
 // MPI/OpenMP headers
 #ifdef MPI_PARALLEL
@@ -452,8 +453,13 @@ int main(int argc, char *argv[]) {
       else if (SELF_GRAVITY_ENABLED == 2) // multigrid
         pmesh->pmgrd->Solve(stage);
       ptlist->DoTaskListOneStage(pmesh, stage);
-    }
 
+      if(IM_RADIATION_ENABLED){
+        pmesh->pimrad->JacobiIteration(pmesh,ptlist,stage);
+      }
+
+    }
+    
     pmesh->UserWorkInLoop();
 
     pmesh->ncycle++;

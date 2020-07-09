@@ -71,6 +71,8 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
   // TODO(felker): validate Field and Hydro diffusion with RK3, RK4, SSPRK(5,4)
   integrator = pin->GetOrAddString("time", "integrator", "vl2");
 
+  bool radiation_flag = ((bool)RADIATION_ENABLED) && ((bool)(!IM_RADIATION_ENABLED));
+
   if (integrator == "vl2") {
     // VL: second-order van Leer integrator (Stone & Gardiner, NewA 14, 139 2009)
     // Simple predictor-corrector scheme similar to MUSCL-Hancock
@@ -268,7 +270,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(INT_HYD, CALC_HYDFLX);
     }
 
-    if (RADIATION_ENABLED) {
+    if (radiation_flag) {
       AddTask(CALC_RADFLX,NONE);
       if (pm->multilevel) { // SMR or AMR
         AddTask(SEND_RADFLX,CALC_RADFLX);
@@ -302,7 +304,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     AddTask(SRCTERM_HYD,INT_HYD);
     // Hydro will also be updated with radiation source term
     TaskID src_term = SRCTERM_HYD;
-    if(RADIATION_ENABLED)
+    if(radiation_flag)
       src_term = (src_term | SRCTERM_RAD);
     if(CR_ENABLED+TC_ENABLED)
       src_term = (src_term | SRCTERM_CRTC);
@@ -364,7 +366,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
         TaskID setb=(SEND_HYD|SETB_HYD|SEND_FLD|SETB_FLD);
 
-        if(RADIATION_ENABLED)
+        if(radiation_flag)
           setb=(setb|SEND_RAD|SETB_RAD);
 
         if(CR_ENABLED+TC_ENABLED)
@@ -405,7 +407,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
         TaskID setb=(SEND_HYD|SETB_HYD);
 
-        if(RADIATION_ENABLED)
+        if(radiation_flag)
           setb=(setb|SEND_RAD|SETB_RAD);
 
         if(CR_ENABLED+TC_ENABLED)
@@ -442,7 +444,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     // everything else
     TaskID before_bval = CONS2PRIM;
     TaskID before_userwork = PHY_BVAL;
-    if(RADIATION_ENABLED){
+    if(radiation_flag){
       before_bval = (before_bval|SETB_RAD|SEND_RAD);
       before_userwork = (before_userwork|RAD_MOMOPACITY);
     }
@@ -455,7 +457,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     AddTask(PHY_BVAL,before_bval);
 
-    if(RADIATION_ENABLED)
+    if(radiation_flag)
       AddTask(RAD_MOMOPACITY,PHY_BVAL);
 
     if(CR_ENABLED+TC_ENABLED)
@@ -790,6 +792,8 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
 
 
 void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
+
+  bool radiation_flag = ((bool)RADIATION_ENABLED) && ((bool)(!IM_RADIATION_ENABLED));
   if (stage == 1) {
     // For each Meshblock, initialize time abscissae of each memory register pair (u,b)
     // at stage=0 to correspond to the beginning of the interval [t^n, t^{n+1}]
@@ -840,7 +844,7 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
         ps->s2 = ps->s;
     }
 
-    if(RADIATION_ENABLED){
+    if(radiation_flag){
       pmb->prad->ir1.ZeroClear();
       if(integrator == "ssprk5_4")
         pmb->prad->ir2 = pmb->prad->ir;
@@ -1327,6 +1331,9 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
 
 
 TaskStatus TimeIntegratorTaskList::PhysicalBoundary(MeshBlock *pmb, int stage) {
+  
+  bool radiation_flag = ((bool)RADIATION_ENABLED) && ((bool)(!IM_RADIATION_ENABLED));
+
   Hydro *ph = pmb->phydro;
   PassiveScalars *ps = pmb->pscalars;
   Radiation *prad=pmb->prad;
@@ -1343,7 +1350,7 @@ TaskStatus TimeIntegratorTaskList::PhysicalBoundary(MeshBlock *pmb, int stage) {
     if (NSCALARS > 0)
       ps->sbvar.var_cc = &(ps->r);
     //Radiation physical boundary is also done in this function
-    if(RADIATION_ENABLED)
+    if(radiation_flag)
       prad->rad_bvar.var_cc = &(prad->ir);
     pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
 
