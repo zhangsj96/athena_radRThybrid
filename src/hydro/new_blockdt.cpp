@@ -21,6 +21,7 @@
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../radiation/radiation.hpp"
+#include "../radiation/implicit/radiation_implicit.hpp"
 #include "../cr/cr.hpp"
 #include "../thermal_conduction/tc.hpp"
 #include "../mesh/mesh.hpp"
@@ -176,6 +177,11 @@ void Hydro::NewBlockTimeStep() {
   // (user-selected or automaticlaly enforced). May add independent parameter "cfl_diff"
   // in the future (with default = cfl_number).
   min_dt_parabolic *= pmb->pmy_mesh->cfl_number;
+
+  if(IM_RADIATION_ENABLED){
+    min_dt_hyperbolic *= pmb->pmy_mesh->pimrad->cfl_rad;
+    min_dt_parabolic  *= pmb->pmy_mesh->pimrad->cfl_rad;
+  }
 
   // set main integrator timestep as the minimum of the appropriate timestep constraints:
   // hyperbolic: (skip if fluid is nonexistent or frozen)

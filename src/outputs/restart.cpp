@@ -175,7 +175,7 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
     }
 
-    if(RADIATION_ENABLED){
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
       std::memcpy(pdata,pmb->prad->ir.data(),pmb->prad->ir.GetSizeInBytes());
       pdata += pmb->prad->ir.GetSizeInBytes();      
     }

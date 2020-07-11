@@ -332,7 +332,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           phydro->u(IEN,k,j,i) += 0.5*SQR(phydro->u(IM3,k,j,i))/phydro->u(IDN,k,j,i);
         }
         
-        if(RADIATION_ENABLED){
+        if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
           Real der = amp * (er_r * cos(theta) + er_i * sin(theta));
           Real dfr = amp * (fr_r * cos(theta) + fr_i * sin(theta));
         

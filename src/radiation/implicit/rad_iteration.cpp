@@ -20,6 +20,7 @@
 
 // Athena++ headers
 #include "../radiation.hpp"
+#include "../../globals.hpp"
 #include "../integrators/rad_integrators.hpp"
 #include "radiation_implicit.hpp"
 #include "../../mesh/mesh.hpp"
@@ -78,6 +79,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
 
       prad->ir_ini = prad->ir;
+
+      prad->ir_old = prad->ir;
 
 
       // prepare t_gas and vel
@@ -179,12 +182,17 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         iteration = false;
     }
 
+    if(Globals::my_rank == 0)
+      std::cout << "Iteration stops at niter: " << niter
+      << " relative error: " << sum_diff_/sum_full_ << std::endl;
+
 
     // After iteration,
     //update the hydro source term
     pmb = pm->pblock;    
     while(pmb != nullptr){
       pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir_ini, pmb->prad->ir);
+      pmb = pmb->next;
     }
 
      // update boundary condition for hydro variables

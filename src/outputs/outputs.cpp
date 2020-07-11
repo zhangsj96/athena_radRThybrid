@@ -538,7 +538,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   // The following radiation/cosmic ray/thermal conduction are all 
   // cell centered variable
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     // (lab-frame) radiation energy density
     if (output_params.variable.compare("Er") == 0 || 
       output_params.variable.compare("cons") == 0 ||
@@ -1063,7 +1063,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         (pm->time >= ptype->output_params.next_time) ||
         (pm->time >= pm->tlim) ||
         (wtflag && ptype->output_params.file_type == "rst")) {
-      if(rad_mom && RADIATION_ENABLED){
+      if(rad_mom && (RADIATION_ENABLED || IM_RADIATION_ENABLED)){
         pmb=pm->pblock;
         while(pmb != NULL){
          // Calculate Com-moving moments and grey opacity for dump

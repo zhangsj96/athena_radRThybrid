@@ -42,6 +42,10 @@ public:
   void CheckResidual(MeshBlock *pmb,  
         AthenaArray<Real> &ir_old, AthenaArray<Real> &ir_new);
 
+  Real cfl_rad; // the additional CFL number. 
+                // Small cfl_rad is good for convergence, 
+                // but with smaller time step
+
 
 private:
 
