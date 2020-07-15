@@ -207,7 +207,7 @@ void BoundaryValues::CheckUserBoundaries() {
             << "is not enrolled in direction " << i  << " (in [0,6])." << std::endl;
         ATHENA_ERROR(msg);
       }
-      if(RADIATION_ENABLED){
+      if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
         if (pmy_mesh_->RadBoundaryFunc_[i] == nullptr) {
           std::stringstream msg;
           msg << "### FATAL ERROR in BoundaryValues::CheckBoundary" << std::endl
@@ -354,7 +354,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
 
   Radiation *prad = nullptr;
   RadBoundaryVariable *pradbvar = nullptr;
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     prad = pmb->prad;
     pradbvar = &(prad->rad_bvar);
   }
@@ -438,7 +438,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
     }
 
 
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::inner_x2] != BoundaryFlag::block)){
       if(prad->rotate_theta == 1){
         pradbvar->RotateHPi_InnerX2(time, dt, bis, bie, pmb->js, bks, bke, NGHOST);
@@ -465,7 +465,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
       }
     }
 
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::outer_x2] != BoundaryFlag::block)){
       if(prad->rotate_theta == 1){
         pradbvar->RotateHPi_OuterX2(time, dt, bis, bie, pmb->je, bks, bke, NGHOST);
@@ -500,7 +500,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
 
     }
 
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::inner_x3] != BoundaryFlag::block)){
       if(prad->rotate_phi == 1){
         pradbvar->RotateHPi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks, NGHOST);
@@ -528,7 +528,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt) {
             ps->r, ph->w, ps->s, pco, bis, bie, bjs, bje, pmb->ke+1, pmb->ke+NGHOST);
       }
     }
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::outer_x3] != BoundaryFlag::block)){
       if(prad->rotate_phi == 1){
         pradbvar->RotateHPi_OuterX3(time, dt, bis, bie, bjs, bje, pmb->ke, NGHOST);
@@ -554,7 +554,7 @@ void BoundaryValues::DispatchBoundaryFunctions(
     pmy_mesh_->BoundaryFunction_[face](pmb, pco, prim, b, time, dt,
                                        il, iu, jl, ju, kl, ku, NGHOST);
     // user-defined  boundary for radiation
-    if(RADIATION_ENABLED){
+    if((RADIATION_ENABLED || IM_RADIATION_ENABLED)){
       pmy_mesh_->RadBoundaryFunc_[face](pmb,pco,pmb->prad,prim,bcc, ir,time,dt,
                                              il,iu,jl,ju,kl,ku,NGHOST);
     }

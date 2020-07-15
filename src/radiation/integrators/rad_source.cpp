@@ -51,8 +51,7 @@
 
 
 void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt, 
-        AthenaArray<Real> &u,
-        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
+        AthenaArray<Real> &u, AthenaArray<Real> &ir)
 {
   Radiation *prad=pmb->prad;
   Coordinates *pco = pmb->pcoord;
@@ -122,7 +121,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
          }
                 
          for(int ifr=0; ifr<nfreq; ++ifr){
-           lab_ir=&(ir_ini(k,j,i,ifr*nang));
+           lab_ir=&(ir(k,j,i,ifr*nang));
 #pragma omp simd
            for(int n=0; n<nang; ++n){
              ir_cm(n+ifr*nang) = lab_ir[n] * cm_to_lab(n);
@@ -153,7 +152,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 }
 
 void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
-        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
+                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
 {
 
   Radiation *prad=pmb->prad;

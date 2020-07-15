@@ -49,14 +49,6 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
   Real dt = (ptlist->stage_wghts[(stage-1)].beta)*(pm->dt);
 
-  Real ave_wghts[3];
-  ave_wghts[0] = 1.0;
-  ave_wghts[1] = ptlist->stage_wghts[stage-1].delta;
-  ave_wghts[2] = 0.0;
-
-  ave_wghts[0] = ptlist->stage_wghts[stage-1].gamma_1;
-  ave_wghts[1] = ptlist->stage_wghts[stage-1].gamma_2;
-  ave_wghts[2] = ptlist->stage_wghts[stage-1].gamma_3; 
 
   const Real wght = ptlist->stage_wghts[stage-1].beta*pm->dt;
 
@@ -86,8 +78,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       // prepare t_gas and vel
       prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
       // clear ir1
-      if(stage == 1)
-        prad->ir1.ZeroClear();
+//      if(stage == 1)
+//        prad->ir1.ZeroClear();
 
       pmb = pmb->next;
     }
@@ -126,19 +118,20 @@ void IMRadiation::JacobiIteration(Mesh *pm,
    // add flux divergence
 
      // This copy ir to ir1
-        pmb->WeightedAve(prad->ir1, prad->ir, prad->ir2, ave_wghts,1);
+//       pmb->WeightedAve(prad->ir1, prad->ir, prad->ir2, ave_wghts1,1);
 
 
-        if(ave_wghts[0] == 0.0 && ave_wghts[1] == 1.0 && ave_wghts[2] == 0.0)
-          prad->ir.SwapAthenaArray(prad->ir1);
-        else
-          pmb->WeightedAve(prad->ir, prad->ir1, prad->ir2, ave_wghts,1);
+//        if(ave_wghts2[0] == 0.0 && ave_wghts2[1] == 1.0 && ave_wghts2[2] == 0.0)
+//          prad->ir.SwapAthenaArray(prad->ir1);
+//        else
+//          pmb->WeightedAve(prad->ir, prad->ir1, prad->ir2, ave_wghts2,1);
 
 
         prad->pradintegrator->FluxDivergence(wght, prad->ir_ini, prad->ir); //ir is already partially updated
      // so ir1 stores the values from the last iteration
+        prad->ir1 = prad->ir;
      // the source term
-        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir_ini, prad->ir);
+        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir);
 
         prad->rad_bvar.SendBoundaryBuffers();
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
@@ -177,6 +170,9 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       niter++;
       Real tot_res = sum_diff_/sum_full_;
 
+      if(Globals::my_rank == 0)
+        std::cout << "Iteration : " << niter
+        << " relative error: " << tot_res << std::endl;
 
       if((niter > nlimit_) || tot_res < error_limit_)
         iteration = false;
@@ -191,7 +187,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
     //update the hydro source term
     pmb = pm->pblock;    
     while(pmb != nullptr){
-      pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir_ini, pmb->prad->ir);
+      if(pmb->prad->set_source_flag  == 0)
+        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir1, pmb->prad->ir);
       pmb = pmb->next;
     }
 
