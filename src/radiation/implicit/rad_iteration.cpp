@@ -152,12 +152,13 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       niter++;
       Real tot_res = sum_diff_/sum_full_;
 
-      if(Globals::my_rank == 0)
-        std::cout << "Iteration : " << niter
-        << " relative error: " << tot_res << std::endl;
+//      if(Globals::my_rank == 0)
+//        std::cout << "Iteration : " << niter
+//        << " relative error: " << tot_res << std::endl;
 
       if((niter > nlimit_) || tot_res < error_limit_)
         iteration = false;
+
     }
 
     if(Globals::my_rank == 0)

@@ -134,10 +134,12 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     // Update the co-moving frame specific intensity
       Real *irn = &(ir_cm(nang*ifr));
       Real *vn2 = &(vncsigma2(0));
+      Real *imcoef = &(implicit_coef(nang*ifr));
+      Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
         irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
-                        - (rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
+                        - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
       }
     }
   }// End Frequency
