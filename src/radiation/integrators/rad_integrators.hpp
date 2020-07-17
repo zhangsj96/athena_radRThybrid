@@ -33,12 +33,15 @@ public:
   
   void FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                        AthenaArray<Real> &ir_out);
+
+  void FirstOrderFluxDivergence(const Real wght, 
+                                AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
   
   void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
-                      AthenaArray<Real> &ir);
+                      AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,  
        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
@@ -46,7 +49,7 @@ public:
   void AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
-          AthenaArray<Real> &ir_cm);
+          AthenaArray<Real> &implicit_coef_, AthenaArray<Real> &ir_cm);
 
   void GetTgasVel(MeshBlock *pmb, const Real dt, 
        AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
@@ -100,6 +103,9 @@ private:
   AthenaArray<Real> x1face_area_, x2face_area_, x3face_area_;
   AthenaArray<Real> x2face_area_p1_, x3face_area_p1_;
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
+
+  AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
+  AthenaArray<Real> divflx_, implicit_coef_;
 
 };
 

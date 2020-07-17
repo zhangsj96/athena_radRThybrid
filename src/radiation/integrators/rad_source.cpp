@@ -51,7 +51,8 @@
 
 
 void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt, 
-        AthenaArray<Real> &u, AthenaArray<Real> &ir)
+        AthenaArray<Real> &u, 
+        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
 {
   Radiation *prad=pmb->prad;
   Coordinates *pco = pmb->pcoord;
@@ -84,53 +85,76 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         // for implicit update, using the quantities from the partially 
         // updated u, not from w 
 
-         Real rho = u(IDN,k,j,i);
-         Real vx = vel_source_(k,j,i,0);
-         Real vy = vel_source_(k,j,i,1);
-         Real vz = vel_source_(k,j,i,2);
-         Real vel = vx*vx + vy*vy + vz*vz;
+        Real rho = u(IDN,k,j,i);
+        Real vx = vel_source_(k,j,i,0);
+        Real vy = vel_source_(k,j,i,1);
+        Real vz = vel_source_(k,j,i,2);
+        Real vel = vx*vx + vy*vy + vz*vz;
         
         
-         Real lorzsq = 1.0/(1.0 - vel  * invcrat * invcrat);
+        Real lorzsq = 1.0/(1.0 - vel  * invcrat * invcrat);
         
         
-         sigma_at=&(prad->sigma_a(k,j,i,0));
-         sigma_aer=&(prad->sigma_ae(k,j,i,0));
-         sigma_s=&(prad->sigma_s(k,j,i,0));
-         sigma_p=&(prad->sigma_planck(k,j,i,0));
+        sigma_at=&(prad->sigma_a(k,j,i,0));
+        sigma_aer=&(prad->sigma_ae(k,j,i,0));
+        sigma_s=&(prad->sigma_s(k,j,i,0));
+        sigma_p=&(prad->sigma_planck(k,j,i,0));
 
          // Prepare the transformation coefficients
-         Real numsum = 0.0;
+        Real numsum = 0.0;
 
 #pragma omp simd reduction(+:numsum)
-         for(int n=0; n<nang; ++n){
-            Real vdotn = vx * prad->mu(0,k,j,i,n) + vy * prad->mu(1,k,j,i,n)
+        for(int n=0; n<nang; ++n){
+           Real vdotn = vx * prad->mu(0,k,j,i,n) + vy * prad->mu(1,k,j,i,n)
                         + vz * prad->mu(2,k,j,i,n);
-            Real vnc = 1.0 - vdotn * invcrat;
-            tran_coef(n) = sqrt(lorzsq) * vnc;
-            wmu_cm(n) = prad->wmu(n)/(tran_coef(n) * tran_coef(n));
-            numsum += wmu_cm(n);
-            cm_to_lab(n) = tran_coef(n)*tran_coef(n)*tran_coef(n)*tran_coef(n);
+           Real vnc = 1.0 - vdotn * invcrat;
+           tran_coef(n) = sqrt(lorzsq) * vnc;
+           wmu_cm(n) = prad->wmu(n)/(tran_coef(n) * tran_coef(n));
+           numsum += wmu_cm(n);
+           cm_to_lab(n) = tran_coef(n)*tran_coef(n)*tran_coef(n)*tran_coef(n);
            
-         }
+        }
            // Normalize weight in co-moving frame to make sure the sum is one
-         numsum = 1.0/numsum;
+        numsum = 1.0/numsum;
 #pragma omp simd
-         for(int n=0; n<nang; ++n){
-            wmu_cm(n) *= numsum;
-         }
+        for(int n=0; n<nang; ++n){
+           wmu_cm(n) *= numsum;
+        }
                 
-         for(int ifr=0; ifr<nfreq; ++ifr){
-           lab_ir=&(ir(k,j,i,ifr*nang));
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          lab_ir=&(ir_ini(k,j,i,ifr*nang));
+          for(int n=0; n<nang; ++n)
+            ir_cm(n+ifr*nang) = lab_ir[n];
+          if(IM_RADIATION_ENABLED){
+            // add the explicit flux divergence term
+            Real *divflux = &(divflx_(k,j,i,ifr*nang));
+            for(int n=0; n<nang; ++n)
+              ir_cm(n+ifr*nang) += divflux[n];
+          }
 #pragma omp simd
-           for(int n=0; n<nang; ++n){
-             ir_cm(n+ifr*nang) = lab_ir[n] * cm_to_lab(n);
-           }
-         }// End frequency
+          for(int n=0; n<nang; ++n){
+            ir_cm(n+ifr*nang) *= cm_to_lab(n);
+          }
+    
+          for(int n=0; n<nang; n++){
+            implicit_coef_(n+ifr*nang) = 1.0;
+            if(IM_RADIATION_ENABLED){
+              implicit_coef_(n+ifr*nang) += const_coef1_(k,j,i,n);
+              if(je > js){
+                implicit_coef_(n+ifr*nang) += const_coef2_(k,j,i,n); 
+              }
+              if(ke > ks){
+                implicit_coef_(n+ifr*nang) += const_coef3_(k,j,i,n);
+              }
+            }
+          }// end ang
+
+        }// End frequency
         
+
          // Add absorption and scattering opacity source
          AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, rho, tgas_(k,j,i), ir_cm);
+                              sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
         
          // Add compton scattering
          if(compton_flag_ > 0)
@@ -150,6 +174,9 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   }// end k
 
 }
+
+// ir_ini and ir only differ by the source term for explicit scheme
+// for implicit scheme, ir also includes the flux divergence term
 
 void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
                        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
@@ -193,9 +220,22 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           Real frx_fr = 0.0;
           Real fry_fr = 0.0;
           Real frz_fr = 0.0;
-#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
+//#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
           for(int n=0; n<nang; ++n){
-            Real ir_weight = p_ir0[n] * prad->wmu(n);
+            Real ir_weight = p_ir0[n];
+            if(IM_RADIATION_ENABLED){
+              ir_weight += divflx_(k,j,i,ifr*nang+n);
+              ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+              if(je > js)
+                ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+              if(ke > ks)
+                ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+            }// end implicit
+
+            ir_weight *= prad->wmu(n);
             er_fr  += ir_weight;
             frx_fr += ir_weight * prad->mu(0,k,j,i,n);
             fry_fr += ir_weight * prad->mu(1,k,j,i,n);

@@ -44,7 +44,7 @@
 void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
-          AthenaArray<Real> &ir_cm)
+          AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
   Real& prat = pmy_rad->prat;
@@ -85,14 +85,16 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
       dtcsigmap = ct * sigma_p[ifr];
       rdtcsigmap = redfactor * dtcsigmap;
     }
+
     Real *ircm = &(ir_cm(nang*ifr));
     Real *vn = &(vncsigma(0));
     Real *vn2 = &(vncsigma2(0));
     Real *tcoef = &(tran_coef(0));
-    Real *wmu = &(wmu_cm(0));     
+    Real *wmu = &(wmu_cm(0));  
+    Real *imcoef = &(implicit_coef(0));   
 #pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       vn[n] = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
+       vn[n] = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
        vn2[n] = tcoef[n] * vn[n];
        Real ir_weight = ircm[n] * wmu[n];
        jr_cm += ir_weight;

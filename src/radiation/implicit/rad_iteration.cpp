@@ -99,21 +99,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
-
-        if ((stage == 1) && (ptlist->integrator == "vl2")) {
-          prad->pradintegrator->CalculateFluxes(ph->w,  prad->ir, 1);
-        } else {
-          prad->pradintegrator->CalculateFluxes(ph->w,  prad->ir, 
-                                      prad->pradintegrator->rad_xorder);
-        }
- // for multi-level, send flux correction
-        if(pm->multilevel){
-           // send rad flux
-          prad->rad_bvar.SendFluxCorrection();
-           // receive rad flux
-          prad->rad_bvar.ReceiveFluxCorrection();
-
-        }
+        prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
   
    // add flux divergence
 
@@ -126,12 +112,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 //        else
 //          pmb->WeightedAve(prad->ir, prad->ir1, prad->ir2, ave_wghts2,1);
 
-
-        prad->pradintegrator->FluxDivergence(wght, prad->ir_ini, prad->ir); //ir is already partially updated
-     // so ir1 stores the values from the last iteration
-        prad->ir1 = prad->ir;
      // the source term
-        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir);
+        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir_ini, prad->ir);
 
         prad->rad_bvar.SendBoundaryBuffers();
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
@@ -188,7 +170,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
     pmb = pm->pblock;    
     while(pmb != nullptr){
       if(pmb->prad->set_source_flag  == 0)
-        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir1, pmb->prad->ir);
+        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir_ini, pmb->prad->ir);
       pmb = pmb->next;
     }
 

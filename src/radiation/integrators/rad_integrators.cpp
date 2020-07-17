@@ -112,6 +112,21 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
   vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
   // the three velocity components used in the source terms
+  implicit_coef_.NewAthenaArray(prad->n_fre_ang);
+
+  // reconstruction coefficients used in implicit radiation scheme
+  if(IM_RADIATION_ENABLED){
+    const_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    if(ncells2 > 1){
+      const_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    }
+    if(ncells3 > 1){
+      const_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    }
+    divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
+  }
+
 
   if(prad->angle_flag == 1){
     int &nzeta = prad->nzeta;
@@ -305,6 +320,22 @@ RadIntegrator::~RadIntegrator()
   cm_to_lab_.DeleteAthenaArray();
   ir_cm_.DeleteAthenaArray();
   tgas_.DeleteAthenaArray();
+  vel_source_.DeleteAthenaArray();
+
+  implicit_coef_.DeleteAthenaArray();
+
+  if(IM_RADIATION_ENABLED){
+    const_coef1_.DeleteAthenaArray();
+
+    if(pmy_rad->pmy_block->ncells2 > 1){
+      const_coef2_.DeleteAthenaArray();
+    }
+    if(pmy_rad->pmy_block->ncells3 > 1){
+      const_coef3_.DeleteAthenaArray();
+    }
+    divflx_.DeleteAthenaArray();
+
+  }
 
   if(pmy_rad->angle_flag == 1){
     int &nzeta = pmy_rad->nzeta;
