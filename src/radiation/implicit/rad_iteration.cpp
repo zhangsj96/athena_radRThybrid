@@ -116,6 +116,13 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir_ini, prad->ir);
 
         prad->rad_bvar.SendBoundaryBuffers();
+
+        pmb = pmb->next;
+      }
+
+      pmb = pm->pblock;
+      while(pmb != nullptr){
+        Radiation *prad = pmb->prad;
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
 
         // apply physical boundaries
