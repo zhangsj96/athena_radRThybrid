@@ -120,11 +120,31 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         pmb = pmb->next;
       }
 
+      // set boundary condition
       pmb = pm->pblock;
       while(pmb != nullptr){
         Radiation *prad = pmb->prad;
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
+        pmb = pmb->next;
 
+      }
+
+      if(pm->multilevel){
+        
+        pmb = pm->pblock;
+        while(pmb != nullptr){
+          Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
+          pmb->pbval->ProlongateBoundaries(t_end_stage, wght);
+          pmb = pmb->next;
+        }
+
+
+      }
+
+
+      pmb = pm->pblock;
+      while(pmb != nullptr){
+        Radiation *prad = pmb->prad;
         // apply physical boundaries
         prad->rad_bvar.var_cc = &(prad->ir);
         Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
@@ -182,14 +202,38 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       pmb = pmb->next;
     }
 
-     // update boundary condition for hydro variables
+
+     // update MPI boundary, do prolongation, set physical boundary
     pmb = pm->pblock;
     while(pmb != nullptr){
       // update MPI boundary for hydro
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
       pmb->phydro->hbvar.SendBoundaryBuffers();
+     
+      pmb = pmb->next;
+    }
+
+    pmb = pm->pblock;
+    while(pmb != nullptr){
       pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
-      // Apply physical boundaries
+      pmb = pmb->next;
+    }
+
+    if(pm->multilevel){
+        
+      pmb = pm->pblock;
+      while(pmb != nullptr){
+        Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
+        pmb->pbval->ProlongateBoundaries(t_end_stage, wght);
+        pmb = pmb->next;
+      }
+
+    }
+
+    // conservative to primitive, and then apply physical boundary
+    pmb = pm->pblock;
+    while(pmb != nullptr){
+       // Apply physical boundaries
       pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
       Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
 
@@ -200,12 +244,10 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
 
       // update opacity     
-      pmb->prad->UpdateOpacity(pmb,pmb->phydro->w); 
+      pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
 
       pmb = pmb->next;
     }
-
-
 
   }// end stage
 
