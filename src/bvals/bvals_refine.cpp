@@ -118,7 +118,7 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt) {
   // hard core assume that radiation boundary is just after hydro/MHD
   Radiation *prad = nullptr;
   RadBoundaryVariable *pradbvar = nullptr;
-  if(RADIATION_ENABLED){
+  if((RADIATION_ENABLED|| IM_RADIATION_ENABLED)){
     prad = pmb->prad;
     pradbvar = &(prad->rad_bvar);
   }  
@@ -216,7 +216,7 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt) {
       ps->sbvar.var_cc = &(ps->coarse_r_);
     }
 
-    if(RADIATION_ENABLED)
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED))
       pradbvar->var_cc = &(prad->coarse_ir_);
 
     if(CR_ENABLED)
@@ -239,7 +239,7 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt) {
       ps->sbvar.var_cc = &(ps->r);
     }
 
-    if(RADIATION_ENABLED)
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED))
       pradbvar->var_cc = &(prad->ir);
 
     if(CR_ENABLED)
@@ -349,7 +349,7 @@ void BoundaryValues::RestrictGhostCellsOnSameLevel(const NeighborBlock& nb, int 
     }
   } // end loop over pvars_fc_
 
-  if(RADIATION_ENABLED){
+  if((RADIATION_ENABLED|| IM_RADIATION_ENABLED)){
     Radiation *prad=pmb->prad;
     AthenaArray<Real> *var_cc = prad->rad_bvar.var_cc;
     AthenaArray<Real> *coarse_cc = prad->rad_bvar.coarse_buf;
@@ -382,7 +382,7 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
 
   Radiation *prad = nullptr;
   RadBoundaryVariable *pradbvar = nullptr;
-  if(RADIATION_ENABLED){
+  if((RADIATION_ENABLED|| IM_RADIATION_ENABLED)){
     prad = pmb->prad;
     pradbvar = &(prad->rad_bvar);
   }
@@ -470,7 +470,7 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::inner_x2);
     }
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::inner_x2] != BoundaryFlag::block)){
       if(prad->rotate_theta == 1){
         pradbvar->RotateHPi_InnerX2(time, dt, si, ei, pmb->cjs, sk, ek, 1);
@@ -486,7 +486,7 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::outer_x2);
     }
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::outer_x2] != BoundaryFlag::block)){
       if(prad->rotate_theta == 1){
         pradbvar->RotateHPi_OuterX2(time, dt, si, ei, pmb->cje, sk, ek, 1);
@@ -503,7 +503,7 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_, 
                                 BoundaryFace::inner_x3);
     }
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::inner_x3] != BoundaryFlag::block)){
       if(prad->rotate_phi == 1){
         pradbvar->RotateHPi_InnerX3(time, dt, si, ei, sj, ej, pmb->cks, 1);
@@ -520,7 +520,7 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
                                 pcr->coarse_cr_, ptc->coarse_tc_,
                                 BoundaryFace::outer_x3);
     }
-    if(RADIATION_ENABLED && 
+    if((RADIATION_ENABLED|| IM_RADIATION_ENABLED) && 
            (block_bcs[BoundaryFace::outer_x3] != BoundaryFlag::block)){
       if(prad->rotate_phi == 1){
         pradbvar->RotateHPi_OuterX3(time, dt, si, ei, sj, ej, pmb->cke, 1);
@@ -556,7 +556,7 @@ void BoundaryValues::ProlongateGhostCells(const NeighborBlock& nb,
   }
 
   // do radiation quantities separately
-  if(RADIATION_ENABLED){
+  if((RADIATION_ENABLED|| IM_RADIATION_ENABLED)){
 
     Radiation *prad=pmb->prad;
     AthenaArray<Real> *var_cc = prad->rad_bvar.var_cc;

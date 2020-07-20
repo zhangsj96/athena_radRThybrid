@@ -150,6 +150,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
         pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
 
+        pmb->pbval->ClearBoundary(BoundaryCommSubset::all);
+
          // calculate residual
         CheckResidual(pmb,prad->ir_old,prad->ir);
 
@@ -242,6 +244,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       ptlist->Primitives(pmb,stage);
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
       pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
+      pmb->pbval->ClearBoundary(BoundaryCommSubset::all);
 
       // update opacity     
       pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
