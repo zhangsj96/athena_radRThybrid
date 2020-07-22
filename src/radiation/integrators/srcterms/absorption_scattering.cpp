@@ -145,7 +145,8 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
   }// End Frequency
   
   // Update gas temperature
-  tgas = tgasnew;
+  // Do not update gas temperature
+//  tgas = tgasnew;
   
 
 

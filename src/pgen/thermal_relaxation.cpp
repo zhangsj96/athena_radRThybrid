@@ -83,7 +83,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   //Now initialize opacity and specific intensity
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     int nfreq = prad->nfreq;
     int nang = prad->nang;
     AthenaArray<Real> ir_cm;
