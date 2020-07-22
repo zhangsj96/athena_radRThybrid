@@ -120,7 +120,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         pmb = pmb->next;
       }
 
-      pmb = pmb->pblock;
+      pmb = pm->pblock;
       while(pmb != nullptr){
 
         pmb->prad->rad_bvar.SendBoundaryBuffers();
@@ -135,7 +135,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         Radiation *prad = pmb->prad;
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
 
-        prad->rad_bvar.Clearboundary(BoundaryCommSubset::radiation);
+        prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
         pmb = pmb->next;
 
       }
@@ -229,7 +229,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
     pmb = pm->pblock;
     while(pmb != nullptr){
       pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
-      pmb->phydro->hbvar.Clearboundary(BoundaryCommSubset::fluid);
+      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::fluid);
       pmb = pmb->next;
     }
 
