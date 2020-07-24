@@ -70,7 +70,7 @@ gamma           = 1.6666666666667       # gamma = C_p/C_v
 nmu             = 4
 Prat            = 1.0
 Crat            = 10
-
+error_limit    = 1.e-12
 <problem>
 er              = 10.0
 tgas            = 1.0

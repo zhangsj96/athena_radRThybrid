@@ -247,6 +247,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
     prad = new Radiation(this, pin);
+  }
+  if(RADIATION_ENABLED){
     pbval->AdvanceCounterPhysID(RadBoundaryVariable::max_phys_id);
   }
 
@@ -446,6 +448,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
     prad = new Radiation(this, pin);
+  }
+  if(RADIATION_ENABLED){
     pbval->AdvanceCounterPhysID(RadBoundaryVariable::max_phys_id);
   }
 

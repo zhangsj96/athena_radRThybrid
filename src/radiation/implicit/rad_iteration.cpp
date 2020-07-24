@@ -70,8 +70,16 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       Field *pf = pmb->pfield;
 
 
-      prad->ir_ini = prad->ir;
 
+
+
+
+      if(stage == 1)
+        prad->ir1 = prad->ir;
+      else
+        prad->ir = prad->ir1;
+
+      prad->ir_ini = prad->ir;
       prad->ir_old = prad->ir;
 
 
@@ -179,8 +187,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 #ifdef MPI_PARALLEL
       Real global_sum = 0.0;
       Real global_diff = 0.0;
-      MPI_Allreduce(&sum_full_, &global_sum, 1, MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(&sum_diff_, &global_diff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+      MPI_Allreduce(&sum_full_, &global_sum, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&sum_diff_, &global_diff, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD); 
 
       sum_full_ = global_sum;
       sum_diff_ = global_diff;
@@ -209,7 +217,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
     pmb = pm->pblock;    
     while(pmb != nullptr){
       if(pmb->prad->set_source_flag  == 0)
-        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u, pmb->prad->ir_ini, pmb->prad->ir);
+        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
+                                          pmb->prad->ir_ini, pmb->prad->ir);
       
       pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::fluid);
       pmb = pmb->next;

@@ -204,12 +204,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   
   pradintegrator = new RadIntegrator(this, pin);
-  
-// enroll radiation boundary value object
+
   rad_bvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&rad_bvar);
-  pmb->pbval->bvars_main_int.push_back(&rad_bvar);
-
+// enroll radiation boundary value object
+  if(RADIATION_ENABLED){
+    pmb->pbval->bvars_main_int.push_back(&rad_bvar);
+  }
   
   // dump the angular grid and radiation parameters in a file
   if(Globals::my_rank ==0){

@@ -1443,6 +1443,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       // other BoundaryVariable objects:
       if (SELF_GRAVITY_ENABLED == 1)
         pmb->pgrav->gbvar.SetupPersistentMPI();
+      if(IM_RADIATION_ENABLED)
+        pmb->prad->rad_bvar.SetupPersistentMPI();
     }
 
     // solve gravity for the first time
@@ -1464,6 +1466,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pbval->ComputeShear(time);
         }
         pbval->StartReceiving(BoundaryCommSubset::mesh_init);
+        if(IM_RADIATION_ENABLED)
+          pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
       }
 
       // send conserved variables
@@ -1505,6 +1509,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }
         pbval->ClearBoundary(BoundaryCommSubset::mesh_init);
+        if(IM_RADIATION_ENABLED)
+          pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
       }
 
       // With AMR/SMR GR send primitives to enable cons->prim before prolongation
