@@ -1,5 +1,5 @@
 Your Athena++ distribution has now been configured with the following options:
-  Problem generator:          thermal_relaxation
+  Problem generator:          rad_linearwave
   Coordinate system:          cartesian
   Equation of state:          adiabatic
   Riemann solver:             hllc
@@ -7,8 +7,8 @@ Your Athena++ distribution has now been configured with the following options:
   Number of scalars:          0
   Special relativity:         OFF
   General relativity:         OFF
-  Radiative Transfer:         ON
-  Implicit Radiation:         OFF
+  Radiative Transfer:         OFF
+  Implicit Radiation:         ON
   Cosmic Ray Transport:       OFF
   Thermal Conduction:         OFF
   Frame transformations:      OFF
