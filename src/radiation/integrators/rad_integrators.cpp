@@ -87,10 +87,21 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   dflx_.NewAthenaArray(ncells1,prad->n_fre_ang);
 
   // arrays for spatial recontruction 
-  il_.NewAthenaArray(ncells1,prad->n_fre_ang);
-  ilb_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  if(RADIATION_ENABLED){
+    il_.NewAthenaArray(ncells1,prad->n_fre_ang);
+    ilb_.NewAthenaArray(ncells1,prad->n_fre_ang);
 
-  ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
+    ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  }
+  if(IM_RADIATION_ENABLED){
+    limiter_.NewAthenaArray(ncells1,prad->n_fre_ang);
+    if(ncells2 > 1)
+      limiterj_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);
+    if(ncells3 > 1)
+      limiterk_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    dql_.NewAthenaArray(prad->n_fre_ang);
+    dqr_.NewAthenaArray(prad->n_fre_ang);
+  }
   
   if(adv_flag_ > 0){
     temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -296,12 +307,23 @@ RadIntegrator::~RadIntegrator()
   cwidth3_.DeleteAthenaArray();
 
   dflx_.DeleteAthenaArray();
+  
+  if(RADIATION_ENABLED){
+    il_.DeleteAthenaArray();
+    ilb_.DeleteAthenaArray();
 
-  il_.DeleteAthenaArray();
-  ilb_.DeleteAthenaArray();
+    ir_.DeleteAthenaArray();
+  }
+  if(IM_RADIATION_ENABLED){
+    limiter_.DeleteAthenaArray();
+    if(pmy_rad->pmy_block->ncells2 > 1) 
+      limiterj_.DeleteAthenaArray();
+    if(pmy_rad->pmy_block->ncells3 > 1) 
+      limiterk_.DeleteAthenaArray();
+    dql_.DeleteAthenaArray();
+    dqr_.DeleteAthenaArray();
 
-  ir_.DeleteAthenaArray();
-
+  }
   if(adv_flag_ > 0){
     temp_i1_.DeleteAthenaArray();
     temp_i2_.DeleteAthenaArray();

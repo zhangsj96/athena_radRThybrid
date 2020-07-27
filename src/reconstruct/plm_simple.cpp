@@ -152,13 +152,15 @@ void Reconstruction::PiecewiseLinearX1(
         // nonuniformity)
           Real cf = pco->dx1v(i  )/(pco->x1f(i+1) - pco->x1v(i)); // (Mignone eq 33)
           Real cb = pco->dx1v(i-1)/(pco->x1v(i  ) - pco->x1f(i));
+          Real dxF = pco->dx1f(i)/pco->dx1v(i);
+          Real dxB = pco->dx1f(i)/pco->dx1v(i-1);
           Real *dqrn = &(dqr(i,0));
           Real *dqln = &(dql(i,0));
           Real *dqmn = &(dqm(i,0));
 #pragma omp simd simdlen(SIMD_WIDTH) aligned(dqrn,dqln,dqmn:ALI_LEN)
         for (int n=0; n<=nu; ++n) {
-          Real dqF =  dqrn[n]*pco->dx1f(i)/pco->dx1v(i);
-          Real dqB =  dqln[n]*pco->dx1f(i)/pco->dx1v(i-1);
+          Real dqF =  dqrn[n]*dxF;
+          Real dqB =  dqln[n]*dxB;
           Real dq2 = dqF*dqB;
         // (modified) VL limiter (Mignone eq 37)
         // (dQ^F term from eq 31 pulled into eq 37, then multiply by (dQ^F/dQ^F)^2)

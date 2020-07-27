@@ -51,10 +51,6 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
 
-  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
-  AthenaArray<Real> &x2flux=prad->flux[X2DIR];
-  AthenaArray<Real> &x3flux=prad->flux[X3DIR];
-
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
   int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
   
@@ -72,26 +68,32 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
       // calculate x1-flux divergence 
       pmb->pcoord->Face1Area(k,j,is,ie+1,x1area);
       for(int i=is; i<=ie; ++i){
+        Real areal = x1area(i);
+        Real arear = x1area(i+1);
+        Real *vel_ln = &(velx_(k,j,i,0));
+        Real *vel_rn = &(velx_(k,j,i+1,0));
+        Real *coef1n = &(const_coef1_(k,j,i,0));
+        Real *irln = &(ir(k,j,i-1,0));
+        Real *irrn = &(ir(k,j,i+1,0));
+        Real *flxn = &(dflx(i,0));
         for(int n=0; n<prad->n_fre_ang; ++n){
           // first left flux
-          Real vel_l = velx_(k,j,i,n);
-          Real vel_r = velx_(k,j,i+1,n);
           Real lflux = 0.0;
           Real rflux = 0.0;
-          const_coef1_(k,j,i,n) = 0.0;
-          if(vel_l > 0.0)
-            lflux = vel_l * ir(k,j,i-1,n);
-          else if(vel_l < 0.0){
-            const_coef1_(k,j,i,n) = (-x1area(i) * vel_l); 
+          coef1n[n] = 0.0;
+          if(vel_ln[n] > 0.0)
+            lflux = vel_ln[n] * irln[n];
+          else if(vel_ln[n] < 0.0){
+            coef1n[n] = (-areal * vel_ln[n]); 
           }
 
-          if(vel_r > 0.0){
-            const_coef1_(k,j,i,n) += (x1area(i+1) * vel_r);
-          }else if(vel_r < 0.0){
-            rflux = vel_r * ir(k,j,i+1,n);
+          if(vel_rn[n] > 0.0){
+            coef1n[n] += (arear * vel_rn[n]);
+          }else if(vel_rn[n] < 0.0){
+            rflux = vel_rn[n] * irrn[n];
           }
 
-          dflx(i,n) = (x1area(i+1) * rflux - x1area(i) * lflux);
+          flxn[n] = (arear * rflux - areal * lflux);
         }// end n
       }// End i
 
@@ -100,22 +102,28 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
         pmb->pcoord->Face2Area(k,j  ,is,ie,x2area   );
         pmb->pcoord->Face2Area(k,j+1,is,ie,x2area_p1);
         for(int i=is; i<=ie; ++i){
+          Real *vel_ln = &(vely_(k,j,i,0));
+          Real *vel_rn = &(vely_(k,j+1,i,0));
+          Real *coef2n = &(const_coef2_(k,j,i,0));
+          Real *irln = &(ir(k,j-1,i,0));
+          Real *irrn = &(ir(k,j+1,i,0));
+          Real areal = x2area(i);
+          Real arear = x2area_p1(i);
+          Real *flxn = &(dflx(i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real vel_l = vely_(k,j,i,n);
-            Real vel_r = vely_(k,j+1,i,n);
             Real lflux = 0.0;
             Real rflux = 0.0;
-            const_coef2_(k,j,i,n) = 0.0;
-            if(vel_l > 0.0)
-              lflux = vel_l * ir(k,j-1,i,n);
-            else if(vel_l < 0.0)
-              const_coef2_(k,j,i,n) = (-x2area(i) * vel_l);
-            if(vel_r > 0.0)
-              const_coef2_(k,j,i,n) += (x2area_p1(i) * vel_r);
-            else if(vel_r < 0.0)
-              rflux = vel_r * ir(k,j+1,i,n); 
+            coef2n[n] = 0.0;
+            if(vel_ln[n] > 0.0)
+              lflux = vel_ln[n] * irln[n];
+            else if(vel_ln[n] < 0.0)
+              coef2n[n] = (-areal * vel_ln[n]);
+            if(vel_rn[n] > 0.0)
+              coef2n[n] += (arear * vel_rn[n]);
+            else if(vel_rn[n] < 0.0)
+              rflux = vel_rn[n] * irrn[n]; 
 
-            dflx(i,n) += (x2area_p1(i)*rflux - x2area(i)*lflux);
+            flxn[n] += (arear*rflux - areal*lflux);
           }// end n
         }// end i
       }// end nx2
@@ -125,22 +133,28 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
         pmb->pcoord->Face3Area(k  ,j,is,ie,x3area   );
         pmb->pcoord->Face3Area(k+1,j,is,ie,x3area_p1);
         for(int i=is; i<=ie; ++i){
+          Real *vel_ln = &(velz_(k,j,i,0));
+          Real *vel_rn = &(velz_(k+1,j,i,0));
+          Real *coef3n = &(const_coef3_(k,j,i,0));
+          Real areal = x3area(i);
+          Real arear = x3area_p1(i);
+          Real *flxn = &(dflx(i,0));
+          Real *irrn = &(ir(k+1,j,i,0));
+          Real *irln = &(ir(k-1,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real vel_l = velz_(k,j,i,n);
-            Real vel_r = velz_(k+1,j,i,n);
             Real lflux = 0.0;
             Real rflux = 0.0;
-            const_coef3_(k,j,i,n) = 0.0;
-            if(vel_l > 0.0)
-              lflux = vel_l * ir(k-1,j,i,n);
-            else if(vel_l < 0.0)
-              const_coef3_(k,j,i,n) = (-x3area(i) * vel_l);
-            if(vel_r > 0.0)
-              const_coef3_(k,j,i,n) += (x3area_p1(i) * vel_r);
-            else if(vel_r < 0.0)
-              rflux = vel_r * ir(k+1,j,i,n); 
+            coef3n[n] = 0.0;
+            if(vel_ln[n] > 0.0)
+              lflux = vel_ln[n] * irln[n];
+            else if(vel_ln[n] < 0.0)
+              coef3n[n] = (-areal * vel_ln[n]);
+            if(vel_rn[n] > 0.0)
+              coef3n[n] += (arear * vel_rn[n]);
+            else if(vel_rn[n] < 0.0)
+              rflux = vel_rn[n] * irrn[n]; 
 
-            dflx(i,n) += (x3area_p1(i)*rflux - x3area(i)*lflux);
+            flxn[n] += (arear*rflux - areal*lflux);
           }
         }
       }// end nx3
