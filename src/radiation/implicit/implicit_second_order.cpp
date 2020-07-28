@@ -209,7 +209,7 @@ void RadIntegrator::SecondOrderFluxDivergence(const Real wght,
       }// end j
 
       // now construct the flux
-      for(int j=j; j<=je; ++j){
+      for(int j=js; j<=je; ++j){
         Real dxp1 = (pco->x2f(j) - pco->x2v(j-1))/pco->dx2f(j-1);
         Real dxp = (pco->x2f(j+1) - pco->x2v(j))/pco->dx2f(j);
         Real dxm = (pco->x2v(j  ) - pco->x2f(j))/pco->dx2f(j);
@@ -318,7 +318,7 @@ void RadIntegrator::SecondOrderFluxDivergence(const Real wght,
       Real dxm = (pco->x3v(k  ) - pco->x3f(k))/pco->dx3f(k);
       Real dxm1 = (pco->x3v(k+1) - pco->x3f(k+1))/pco->dx3f(k+1);
 
-      for(int j=j; j<=je; ++j){
+      for(int j=js; j<=je; ++j){
         pmb->pcoord->Face3Area(k,j  ,is,ie,x3area   );
         pmb->pcoord->Face3Area(k+1,j,is,ie,x3area_p1);
 

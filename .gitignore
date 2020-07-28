@@ -11,3 +11,4 @@ obj/
 tst/regression/.DS_Store
 tst/regression/scripts/tests/.DS_Store
 tst/.DS_Store
+configure.log

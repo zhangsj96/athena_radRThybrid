@@ -108,7 +108,7 @@ void IMRadiation::JacobiIteration(Mesh *pm,
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
         prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
-  
+        // the second order iteration scheme is not working  
    // add flux divergence
 
      // This copy ir to ir1
