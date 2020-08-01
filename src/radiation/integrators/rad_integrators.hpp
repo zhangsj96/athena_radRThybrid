@@ -34,6 +34,8 @@ public:
   void FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                        AthenaArray<Real> &ir_out);
 
+  void FirstOrderFluxDivergenceUpwind(const Real wght, 
+                                AthenaArray<Real> &ir);
   void FirstOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
@@ -110,6 +112,9 @@ private:
   AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
   AthenaArray<Real> divflx_, implicit_coef_;
   AthenaArray<Real> limiter_, limiterj_, limiterk_, dql_, dqr_;
+  AthenaArray<Real> sfac1_x_, sfac2_x_;
+  AthenaArray<Real> sfac1_y_, sfac2_y_;
+  AthenaArray<Real> sfac1_z_, sfac2_z_;
 
 };
 

@@ -38,21 +38,21 @@
 #include <omp.h>
 #endif
 
-// flux at each interface is given as
-// x flux: alpha_i-1 I(i-1) + alpha_1 I + alpha_i+1 I(i+1)
-// y flux: alpha_j-1 I(j-1) + alpha_2 I + alpha_j+1 I(j+1)
-// z flux: alpha_k-1 I(k-1) + alpha_3 I + alpha_k+1 I(k+1)
-
-// the flux should be Area * I^{i+1/2}/Vol
+// the flux is 
+// Smax F(U_L)/(Smax-Smin) - Smin F(U_R) /(Smax-Smin)
+// + Smax Smin * (U_R - U_L)/(Smax - Smin)
 
 void RadIntegrator::FirstOrderFluxDivergence(const Real wght, 
                                        AthenaArray<Real> &ir)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco= pmb->pcoord;
 
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
   int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+  int nang = prad->nang; 
+  int nfreq = prad->nfreq;
   
   AthenaArray<Real> &x1area = x1face_area_, &x2area = x2face_area_,
                  &x2area_p1 = x2face_area_p1_, &x3area = x3face_area_,
@@ -64,111 +64,231 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
   for (int k=ks; k<=ke; ++k) { 
     for (int j=js; j<=je; ++j) {
+      // first, calculate maximum and minimum speeds
+      for(int i=is; i<=ie+1; ++i){
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
+          Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+          Real tau = (pco->x1f(i) - pco->x1v(i-1)) * sigmal 
+                    + (pco->x1v(i) - pco->x1f(i)) * sigmar;
+          tau *= taufact_;
+          Real tausq = tau * tau;
+          Real factor1 = 1.0 - 0.5 * tausq;
+          Real factor2 = tausq;
+          if(tausq > 1.e-3){
+            factor1  = (1.0 - exp(-tausq))/tausq;
+            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
+          }
+          factor1 = sqrt(factor1);
+          factor2 = sqrt(factor2);
+          Real *s1n = &(sfac1_x_(i,ifr*nang));
+          Real *s2n = &(sfac2_x_(i,ifr*nang));
+          Real *velxn = &(velx_(k,j,i,ifr*nang));
+          for(int n=0; n<nang; ++n){
+            if(velxn[n] > 0.0){
+              s1n[n] = factor1 * velxn[n];
+              s2n[n] = -factor2 * velxn[n];
+            }else{
+              s1n[n] = -factor2 * velxn[n];
+              s2n[n] = factor1 * velxn[n];
+            }
 
+          }
+        }// end ifr
+      }// end i
       // calculate x1-flux divergence 
-      pmb->pcoord->Face1Area(k,j,is,ie+1,x1area);
+      pco->Face1Area(k,j,is,ie+1,x1area);
       for(int i=is; i<=ie; ++i){
         Real areal = x1area(i);
         Real arear = x1area(i+1);
+        Real *s1_ln = &(sfac1_x_(i,0));
+        Real *s1_rn = &(sfac1_x_(i+1,0));
+        Real *s2_ln = &(sfac2_x_(i,0));
+        Real *s2_rn = &(sfac2_x_(i+1,0));
         Real *vel_ln = &(velx_(k,j,i,0));
-        Real *vel_rn = &(velx_(k,j,i+1,0));
+        Real *vel_rn = &(velx_(k,j,i+1,0));        
+
         Real *coef1n = &(const_coef1_(k,j,i,0));
         Real *irln = &(ir(k,j,i-1,0));
         Real *irrn = &(ir(k,j,i+1,0));
-        Real *flxn = &(dflx(i,0));
+        Real *divn = &(divflx_(k,j,i,0));
+
         for(int n=0; n<prad->n_fre_ang; ++n){
-          // first left flux
-          Real lflux = 0.0;
-          Real rflux = 0.0;
-          coef1n[n] = 0.0;
-          if(vel_ln[n] > 0.0)
-            lflux = vel_ln[n] * irln[n];
-          else if(vel_ln[n] < 0.0){
-            coef1n[n] = (-areal * vel_ln[n]); 
-          }
+          Real smax = s1_ln[n];
+          Real smin = s2_ln[n];
+          Real lflux = (smax * vel_ln[n] * irln[n] - smax * smin * irln[n])/(smax - smin);
+          coef1n[n] = -areal * (-smin * vel_ln[n] + smax * smin)/(smax - smin);
+          smax = s1_rn[n];
+          smin = s2_rn[n];
+          Real rflux = (-smin * vel_rn[n] * irrn[n] + smax * smin * irrn[n])/(smax - smin);
+          coef1n[n] += arear * (smax * vel_rn[n] - smax * smin)/(smax - smin);
 
-          if(vel_rn[n] > 0.0){
-            coef1n[n] += (arear * vel_rn[n]);
-          }else if(vel_rn[n] < 0.0){
-            rflux = vel_rn[n] * irrn[n];
-          }
-
-          flxn[n] = (arear * rflux - areal * lflux);
+          divn[n] = -(arear * rflux - areal * lflux);
         }// end n
       }// End i
+    }// end j
+  }// end k
 
      // calculate x2-flux
-      if (pmb->block_size.nx2 > 1) {
+  if (pmb->block_size.nx2 > 1) {
+    for(int k=ks; k<=ke; ++k){
+      // first, calculate speed
+      for(int j=js; j<=je+1; ++j){
+        for(int i=is; i<=ie; ++i){
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            Real tau = (pco->x2f(j) - pco->x2v(j-1)) * sigmal 
+                    + (pco->x2v(j) - pco->x2f(j)) * sigmar;
+            tau *= taufact_;
+            Real tausq = tau * tau;
+            Real factor1 = 1.0 - 0.5 * tausq;
+            Real factor2 = tausq;
+            if(tausq > 1.e-3){
+              factor1  = (1.0 - exp(-tausq))/tausq;
+              factor2 = (1.0 - exp(-tausq * tausq))/tausq;
+            }
+            factor1 = sqrt(factor1);
+            factor2 = sqrt(factor2);
+            Real *s1n = &(sfac1_y_(j,i,ifr*nang));
+            Real *s2n = &(sfac2_y_(j,i,ifr*nang));
+            Real *velyn = &(vely_(k,j,i,ifr*nang));
+            for(int n=0; n<nang; ++n){
+              if(velyn[n] > 0.0){
+                s1n[n] =  factor1 * velyn[n];
+                s2n[n] = -factor2 * velyn[n];
+              }else{
+                s1n[n] = -factor2 * velyn[n];
+                s2n[n] =  factor1 * velyn[n];
+              }
+
+            }// end n
+          }// end ifr
+
+        }// end i
+      }// end j
+
+      for(int j=js; j<=je; ++j){
+
         pmb->pcoord->Face2Area(k,j  ,is,ie,x2area   );
         pmb->pcoord->Face2Area(k,j+1,is,ie,x2area_p1);
+
         for(int i=is; i<=ie; ++i){
           Real *vel_ln = &(vely_(k,j,i,0));
           Real *vel_rn = &(vely_(k,j+1,i,0));
           Real *coef2n = &(const_coef2_(k,j,i,0));
+          Real *s1_ln = &(sfac1_y_(j,i,0));
+          Real *s1_rn = &(sfac1_y_(j+1,i,0));
+          Real *s2_ln = &(sfac2_y_(j,i,0));
+          Real *s2_rn = &(sfac2_y_(j+1,i,0));
+
           Real *irln = &(ir(k,j-1,i,0));
           Real *irrn = &(ir(k,j+1,i,0));
           Real areal = x2area(i);
           Real arear = x2area_p1(i);
-          Real *flxn = &(dflx(i,0));
+          Real *divn = &(divflx_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real lflux = 0.0;
-            Real rflux = 0.0;
-            coef2n[n] = 0.0;
-            if(vel_ln[n] > 0.0)
-              lflux = vel_ln[n] * irln[n];
-            else if(vel_ln[n] < 0.0)
-              coef2n[n] = (-areal * vel_ln[n]);
-            if(vel_rn[n] > 0.0)
-              coef2n[n] += (arear * vel_rn[n]);
-            else if(vel_rn[n] < 0.0)
-              rflux = vel_rn[n] * irrn[n]; 
+            Real smax = s1_ln[n];
+            Real smin = s2_ln[n];
+            Real lflux = (smax * vel_ln[n] * irln[n] - smax * smin * irln[n])/(smax - smin);
+            coef2n[n] = -areal * (-smin * vel_ln[n] + smax * smin)/(smax - smin);
+            smax = s1_rn[n];
+            smin = s2_rn[n];
+            Real rflux = (-smin * vel_rn[n] * irrn[n] + smax * smin * irrn[n])/(smax - smin);
+            coef2n[n] += arear * (smax * vel_rn[n] - smax * smin)/(smax - smin);
 
-            flxn[n] += (arear*rflux - areal*lflux);
+            divn[n] += -(arear * rflux - areal * lflux);  
+
           }// end n
         }// end i
-      }// end nx2
+      }// end j
+    }// end k
+  }// end nx2
 
-      // calculate x3-flux divergence
-      if (pmb->block_size.nx3 > 1) {
+
+  // calculate x3-flux divergence
+  if (pmb->block_size.nx3 > 1) {
+    for(int k=ks; k<=ke+1; ++k){
+      for(int j=js; j<=je; ++j){
+        for(int i=is; i<=ie; ++i){
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            Real tau = (pco->x3f(k) - pco->x3v(k-1)) * sigmal 
+                    + (pco->x3v(k) - pco->x3f(k)) * sigmar;
+            tau *= taufact_;
+            Real tausq = tau * tau;
+            Real factor1 = 1.0 - 0.5 * tausq;
+            Real factor2 = tausq;
+            if(tausq > 1.e-3){
+              factor1  = (1.0 - exp(-tausq))/tausq;
+              factor2 = (1.0 - exp(-tausq * tausq))/tausq;
+            }
+            factor1 = sqrt(factor1);
+            factor2 = sqrt(factor2);
+            Real *s1n = &(sfac1_z_(k,j,i,ifr*nang));
+            Real *s2n = &(sfac2_z_(k,j,i,ifr*nang));
+            Real *velzn = &(velz_(k,j,i,ifr*nang));
+            for(int n=0; n<nang; ++n){
+              if(velzn[n] > 0.0){
+                s1n[n] =  factor1 * velzn[n];
+                s2n[n] = -factor2 * velzn[n];
+              }else{
+                s1n[n] = -factor2 * velzn[n];
+                s2n[n] = factor1 * velzn[n];
+              }
+
+            }// end n
+          }// end ifr
+
+        }// end i
+      }// end j
+    }// end k
+    for(int k=ks; k<=ke; ++k){
+      for(int j=js; j<=je; ++j){
         pmb->pcoord->Face3Area(k  ,j,is,ie,x3area   );
         pmb->pcoord->Face3Area(k+1,j,is,ie,x3area_p1);
         for(int i=is; i<=ie; ++i){
+          Real *s1_ln = &(sfac1_z_(k,j,i,0));
+          Real *s1_rn = &(sfac1_z_(k+1,j,i,0));
+          Real *s2_ln = &(sfac2_z_(k,j,i,0));
+          Real *s2_rn = &(sfac2_z_(k+1,j,i,0));
           Real *vel_ln = &(velz_(k,j,i,0));
           Real *vel_rn = &(velz_(k+1,j,i,0));
           Real *coef3n = &(const_coef3_(k,j,i,0));
+          Real *irln = &(ir(k-1,j,i,0));
+          Real *irrn = &(ir(k+1,j,i,0));
           Real areal = x3area(i);
           Real arear = x3area_p1(i);
-          Real *flxn = &(dflx(i,0));
-          Real *irrn = &(ir(k+1,j,i,0));
-          Real *irln = &(ir(k-1,j,i,0));
+          Real *divn = &(divflx_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real lflux = 0.0;
-            Real rflux = 0.0;
-            coef3n[n] = 0.0;
-            if(vel_ln[n] > 0.0)
-              lflux = vel_ln[n] * irln[n];
-            else if(vel_ln[n] < 0.0)
-              coef3n[n] = (-areal * vel_ln[n]);
-            if(vel_rn[n] > 0.0)
-              coef3n[n] += (arear * vel_rn[n]);
-            else if(vel_rn[n] < 0.0)
-              rflux = vel_rn[n] * irrn[n]; 
+            Real smax = s1_ln[n];
+            Real smin = s2_ln[n];
+            Real lflux = (smax * vel_ln[n] * irln[n] - smax * smin * irln[n])/(smax - smin);
+            coef3n[n] = -areal * (-smin * vel_ln[n] + smax * smin)/(smax - smin);
+            smax = s1_rn[n];
+            smin = s2_rn[n];
+            Real rflux = (-smin * vel_rn[n] * irrn[n] + smax * smin * irrn[n])/(smax - smin);
+            coef3n[n] += arear * (smax * vel_rn[n] - smax * smin)/(smax - smin);
 
-            flxn[n] += (arear*rflux - areal*lflux);
-          }
-        }
-      }// end nx3
-      // update variable with flux divergence
+            divn[n] += -(arear * rflux - areal * lflux);  
+
+          }// end n          
+        }// end i
+      }// end j
+    }// end k
+  }// end nx3
+
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
       pmb->pcoord->CellVolume(k,j,is,ie,vol);
       for(int i=is; i<=ie; ++i){
         Real *divn = &(divflx_(k,j,i,0));
-        Real *flxn = &(dflx(i,0));
         Real dtvol = wght/vol(i);
 #pragma omp simd aligned(divn,flxn:ALI_LEN)
         for(int n=0; n<prad->n_fre_ang; ++n){
-          divn[n] = -dtvol*flxn[n];
+          divn[n] *= dtvol;
         }
-        // multiple the matrix coefficient with dt/vol
         Real *coef1n = &(const_coef1_(k,j,i,0));
         for(int n=0; n<prad->n_fre_ang; ++n){
           coef1n[n] *= dtvol;
@@ -185,8 +305,10 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
             coef3n[n] *= dtvol;
           }          
         }// end nx3 > 1
+
       }// end i
     }// end j
-  }// End k
-  
-}
+  }// end k
+
+
+}// end function
