@@ -43,6 +43,7 @@ IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
   error_limit_ =  pin->GetOrAddReal("radiation","error_limit",1.e-3);
   cfl_rad = pin->GetOrAddReal("radiation","cfl_rad",1.0);
 
+
 }
 
 

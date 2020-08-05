@@ -629,6 +629,169 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 }// end calculate_flux
 
 
+// calculate advective flux for the implicit scheme
+void RadIntegrator::CalculateFluxes(AthenaArray<Real> &ir, const int order)
+{
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco=pmb->pcoord;
+  
+  int nang=prad->nang;
+  int nfreq=prad->nfreq;
+
+  int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
+  ncells3 = pmb->ncells3; 
+
+  
+  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+  int il, iu, jl, ju, kl, ku;
+  jl = js, ju=je, kl=ks, ku=ke;
+
+  if(ncells2 > 1)
+  {
+    if(ncells3 == 1){
+      jl=js-1, ju=je+1, kl=ks, ku=ke;
+    }else{
+      jl=js-1, ju=je+1, kl=ks-1, ku=ke+1;
+    }
+ 
+  }       
+//--------------------------------------------------------------------------------------
+// i-direction
+
+    // First, do reconstruction of the specific intensities
+
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+      // reconstruct L/R states
+      if (order == 1) {
+        pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      }     
+
+      // calculate flux with velocity times the interface state
+      for(int i=is; i<=ie+1; ++i){
+        Real &vel = adv_vel(0,k,j,i);
+        if(vel >0){
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            x1flux(k,j,i,n) = vel * il_(i,n);
+          }// end n
+        }else{
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            x1flux(k,j,i,n) = vel * ir_(i,n);
+          }// end n
+        }// end vel
+      }// end i
+
+    }// end j
+  }// end k
+
+// j-direction
+  if(pmb->pmy_mesh->f2){
+    AthenaArray<Real> &x2flux=prad->flux[X2DIR];
+
+    il = is-1, iu = ie+1, kl = ks, ku = ke;
+    if (ncells3 ==  1) // 2D
+      kl = ks, ku = ke;
+    else // 3D
+      kl = ks-1, ku = ke+1;
+
+
+    for (int k=kl; k<=ku; ++k) {
+      //reconstruct the first row
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        }        
+
+
+      for(int j=js; j<=je+1; ++j){
+
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        }       
+        
+        //calculate the flux
+      // calculate flux with velocity times the interface state
+        for(int i=il; i<=iu; ++i){
+          Real &vel = adv_vel(1,k,j,i);
+          if(vel > 0){
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x2flux(k,j,i,n) = vel * il_(i,n);
+            }// end n
+          }else{
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x2flux(k,j,i,n) = vel * ir_(i,n);
+            }// end n
+          }
+        }// end i
+        //swap the array for the next step
+        il_.SwapAthenaArray(ilb_);
+      }// end j loop from js to je+1
+    }//end k
+  }//end pmy_mesh->f2 
+    
+  if(pmb->pmy_mesh->f3){
+    AthenaArray<Real> &x3flux=prad->flux[X3DIR];
+
+    il =is-1, iu=ie+1, jl=js-1, ju=je+1;
+
+    // First, calculate the transport velocity
+    for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
+      // reconstruct the first row
+      if (order == 1) {
+        pmb->precon->DonorCellX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      }        
+
+      for (int k=ks; k<=ke+1; ++k) {
+        // reconstruct L/R states at k
+        if (order == 1) {
+          pmb->precon->DonorCellX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        }
+
+      // calculate flux with velocity times the interface state
+        for(int i=il; i<=iu; ++i){
+          Real &vel = adv_vel(2,k,j,i);
+          if(vel > 0){
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x3flux(k,j,i,n) = vel * il_(i,n);
+            }// end n
+          }else{
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x3flux(k,j,i,n) = vel * ir_(i,n);
+            }// end n
+          }
+        }// end i        
+
+        // swap the arrays for the next step
+        il_.SwapAthenaArray(ilb_);
+      }// end k loop
+    }// end j from jl to ju
+  }// end k direction
+}// end calculate_flux
+
+
 void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                                     AthenaArray<Real> &ir_out)
 {

@@ -85,10 +85,13 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
       // prepare t_gas and vel
       prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
-      // clear ir1
-//      if(stage == 1)
-//        prad->ir1.ZeroClear();
-
+      // Calculate advection flux due to flow velocity explicitly
+      if(prad->pradintegrator->adv_flag_ > 0){
+        if(stage == 1)
+          prad->pradintegrator->CalculateFluxes(prad->ir, 1);
+       else
+          prad->pradintegrator->CalculateFluxes(prad->ir, prad->pradintegrator->rad_xorder);
+      }
       pmb = pmb->next;
     }
 

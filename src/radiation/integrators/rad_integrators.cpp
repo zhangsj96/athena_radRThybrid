@@ -28,7 +28,7 @@
 #include "../radiation.hpp"
 #include "rad_integrators.hpp"
 #include "../../coordinates/coordinates.hpp"
-
+#include "../../eos/eos.hpp"
 
 RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 {
@@ -40,7 +40,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   int nang=prad->nang;
   int nfreq=prad->nfreq;
-
   rad_xorder = pin->GetOrAddInteger("time","rad_xorder",2);
   if (rad_xorder == 3) {
     if (NGHOST < 3){ 
@@ -55,10 +54,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  taufact_ = pin->GetOrAddInteger("radiation","taucell",5);
+  taufact_ = pin->GetOrAddInteger("radiation","taucell",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
-  adv_flag_=pin->GetOrAddInteger("radiation","Advection",0);
+  if(IM_RADIATION_ENABLED)
+    adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
+  else
+    adv_flag_=pin->GetOrAddInteger("radiation","Advection",0);    
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
   tau_limit_ =  pin->GetOrAddReal("radiation","tau_limit",0);
 
@@ -87,12 +89,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   dflx_.NewAthenaArray(ncells1,prad->n_fre_ang);
 
   // arrays for spatial recontruction 
-  if(RADIATION_ENABLED){
-    il_.NewAthenaArray(ncells1,prad->n_fre_ang);
-    ilb_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  il_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  ilb_.NewAthenaArray(ncells1,prad->n_fre_ang);
 
-    ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
-  }
+  ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  
   if(IM_RADIATION_ENABLED){
     limiter_.NewAthenaArray(ncells1,prad->n_fre_ang);
     sfac1_x_.NewAthenaArray(ncells1,prad->n_fre_ang);
@@ -109,9 +110,29 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     }
     dql_.NewAthenaArray(prad->n_fre_ang);
     dqr_.NewAthenaArray(prad->n_fre_ang);
+
+    const_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    if(ncells2 > 1){
+      const_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    }
+    if(ncells3 > 1){
+      const_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    }
+    divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
+    if(adv_flag_ > 0){
+      adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
+    }
+  
+    tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
+    vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
+
+  // three velocity for separated advection
+    implicit_coef_.NewAthenaArray(prad->n_fre_ang);
+
   }
   
-  if(adv_flag_ > 0){
+  if(adv_flag_ > 0 && (RADIATION_ENABLED)){
     temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     temp_i2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   }
@@ -128,23 +149,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   cm_to_lab_.NewAthenaArray(nang);
   ir_cm_.NewAthenaArray(prad->n_fre_ang);
 
-  tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
-  vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
-  // the three velocity components used in the source terms
-  implicit_coef_.NewAthenaArray(prad->n_fre_ang);
-
-  // reconstruction coefficients used in implicit radiation scheme
-  if(IM_RADIATION_ENABLED){
-    const_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    if(ncells2 > 1){
-      const_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    }
-    if(ncells3 > 1){
-      const_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    }
-    divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
-  }
 
 
   if(prad->angle_flag == 1){
@@ -316,14 +320,14 @@ RadIntegrator::~RadIntegrator()
 
   dflx_.DeleteAthenaArray();
   
-  if(RADIATION_ENABLED){
-    il_.DeleteAthenaArray();
-    ilb_.DeleteAthenaArray();
 
-    ir_.DeleteAthenaArray();
-  }
+  il_.DeleteAthenaArray();
+  ilb_.DeleteAthenaArray();
 
-  if(adv_flag_ > 0){
+  ir_.DeleteAthenaArray();
+  
+
+  if(adv_flag_ > 0 && RADIATION_ENABLED){
     temp_i1_.DeleteAthenaArray();
     temp_i2_.DeleteAthenaArray();
   }
@@ -340,10 +344,6 @@ RadIntegrator::~RadIntegrator()
   tran_coef_.DeleteAthenaArray();
   cm_to_lab_.DeleteAthenaArray();
   ir_cm_.DeleteAthenaArray();
-  tgas_.DeleteAthenaArray();
-  vel_source_.DeleteAthenaArray();
-
-  implicit_coef_.DeleteAthenaArray();
 
   if(IM_RADIATION_ENABLED){
     const_coef1_.DeleteAthenaArray();
@@ -366,6 +366,15 @@ RadIntegrator::~RadIntegrator()
     divflx_.DeleteAthenaArray();
     dql_.DeleteAthenaArray();
     dqr_.DeleteAthenaArray();
+
+    tgas_.DeleteAthenaArray();
+    vel_source_.DeleteAthenaArray();
+    if(adv_flag_ > 0){
+      adv_vel.DeleteAthenaArray();
+    }
+
+    implicit_coef_.DeleteAthenaArray();
+
 
   }
 
@@ -393,4 +402,186 @@ RadIntegrator::~RadIntegrator()
   }  
   
 }
+
+
+
+void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
+    AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
+    AthenaArray<Real> &ir)
+{
+
+
+  Real gm1 = pmb->peos->GetGamma() - 1.0;
+
+  Real rho_floor = pmb->peos->GetDensityFloor();
+
+  Radiation *prad=pmb->prad;  
+  Coordinates *pco=pmb->pcoord;
+
+  Real& prat = prad->prat;
+  Real invcrat = 1.0/prad->crat;
+
+  int &nang =prad->nang;
+  int &nfreq=prad->nfreq;
+
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+ 
+  for(int k=0; k<pmb->ncells3; ++k){
+    for(int j=0; j<pmb->ncells2; ++j){
+      for(int i=0; i<pmb->ncells1; ++i){
+
+        // for implicit update, using the quantities from the partially 
+        // updated u, not from w 
+
+         Real rho = u(IDN,k,j,i);
+         rho = std::max(rho,rho_floor);
+         Real vx = u(IM1,k,j,i)/rho;
+         Real vy = u(IM2,k,j,i)/rho;
+         Real vz = u(IM3,k,j,i)/rho;
+         Real pb = 0.0;
+         if(MAGNETIC_FIELDS_ENABLED)
+           pb = 0.5*(SQR(bcc(IB1,k,j,i))+SQR(bcc(IB2,k,j,i))
+                +SQR(bcc(IB3,k,j,i)));
+
+         Real vel = vx * vx + vy * vy + vz * vz;
+         Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vel;
+         tgas = gm1*tgas/rho;
+         tgas = std::max(tgas,pmb->prad->t_floor_);
+         tgas_(k,j,i) = tgas;
+        // Do not use the velocity directly in strongly radiation pressure
+         // dominated regime
+         // use the predicted velocity based on moment equatio
+
+         // calculate radiation energy density
+         Real er = 0.0;
+         for(int ifr=0; ifr<nfreq; ++ifr){ 
+           Real *irn = &(ir(k,j,i,ifr*nang));
+           Real *weight = &(prad->wmu(0));
+           Real er_freq = 0.0;
+#pragma omp simd reduction(+:er_freq)
+           for(int n=0; n<nang; ++n){
+             er_freq += weight[n] * irn[n];
+           }
+           er_freq *= prad->wfreq(ifr);
+           er += er_freq;
+         }   
+
+         if(prat * er * invcrat * invcrat > rho){
+
+            PredictVel(ir,k,j,i, 0.5 * dt, rho, &vx, &vy, &vz);
+            vel = vx * vx + vy * vy + vz * vz;
+
+         }
+        
+         Real ratio = sqrt(vel) * invcrat;
+         // Limit the velocity to be smaller than the speed of light
+         if(ratio > prad->vmax){
+           Real factor = prad->vmax/ratio;
+           vx *= factor;
+           vy *= factor;
+           vz *= factor;
+           
+         }
+         vel_source_(k,j,i,0) = vx;
+         vel_source_(k,j,i,1) = vy;
+         vel_source_(k,j,i,2) = vz;
+
+
+   
+      }// end i
+    }// end j
+  }// end k  
+
+  // Now get interface velocity
+  if(adv_flag_ > 0){
+    // vx
+    for(int k=ks; k<=ke; ++k){
+      for(int j=js; j<=je; ++j){
+        for(int i=is; i<=ie+1; ++i){
+          Real tau = 0.0;
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
+                    + (pco->x1v(i) - pco->x1f(i)) * sigmar);
+          }// end ifr
+
+          tau *= taufact_;
+          Real tausq = tau * tau;
+          Real factor = tausq - 0.5 * tausq * tausq;
+          if(tausq > 1.e-3)
+            factor = (1.0 - exp(-tausq));
+          Real vl = vel_source_(k,j,i-1,0);
+          Real vr = vel_source_(k,j,i,0);
+          adv_vel(0,k,j,i) = factor*(vl + (pco->x1f(i) - pco->x1v(i-1)) * 
+                                 (vr - vl)/(pco->x1v(i) - pco->x1v(i-1)));
+
+        }
+      }
+    }
+    if(je > js){
+      for(int k=ks; k<=ke; ++k){
+        for(int j=js; j<=je+1; ++j){
+          Real ratio = (pco->x2f(j) - pco->x2v(j-1))/
+                       (pco->x2v(j) - pco->x2v(j-1));
+          for(int i=is; i<=ie; ++i){
+            Real tau = 0.0;
+            for(int ifr=0; ifr<nfreq; ++ifr){
+              Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
+              Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+              tau += prad->wfreq(ifr)*((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
+                    + (pco->x2v(j) - pco->x2f(j)) * sigmar);
+            }// end ifr
+
+            tau *= taufact_;
+            Real tausq = tau * tau;
+            Real factor = tausq - 0.5 * tausq * tausq;
+            if(tausq > 1.e-3)
+              factor = (1.0 - exp(-tausq));
+
+            Real vl = vel_source_(k,j-1,i,1);
+            Real vr = vel_source_(k,j,i,1);
+            adv_vel(1,k,j,i) = factor*(vl +  ratio * (vr - vl));
+          }
+        }// end j
+      }// end k
+
+    }// end je > js
+
+    if(ke > ks){
+      for(int k=ks; k<=ke+1; ++k){
+        Real ratio = (pco->x3f(k) - pco->x3v(k-1))/
+                     (pco->x3v(k) - pco->x3v(k-1));
+        for(int j=js; j<=je; ++j){
+          for(int i=is; i<=ie; ++i){
+            Real tau = 0.0;
+            for(int ifr=0; ifr<nfreq; ++ifr){
+              Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
+              Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+              tau += prad->wfreq(ifr)*((pco->x3f(k) - pco->x3v(k-1)) * sigmal 
+                    + (pco->x3v(j) - pco->x3f(j)) * sigmar);
+            }// end ifr
+
+            tau *= taufact_;
+            Real tausq = tau * tau;
+            Real factor = tausq - 0.5 * tausq * tausq;
+            if(tausq > 1.e-3)
+              factor = (1.0 - exp(-tausq));
+
+            Real vl = vel_source_(k-1,j,i,2);
+            Real vr = vel_source_(k,j,i,2);
+            adv_vel(2,k,j,i) = factor * (vl +  ratio * (vr - vl));
+          }
+        }// end j
+      }// end k
+
+    }// end ke > ks
+
+  }// end adv_flag
+
+}// end the function
+
+
 

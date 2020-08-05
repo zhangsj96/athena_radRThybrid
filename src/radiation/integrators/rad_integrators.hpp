@@ -25,6 +25,7 @@ class Radiation;
 
 class RadIntegrator {
   friend class Radiation;
+  friend class IMRadiation;
 public:
   RadIntegrator(Radiation *prad, ParameterInput *pin);
   ~RadIntegrator();
@@ -39,11 +40,13 @@ public:
   void FirstOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
+
   void SecondOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
+  void CalculateFluxes(AthenaArray<Real> &ir, const int order);
   
   void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
@@ -83,6 +86,8 @@ public:
                   Real *vx, Real *vy, Real *vz);
 
   int rad_xorder; 
+  AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
+  
 private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;
   AthenaArray<Real> il_, ilb_, ir_;// for recontruction
@@ -95,6 +100,7 @@ private:
   AthenaArray<Real> dflx_ang_, ang_vol_;
   AthenaArray<Real> tgas_, vel_source_; // array to store gas temperature, 
                                         // velocity for source term
+
                                     
  // temporary 1D array with size of nang
   Real taufact_;
