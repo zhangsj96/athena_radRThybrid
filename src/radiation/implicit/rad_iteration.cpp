@@ -71,7 +71,20 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
 
 
+      // prepare t_gas and vel
+      if(stage == 1)
+        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
+      else
+        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir1);
 
+      // Calculate advection flux due to flow velocity explicitly
+      // need to do this before ir is reset in the second step
+      if(prad->pradintegrator->adv_flag_ > 0){
+        if(stage == 1)
+          prad->pradintegrator->CalculateFluxes(prad->ir, 1);
+       else
+          prad->pradintegrator->CalculateFluxes(prad->ir, prad->pradintegrator->rad_xorder);
+      }
 
 
       if(stage == 1)
@@ -83,15 +96,6 @@ void IMRadiation::JacobiIteration(Mesh *pm,
       prad->ir_old = prad->ir;
 
 
-      // prepare t_gas and vel
-      prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
-      // Calculate advection flux due to flow velocity explicitly
-      if(prad->pradintegrator->adv_flag_ > 0){
-        if(stage == 1)
-          prad->pradintegrator->CalculateFluxes(prad->ir, 1);
-       else
-          prad->pradintegrator->CalculateFluxes(prad->ir, prad->pradintegrator->rad_xorder);
-      }
       pmb = pmb->next;
     }
 
