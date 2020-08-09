@@ -124,14 +124,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
     }
   
-    tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
-    vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
 
-  // three velocity for separated advection
-    implicit_coef_.NewAthenaArray(prad->n_fre_ang);
 
   }
-  
+  implicit_coef_.NewAthenaArray(prad->n_fre_ang);
+  tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
+  vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
+
   if(adv_flag_ > 0 && (RADIATION_ENABLED)){
     temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     temp_i2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -367,16 +366,15 @@ RadIntegrator::~RadIntegrator()
     dql_.DeleteAthenaArray();
     dqr_.DeleteAthenaArray();
 
-    tgas_.DeleteAthenaArray();
-    vel_source_.DeleteAthenaArray();
+
     if(adv_flag_ > 0){
       adv_vel.DeleteAthenaArray();
     }
-
-    implicit_coef_.DeleteAthenaArray();
-
-
   }
+  implicit_coef_.DeleteAthenaArray();
+  tgas_.DeleteAthenaArray();
+  vel_source_.DeleteAthenaArray();
+
 
   if(pmy_rad->angle_flag == 1){
     int &nzeta = pmy_rad->nzeta;
