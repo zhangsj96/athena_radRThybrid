@@ -40,7 +40,7 @@
 
 
 
-void IMRadiation::JacobiIteration(Mesh *pm, 
+void IMRadiation::Iteration(Mesh *pm, 
              TimeIntegratorTaskList *ptlist, int stage){
    // perform Jacobi iteration including both source and flux terms
    // The iteration step is: calculate flux, calculate source term, 
@@ -114,7 +114,11 @@ void IMRadiation::JacobiIteration(Mesh *pm,
 
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
-        prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
+        if(ite_scheme_ == 0)
+          prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
+        else if(ite_scheme_ == 1)
+          prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);          
+
         // the second order iteration scheme is not working  
    // add flux divergence
 
@@ -309,8 +313,8 @@ void IMRadiation::JacobiIteration(Mesh *pm,
            Real *iro = &(ir_old(k,j,i,ifr*nang));
            Real *irn = &(ir_new(k,j,i,ifr*nang));
            for(int n=0; n<nang; ++n){
-             prad->sum_diff += abs(iro[n] - irn[n]);
-             prad->sum_full += abs(irn[n]);
+             prad->sum_diff += fabs(iro[n] - irn[n]);
+             prad->sum_full += fabs(irn[n]);
            }
          }// end ifr
        }// end i

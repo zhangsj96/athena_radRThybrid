@@ -455,7 +455,7 @@ int main(int argc, char *argv[]) {
       ptlist->DoTaskListOneStage(pmesh, stage);
 
       if(IM_RADIATION_ENABLED){
-        pmesh->pimrad->JacobiIteration(pmesh,ptlist,stage);
+        pmesh->pimrad->Iteration(pmesh,ptlist,stage);
       }
 
     }

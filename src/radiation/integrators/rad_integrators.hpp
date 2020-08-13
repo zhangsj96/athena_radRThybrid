@@ -39,7 +39,8 @@ public:
                                 AthenaArray<Real> &ir);
   void FirstOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
-
+  void FirstOrderGSFluxDivergence(const Real wght, 
+                                AthenaArray<Real> &ir);
 
   void SecondOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
@@ -117,6 +118,7 @@ private:
 
   AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
   AthenaArray<Real> divflx_, implicit_coef_;
+  AthenaArray<Real> left_coef1_, left_coef2_, left_coef3_;
   AthenaArray<Real> limiter_, limiterj_, limiterk_, dql_, dqr_;
   AthenaArray<Real> sfac1_x_, sfac2_x_;
   AthenaArray<Real> sfac1_y_, sfac2_y_;

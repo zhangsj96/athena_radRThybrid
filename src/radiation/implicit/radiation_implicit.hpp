@@ -35,7 +35,7 @@ public:
   IMRadiation(Mesh *pm, ParameterInput *pin);
 //  ~Radiation();
 
-  void JacobiIteration(Mesh *pm, 
+  void Iteration(Mesh *pm, 
              TimeIntegratorTaskList *ptlist, int stage);
 
 
@@ -53,6 +53,7 @@ private:
   Real sum_full_;
   int nlimit_;       // threadhold for the number of iterations
   Real error_limit_; // 
+  int ite_scheme_;
   
 
 };

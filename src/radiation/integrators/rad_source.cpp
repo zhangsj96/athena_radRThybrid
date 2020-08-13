@@ -30,6 +30,7 @@
 #include "../../parameter_input.hpp"
 #include "../../mesh/mesh.hpp"
 #include "../radiation.hpp"
+#include "../implicit/radiation_implicit.hpp"
 #include "../../coordinates/coordinates.hpp" //
 #include "../../hydro/hydro.hpp"
 #include "../../field/field.hpp"
@@ -130,6 +131,23 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
             Real *divflux = &(divflx_(k,j,i,ifr*nang));
             for(int n=0; n<nang; ++n)
               ir_cm(n+ifr*nang) += divflux[n];
+            // for Gauss-Seidel iteration, add flux from left hand side
+            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 1){
+              for(int n=0; n<nang; ++n)
+                ir_cm(n+ifr*nang) -= left_coef1_(k,j,i,n+ifr*nang) 
+                                   * ir(k,j,i-1,n+ifr*nang);
+              if(je > js){
+                for(int n=0; n<nang; ++n)
+                  ir_cm(n+ifr*nang) -= left_coef2_(k,j,i,n+ifr*nang) 
+                                     * ir(k,j-1,i,n+ifr*nang);                
+              }
+              if(ke > ks){
+                for(int n=0; n<nang; ++n)
+                  ir_cm(n+ifr*nang) -= left_coef3_(k,j,i,n+ifr*nang) 
+                                     * ir(k-1,j,i,n+ifr*nang);                 
+              }
+
+            }
           }
 #pragma omp simd
           for(int n=0; n<nang; ++n){
@@ -220,26 +238,63 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           Real frx_fr = 0.0;
           Real fry_fr = 0.0;
           Real frz_fr = 0.0;
-//#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
-          for(int n=0; n<nang; ++n){
-            Real ir_weight = p_ir0[n];
-            if(IM_RADIATION_ENABLED){
-              ir_weight += divflx_(k,j,i,ifr*nang+n);
-              ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
-              if(je > js)
-                ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
-              if(ke > ks)
-                ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
-            }// end implicit
 
-            ir_weight *= prad->wmu(n);
-            er_fr  += ir_weight;
-            frx_fr += ir_weight * prad->mu(0,k,j,i,n);
-            fry_fr += ir_weight * prad->mu(1,k,j,i,n);
-            frz_fr += ir_weight * prad->mu(2,k,j,i,n);
+          if(IM_RADIATION_ENABLED){
+            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 0){
+              for(int n=0; n<nang; ++n){
+                Real ir_weight = p_ir0[n];
+                ir_weight += divflx_(k,j,i,ifr*nang+n);
+                ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                if(je > js)
+                  ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                if(ke > ks)
+                  ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                ir_weight *= prad->wmu(n);
+                er_fr  += ir_weight;
+                frx_fr += ir_weight * prad->mu(0,k,j,i,n);
+                fry_fr += ir_weight * prad->mu(1,k,j,i,n);
+                frz_fr += ir_weight * prad->mu(2,k,j,i,n);
+              }// end Jacobi iteration
+            }else if(pmb->pmy_mesh->pimrad->ite_scheme_ == 1){
+              for(int n=0; n<nang; ++n){
+                Real ir_weight = p_ir0[n];
+                ir_weight += divflx_(k,j,i,ifr*nang+n);
+                ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                ir_weight -= (left_coef1_(k,j,i,ifr*nang+n)
+                           * ir(k,j,i-1,ifr*nang+n));
+                if(je > js){
+                  ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                  ir_weight -= (left_coef2_(k,j,i,ifr*nang+n)
+                           * ir(k,j-1,i,ifr*nang+n));
+                }
+                if(ke > ks){
+                  ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
+                           * ir(k,j,i,ifr*nang+n));
+                  ir_weight -= (left_coef3_(k,j,i,ifr*nang+n)
+                           * ir(k-1,j,i,ifr*nang+n));
+                }
+                ir_weight *= prad->wmu(n);
+                er_fr  += ir_weight;
+                frx_fr += ir_weight * prad->mu(0,k,j,i,n);
+                fry_fr += ir_weight * prad->mu(1,k,j,i,n);
+                frz_fr += ir_weight * prad->mu(2,k,j,i,n);
+              }
+            }// end Gauss-Seidel iteration
+          }else{
+#pragma omp simd reduction (+:er_fr,frx_fr,fry_fr,frz_fr)
+            for(int n=0; n<nang; ++n){
+              Real ir_weight = p_ir0[n];
+              ir_weight *= prad->wmu(n);
+              er_fr  += ir_weight;
+              frx_fr += ir_weight * prad->mu(0,k,j,i,n);
+              fry_fr += ir_weight * prad->mu(1,k,j,i,n);
+              frz_fr += ir_weight * prad->mu(2,k,j,i,n);
+            }
           }
           er0 += er_fr*prad->wfreq(ifr);
           frx0 += frx_fr*prad->wfreq(ifr);
