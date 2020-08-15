@@ -69,14 +69,16 @@ void IMRadiation::Iteration(Mesh *pm,
       Hydro *ph = pmb->phydro;
       Field *pf = pmb->pfield;
 
-
+      AthenaArray<Real> &ir_ini = prad->ir1;
 
       // prepare t_gas and vel
-      if(stage == 1)
+      if(stage == 1){
+        ir_ini = prad->ir;
         prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
-      else
-        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir1);
-
+      }
+      else{
+        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,ir_ini);
+      }
       // Calculate advection flux due to flow velocity explicitly
       // need to do this before ir is reset in the second step
       if(prad->pradintegrator->adv_flag_ > 0){
@@ -86,13 +88,6 @@ void IMRadiation::Iteration(Mesh *pm,
           prad->pradintegrator->CalculateFluxes(prad->ir, prad->pradintegrator->rad_xorder);
       }
 
-
-      if(stage == 1)
-        prad->ir1 = prad->ir;
-      else
-        prad->ir = prad->ir1;
-
-      prad->ir_ini = prad->ir;
       prad->ir_old = prad->ir;
 
 
@@ -122,17 +117,9 @@ void IMRadiation::Iteration(Mesh *pm,
         // the second order iteration scheme is not working  
    // add flux divergence
 
-     // This copy ir to ir1
-//       pmb->WeightedAve(prad->ir1, prad->ir, prad->ir2, ave_wghts1,1);
 
-
-//        if(ave_wghts2[0] == 0.0 && ave_wghts2[1] == 1.0 && ave_wghts2[2] == 0.0)
-//          prad->ir.SwapAthenaArray(prad->ir1);
-//        else
-//          pmb->WeightedAve(prad->ir, prad->ir1, prad->ir2, ave_wghts2,1);
-
-     // the source term
-        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir_ini, prad->ir);
+     // the source term, ir1 is the ir_ini
+        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir1, prad->ir);
 
         prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
 
@@ -229,7 +216,7 @@ void IMRadiation::Iteration(Mesh *pm,
     while(pmb != nullptr){
       if(pmb->prad->set_source_flag  == 0)
         pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
-                                          pmb->prad->ir_ini, pmb->prad->ir);
+                                          pmb->prad->ir1, pmb->prad->ir);
       
       pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::fluid);
       pmb = pmb->next;

@@ -1605,9 +1605,9 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
     // Evaluate the time-dependent source terms
     // Both u and ir are partially updated, only w is from the beginning of the step
     prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
-    prad->ir_ini = prad->ir;
+    prad->ir_old = prad->ir;
     prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir, prad->ir);
-    prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_ini, prad->ir);
+    prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_old, prad->ir);
   } else {
     return TaskStatus::fail;
   }
