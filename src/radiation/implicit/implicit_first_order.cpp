@@ -343,7 +343,6 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
       for(int i=is; i<=ie; ++i){
         Real *divn = &(divflx_(k,j,i,0));
         Real dtvol = wght/vol(i);
-#pragma omp simd aligned(divn,flxn:ALI_LEN)
         for(int n=0; n<prad->n_fre_ang; ++n){
           divn[n] *= dtvol;
         }

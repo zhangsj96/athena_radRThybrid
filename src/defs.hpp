@@ -49,9 +49,9 @@
 #define SELF_GRAVITY_ENABLED 0
 
 // include radiative transfer? default=0 (false)
-#define RADIATION_ENABLED 1
+#define RADIATION_ENABLED 0
 
-#define IM_RADIATION_ENABLED 0
+#define IM_RADIATION_ENABLED 1
 
 
 // include cosmic ray transport? default=0 (false)

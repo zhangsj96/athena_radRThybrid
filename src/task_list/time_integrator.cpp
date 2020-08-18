@@ -1574,6 +1574,8 @@ TaskStatus TimeIntegratorTaskList::IntegrateRad(MeshBlock *pmb, int stage) {
 TaskStatus TimeIntegratorTaskList::CalculateRadFlux(MeshBlock *pmb, int stage) {
   Hydro *phydro = pmb->phydro;
   Radiation *prad = pmb->prad;
+  Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
+  prad->pradintegrator->GetTgasVel(pmb,dt,phydro->u,pmb->pfield->bcc,prad->ir);
 
   if (stage <= nstages) {
     if ((stage == 1) && (integrator == "vl2")) {
@@ -1604,7 +1606,7 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
     Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
     // Evaluate the time-dependent source terms
     // Both u and ir are partially updated, only w is from the beginning of the step
-    prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
+
     prad->ir_old = prad->ir;
     prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir, prad->ir);
     prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_old, prad->ir);
