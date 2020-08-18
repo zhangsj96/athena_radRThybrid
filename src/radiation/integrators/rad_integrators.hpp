@@ -93,7 +93,6 @@ private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;
   AthenaArray<Real> il_, ilb_, ir_;// for recontruction
                           // temporary array to store the flux, velocity
-  AthenaArray<Real> temp_i1_, temp_i2_; // temporary array to store Div q
   AthenaArray<Real> vncsigma_, vncsigma2_, wmu_cm_, tran_coef_, ir_cm_;
   AthenaArray<Real> cm_to_lab_;
   AthenaArray<Real> g_zeta_, q_zeta_, ql_zeta_, qr_zeta_, zeta_flux_, zeta_area_;

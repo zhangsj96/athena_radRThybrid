@@ -57,10 +57,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   taufact_ = pin->GetOrAddInteger("radiation","taucell",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
-  if(IM_RADIATION_ENABLED)
-    adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
-  else
-    adv_flag_=pin->GetOrAddInteger("radiation","Advection",0);    
+  adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
   tau_limit_ =  pin->GetOrAddReal("radiation","tau_limit",0);
 
@@ -93,20 +90,32 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   ilb_.NewAthenaArray(ncells1,prad->n_fre_ang);
 
   ir_.NewAthenaArray(ncells1,prad->n_fre_ang);
+
+  sfac1_x_.NewAthenaArray(ncells1,prad->n_fre_ang);
+  sfac2_x_.NewAthenaArray(ncells1,prad->n_fre_ang);  
+  if(ncells2 > 1){
+    sfac1_y_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);
+    sfac2_y_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);    
+  }
+  if(ncells3 > 1){
+    sfac1_z_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    sfac2_z_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);    
+  }
+
+  if(adv_flag_ > 0){
+    adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
+  }
   
   if(IM_RADIATION_ENABLED){
     limiter_.NewAthenaArray(ncells1,prad->n_fre_ang);
-    sfac1_x_.NewAthenaArray(ncells1,prad->n_fre_ang);
-    sfac2_x_.NewAthenaArray(ncells1,prad->n_fre_ang);
+
     if(ncells2 > 1){
       limiterj_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);
-      sfac1_y_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);
-      sfac2_y_.NewAthenaArray(ncells2,ncells1,prad->n_fre_ang);
+
     }
     if(ncells3 > 1){
       limiterk_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-      sfac1_z_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-      sfac2_z_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
     }
     dql_.NewAthenaArray(prad->n_fre_ang);
     dqr_.NewAthenaArray(prad->n_fre_ang);
@@ -120,24 +129,18 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     }
     divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-    if(adv_flag_ > 0){
-      adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
-    }
+
   
     left_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-  }
+  }// end implicit
   implicit_coef_.NewAthenaArray(prad->n_fre_ang);
 
   tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
   vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
 
-  if(adv_flag_ > 0 && (RADIATION_ENABLED)){
-    temp_i1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    temp_i2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-  }
 
   vel_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   velx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -328,12 +331,6 @@ RadIntegrator::~RadIntegrator()
 
   ir_.DeleteAthenaArray();
   
-
-  if(adv_flag_ > 0 && RADIATION_ENABLED){
-    temp_i1_.DeleteAthenaArray();
-    temp_i2_.DeleteAthenaArray();
-  }
-
   vel_.DeleteAthenaArray();
   velx_.DeleteAthenaArray();
   vely_.DeleteAthenaArray();
@@ -347,32 +344,38 @@ RadIntegrator::~RadIntegrator()
   cm_to_lab_.DeleteAthenaArray();
   ir_cm_.DeleteAthenaArray();
 
+  sfac1_x_.DeleteAthenaArray();
+  sfac2_x_.DeleteAthenaArray();  
+  if(pmy_rad->pmy_block->ncells2 > 1){
+    sfac1_y_.DeleteAthenaArray();
+    sfac2_y_.DeleteAthenaArray();    
+  }
+  if(pmy_rad->pmy_block->ncells3 > 1){
+    sfac1_z_.DeleteAthenaArray();
+    sfac2_z_.DeleteAthenaArray();    
+  }
+
+  if(adv_flag_ > 0){
+    adv_vel.DeleteAthenaArray();
+  }
+
   if(IM_RADIATION_ENABLED){
+
     const_coef1_.DeleteAthenaArray();
     limiter_.DeleteAthenaArray();
-    sfac1_x_.DeleteAthenaArray();
-    sfac2_x_.DeleteAthenaArray();
 
     if(pmy_rad->pmy_block->ncells2 > 1){
       const_coef2_.DeleteAthenaArray();
       limiterj_.DeleteAthenaArray();
-      sfac1_y_.DeleteAthenaArray();
-      sfac2_y_.DeleteAthenaArray();
     }
     if(pmy_rad->pmy_block->ncells3 > 1){
       const_coef3_.DeleteAthenaArray();
       limiterk_.DeleteAthenaArray();
-      sfac1_z_.DeleteAthenaArray();
-      sfac2_z_.DeleteAthenaArray();
     }
     divflx_.DeleteAthenaArray();
     dql_.DeleteAthenaArray();
     dqr_.DeleteAthenaArray();
 
-
-    if(adv_flag_ > 0){
-      adv_vel.DeleteAthenaArray();
-    }
     left_coef1_.DeleteAthenaArray();
     left_coef2_.DeleteAthenaArray();
     left_coef3_.DeleteAthenaArray();
