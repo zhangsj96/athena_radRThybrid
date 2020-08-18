@@ -162,12 +162,6 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   if(pmb->pmy_mesh->f2){
     AthenaArray<Real> &x2flux=prad->flux[X2DIR];
 
-    il = is-1, iu = ie+1, kl = ks, ku = ke;
-    if (ncells3 ==  1) // 2D
-      kl = ks, ku = ke;
-    else // 3D
-      kl = ks-1, ku = ke+1;
-
     for(int k=ks; k<=ke; ++k){
       // first, calculate speed
       for(int j=js; j<=je+1; ++j){
@@ -228,8 +222,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
         for(int i=is; i<=ie; ++i){
           Real *vel = &(vely_(k,j,i,0));
-          Real *smax = &(sfac1_y_(i,0));
-          Real *smin = &(sfac2_y_(i,0));
+          Real *smax = &(sfac1_y_(j,i,0));
+          Real *smin = &(sfac2_y_(j,i,0));
           Real *irln = &(il_(i,0));
           Real *irrn = &(ir_(i,0));
           Real adv = 0.0;
@@ -261,9 +255,6 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     
   if(pmb->pmy_mesh->f3){
     AthenaArray<Real> &x3flux=prad->flux[X3DIR];
-
-    il =is-1, iu=ie+1, jl=js-1, ju=je+1;
-
     // First, calculate the transport velocity
 
     for(int k=ks; k<=ke+1; ++k){
@@ -330,8 +321,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
         for(int i=is; i<=ie; ++i){
           Real *vel = &(velz_(k,j,i,0));
-          Real *smax = &(sfac1_z_(i,0));
-          Real *smin = &(sfac2_z_(i,0));
+          Real *smax = &(sfac1_z_(k,j,i,0));
+          Real *smin = &(sfac2_z_(k,j,i,0));
           Real *irln = &(il_(i,0));
           Real *irrn = &(ir_(i,0));
           Real adv = 0.0;
