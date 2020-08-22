@@ -39,7 +39,11 @@ public:
                                 AthenaArray<Real> &ir);
   void FirstOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
+  void FirstOrderFluxDivergenceSafe(const Real wght, 
+                                AthenaArray<Real> &ir);
   void FirstOrderGSFluxDivergence(const Real wght, 
+                                AthenaArray<Real> &ir);
+  void FirstOrderGSFluxDivergenceSafe(const Real wght, 
                                 AthenaArray<Real> &ir);
 
   void SecondOrderFluxDivergence(const Real wght, 
@@ -91,6 +95,9 @@ public:
   
 private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;
+  AthenaArray<Real> p_velx_, n_velx_;
+  AthenaArray<Real> p_vely_, n_vely_;
+  AthenaArray<Real> p_velz_, n_velz_;
   AthenaArray<Real> il_, ilb_, ir_;// for recontruction
                           // temporary array to store the flux, velocity
   AthenaArray<Real> vncsigma_, vncsigma2_, wmu_cm_, tran_coef_, ir_cm_;

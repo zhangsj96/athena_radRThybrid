@@ -112,7 +112,9 @@ void IMRadiation::Iteration(Mesh *pm,
         if(ite_scheme_ == 0)
           prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
         else if(ite_scheme_ == 1)
-          prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);          
+          prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
+        else if(ite_scheme_ == 2)
+          prad->pradintegrator->FirstOrderFluxDivergenceSafe(wght, prad->ir);                
 
         // the second order iteration scheme is not working  
    // add flux divergence

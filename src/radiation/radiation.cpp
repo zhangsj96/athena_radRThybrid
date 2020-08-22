@@ -32,6 +32,7 @@
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
 #include "integrators/rad_integrators.hpp"
+#include "implicit/radiation_implicit.hpp"
 
 // constructor, initializes data structures and parameters
 
@@ -232,6 +233,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
     fprintf(pfile,"nzeta:        %d  \n",nzeta);
     fprintf(pfile,"npsi:         %d  \n",npsi);
+    fprintf(pfile,"taucell:      %e  \n",pradintegrator->taufact_);
+    if(IM_RADIATION_ENABLED){
+    fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme_);
+    fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
+    fprintf(pfile,"n_limit:      %d  \n",pmb->pmy_mesh->pimrad->nlimit_);
+ 
+    }
     
     for(int n=0; n<nang; ++n){
       fprintf(pfile,"%2d   %e   %e   %e    %e\n",n,mu(0,0,0,0,n),mu(1,0,0,0,n),
