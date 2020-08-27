@@ -84,8 +84,8 @@ public:
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
   
-  void GetTaufactor(const Real vx, const Real vy, const Real vz,
-                                 const Real ds, const Real sigma, Real *factor);
+  void GetTaufactor(const Real tau, Real &factor1, Real &factor2);
+  void GetTaufactorAdv(const Real tau, Real &factor);
 
   void PredictVel(AthenaArray<Real> &ir, int k, int j, int i, Real dt, Real rho,
                   Real *vx, Real *vy, Real *vz);
@@ -111,13 +111,13 @@ private:
                                     
  // temporary 1D array with size of nang
   Real taufact_;
+  int tau_flag_;
   int compton_flag_; // flag to add simple Compton scattering
   int planck_flag_; // flag to add additional Planck absorption opacity
   int adv_flag_; // flag used to indicate whether separate
                  // advection flux from diffustion flux or not.
 
   int flux_correct_flag_; // flag to do second order flux crrection or not.
-  Real tau_limit_; // the limit of optical depth sure.
   AthenaArray<Real> x1face_area_, x2face_area_, x3face_area_;
   AthenaArray<Real> x2face_area_p1_, x3face_area_p1_;
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;

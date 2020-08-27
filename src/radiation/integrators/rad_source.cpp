@@ -240,7 +240,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           Real frz_fr = 0.0;
 
           if(IM_RADIATION_ENABLED){
-            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 0){
+            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 0 || 
+               pmb->pmy_mesh->pimrad->ite_scheme_ == 2){ 
               for(int n=0; n<nang; ++n){
                 Real ir_weight = p_ir0[n];
                 ir_weight += divflx_(k,j,i,ifr*nang+n);

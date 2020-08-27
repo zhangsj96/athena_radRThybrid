@@ -238,7 +238,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme_);
     fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
     fprintf(pfile,"n_limit:      %d  \n",pmb->pmy_mesh->pimrad->nlimit_);
- 
+    fprintf(pfile,"tau_scheme    %d  \n",pradintegrator->tau_flag_); 
     }
     
     for(int n=0; n<nang; ++n){

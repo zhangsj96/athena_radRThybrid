@@ -54,12 +54,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  taufact_ = pin->GetOrAddInteger("radiation","taucell",1);
+  taufact_ = pin->GetOrAddReal("radiation","taucell",1);
+  tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
-  tau_limit_ =  pin->GetOrAddReal("radiation","tau_limit",0);
+
 
 
 
@@ -531,11 +532,8 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
                     + (pco->x1v(i) - pco->x1f(i)) * sigmar);
           }// end ifr
 
-          tau *= taufact_;
-          Real tausq = tau * tau;
-          Real factor = tausq - 0.5 * tausq * tausq;
-          if(tausq > 1.e-3)
-            factor = (1.0 - exp(-tausq));
+          Real factor = 0.0;
+          GetTaufactorAdv(tau,factor);
           Real vl = vel_source_(k,j,i-1,0);
           Real vr = vel_source_(k,j,i,0);
           adv_vel(0,k,j,i) = factor*(vl + (pco->x1f(i) - pco->x1v(i-1)) * 
@@ -558,11 +556,8 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
                     + (pco->x2v(j) - pco->x2f(j)) * sigmar);
             }// end ifr
 
-            tau *= taufact_;
-            Real tausq = tau * tau;
-            Real factor = tausq - 0.5 * tausq * tausq;
-            if(tausq > 1.e-3)
-              factor = (1.0 - exp(-tausq));
+            Real factor = 0.0;
+            GetTaufactorAdv(tau,factor);
 
             Real vl = vel_source_(k,j-1,i,1);
             Real vr = vel_source_(k,j,i,1);
@@ -587,11 +582,8 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
                     + (pco->x3v(j) - pco->x3f(j)) * sigmar);
             }// end ifr
 
-            tau *= taufact_;
-            Real tausq = tau * tau;
-            Real factor = tausq - 0.5 * tausq * tausq;
-            if(tausq > 1.e-3)
-              factor = (1.0 - exp(-tausq));
+            Real factor = 0.0;
+            GetTaufactorAdv(tau,factor);
 
             Real vl = vel_source_(k-1,j,i,2);
             Real vr = vel_source_(k,j,i,2);

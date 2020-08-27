@@ -81,16 +81,10 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
           tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
                     + (pco->x1v(i) - pco->x1f(i)) * sigmar);
         }// end ifr
-        tau *= taufact_;
-        Real tausq = tau * tau;
-        Real factor1 = 1.0 - 0.5 * tausq;
-        Real factor2 = tausq; 
-        if(tausq > 1.e-3){
-          factor1  = (1.0 - exp(-tausq))/tausq;
-          factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-        }
-        factor1 = sqrt(factor1);
-        factor2 = sqrt(factor2);
+        Real factor1 = 1.0;
+        Real factor2 = 0.0;
+        GetTaufactor(tau,factor1,factor2);
+
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
         Real *velxn = &(velx_(k,j,i,0));
@@ -170,16 +164,10 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
             tau += prad->wfreq(ifr) * ((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
                     + (pco->x2v(j) - pco->x2f(j)) * sigmar);
           }
-          tau *= taufact_;
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+          Real factor1 = 1.0;
+          Real factor2 = 0.0;
+          GetTaufactor(tau,factor1,factor2);
+
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
           Real *velyn = &(vely_(k,j,i,0));
@@ -264,15 +252,11 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
                     + (pco->x3v(k) - pco->x3f(k)) * sigmar);
             tau *= taufact_;
           }
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+
+          Real factor1 = 1.0;
+          Real factor2 = 0.0;
+          GetTaufactor(tau,factor1,factor2);
+
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));
           Real *velzn = &(velz_(k,j,i,0));
@@ -415,16 +399,10 @@ void RadIntegrator::FirstOrderFluxDivergenceSafe(const Real wght,
           tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
                     + (pco->x1v(i) - pco->x1f(i)) * sigmar);
         }// end ifr
-        tau *= taufact_;
-        Real tausq = tau * tau;
-        Real factor1 = 1.0 - 0.5 * tausq;
-        Real factor2 = tausq; 
-        if(tausq > 1.e-3){
-          factor1  = (1.0 - exp(-tausq))/tausq;
-          factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-        }
-        factor1 = sqrt(factor1);
-        factor2 = sqrt(factor2);
+        Real factor1 = 1.0;
+        Real factor2 = 0.0;
+        GetTaufactor(tau,factor1,factor2);
+
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
         Real *velxn = &(velx_(k,j,i,0));
@@ -518,16 +496,10 @@ void RadIntegrator::FirstOrderFluxDivergenceSafe(const Real wght,
             tau += prad->wfreq(ifr) * ((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
                     + (pco->x2v(j) - pco->x2f(j)) * sigmar);
           }
-          tau *= taufact_;
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+          Real factor1 = 1.0;
+          Real factor2 = 0.0;
+          GetTaufactor(tau,factor1,factor2);
+
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
           Real *velyn = &(vely_(k,j,i,0));
@@ -624,15 +596,10 @@ void RadIntegrator::FirstOrderFluxDivergenceSafe(const Real wght,
                     + (pco->x3v(k) - pco->x3f(k)) * sigmar);
             tau *= taufact_;
           }
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+          Real factor1 = 1.0;
+          Real factor2 = 0.0;
+          GetTaufactor(tau,factor1,factor2);
+
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));
           Real *velzn = &(velz_(k,j,i,0));

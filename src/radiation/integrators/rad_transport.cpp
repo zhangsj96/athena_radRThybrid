@@ -778,15 +778,44 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
   
 }
 
-void RadIntegrator::GetTaufactor(const Real vx, const Real vy, const Real vz,
-                                 const Real ds, const Real sigma, Real *factor)
+void RadIntegrator::GetTaufactor(const Real tau, Real &factor1, Real &factor2)
 {
+  Real eff_tau = tau * taufact_;
+  if(tau_flag_ == 1){
+    Real tausq = eff_tau * eff_tau;
+    factor1 = 1.0 - 0.5 * tausq;
+    if(tausq > 1.e-3){
+      factor1  = (1.0 - exp(-tausq))/tausq;
+    }
+    factor1 = sqrt(factor1);
+    factor2 = factor1;
 
-   Real invcrat = 1.0/pmy_rad->crat;
-   Real vel = vx*vx+vy*vy+vz*vz;
-   Real taucell = taufact_ * ds * sigma;
-   Real tausq = taucell * taucell * (vel*invcrat*invcrat);
-   if(tausq > 1.e-3) tausq = 1.0 - exp(-tausq);
-   (*factor) = tausq;
+  }else if(tau_flag_ == 2){
+    Real tausq = eff_tau;
+    factor1 = 1.0 - 0.5 * tausq;
+    if(tausq > 1.e-3){
+      factor1  = (1.0 - exp(-tausq))/tausq;
+    }
+    factor2 = factor1;
+  }else if(tau_flag_ == 3){
+    Real tausq = eff_tau;
+    if(tausq > 1)
+      factor1 = 1.0/tausq;
+    else
+      factor1 = 1.0;
+
+    factor2 = factor1;
+  }
+  
+}
+
+// The tau factor for advection velocity
+void RadIntegrator::GetTaufactorAdv(const Real tau, Real &factor)
+{
+  Real eff_tau = tau * taufact_;
+  Real tausq = eff_tau * eff_tau;
+  factor = tausq - 0.5 * tausq * tausq;
+  if(tausq > 1.e-3)
+    factor = (1.0 - exp(-tausq));
 
 }
