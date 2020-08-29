@@ -19,6 +19,7 @@
 
 
 // Athena++ headers
+#include <sstream>    // stringstream
 #include "../radiation.hpp"
 #include "../../globals.hpp"
 #include "../integrators/rad_integrators.hpp"
@@ -46,13 +47,9 @@ void IMRadiation::Iteration(Mesh *pm,
    // The iteration step is: calculate flux, calculate source term, 
    // update specific intensity, compute error
   MeshBlock *pmb = pm->pblock;
-
-  Real dt = (ptlist->stage_wghts[(stage-1)].beta)*(pm->dt);
-
+  std::stringstream msg;
 
   const Real wght = ptlist->stage_wghts[stage-1].beta*pm->dt;
-
-
 
   if(stage <= ptlist->nstages){
 
@@ -74,13 +71,19 @@ void IMRadiation::Iteration(Mesh *pm,
       // prepare t_gas and vel
       if(stage == 1){
         ir_ini = prad->ir;
-        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,prad->ir);
       }
-      else{
-        prad->pradintegrator->GetTgasVel(pmb,dt,ph->u,pf->bcc,ir_ini);
+      // use the current stage velocity for advection
+      prad->pradintegrator->GetTgasVel(pmb,wght,ph->u,ph->w,pf->bcc,ir_ini);
+
+      // first, calculate the angular flux, nothing is updated
+      // This is done separately with other transport terms
+      if(prad->angle_flag == 1){
+          prad->pradintegrator->ImplicitAngularFluxes(wght,ir_ini);  
       }
+
       // Calculate advection flux due to flow velocity explicitly
-      // need to do this before ir is reset in the second step
+      // advection velocity uses the partially updated velocity and ir from half 
+      // time step 
       if(prad->pradintegrator->adv_flag_ > 0){
         if(stage == 1)
           prad->pradintegrator->CalculateFluxes(prad->ir, 1);
@@ -114,14 +117,20 @@ void IMRadiation::Iteration(Mesh *pm,
         else if(ite_scheme_ == 1)
           prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
         else if(ite_scheme_ == 2)
-          prad->pradintegrator->FirstOrderFluxDivergenceSafe(wght, prad->ir);                
+          prad->pradintegrator->FirstOrderFluxDivergenceSafe(wght, prad->ir);   
+        else{
+          msg << "### FATAL ERROR in function [Iteration]"
+          << std::endl << "ite_scheme_ '" << ite_scheme_ << "' not allowed!";
+          ATHENA_ERROR(msg);
+
+        }             
 
         // the second order iteration scheme is not working  
    // add flux divergence
 
 
      // the source term, ir1 is the ir_ini
-        prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir1, prad->ir);
+        prad->pradintegrator->CalSourceTerms(pmb, wght, ph->u, prad->ir1, prad->ir);
 
         prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
 
@@ -167,7 +176,7 @@ void IMRadiation::Iteration(Mesh *pm,
         // apply physical boundaries
         prad->rad_bvar.var_cc = &(prad->ir);
         Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
-        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
+        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght);
 
          // calculate residual
         CheckResidual(pmb,prad->ir_old,prad->ir);
@@ -264,7 +273,7 @@ void IMRadiation::Iteration(Mesh *pm,
       // update physical boundary for hydro
       ptlist->Primitives(pmb,stage);
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
-      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, dt);
+      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght);
 
       // update opacity     
       pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      

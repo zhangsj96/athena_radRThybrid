@@ -148,6 +148,12 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
               }
 
             }
+            // add angular flux
+            if(prad->angle_flag == 1){
+              Real *p_angflx  = &(ang_flx_(k,j,i,ifr*nang));
+              for(int n=0; n<nang; ++n)
+                ir_cm(n+ifr*nang) += p_angflx[n];
+            }// end angle_flag == 1
           }
 #pragma omp simd
           for(int n=0; n<nang; ++n){
@@ -240,11 +246,15 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           Real frz_fr = 0.0;
 
           if(IM_RADIATION_ENABLED){
+
             if(pmb->pmy_mesh->pimrad->ite_scheme_ == 0 || 
                pmb->pmy_mesh->pimrad->ite_scheme_ == 2){ 
               for(int n=0; n<nang; ++n){
                 Real ir_weight = p_ir0[n];
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
+                if(prad->angle_flag == 1){
+                  ir_weight += ang_flx_(k,j,i,ifr*nang+n);
+                }
                 ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));
                 if(je > js)
@@ -263,6 +273,9 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
               for(int n=0; n<nang; ++n){
                 Real ir_weight = p_ir0[n];
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
+                if(prad->angle_flag == 1){
+                  ir_weight += ang_flx_(k,j,i,ifr*nang+n);
+                }
                 ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));
                 ir_weight -= (left_coef1_(k,j,i,ifr*nang+n)

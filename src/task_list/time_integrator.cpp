@@ -1575,7 +1575,8 @@ TaskStatus TimeIntegratorTaskList::CalculateRadFlux(MeshBlock *pmb, int stage) {
   Hydro *phydro = pmb->phydro;
   Radiation *prad = pmb->prad;
   Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
-  prad->pradintegrator->GetTgasVel(pmb,dt,phydro->u,pmb->pfield->bcc,prad->ir);
+  prad->pradintegrator->GetTgasVel(pmb,dt,phydro->u,phydro->w,
+                                   pmb->pfield->bcc,prad->ir);
 
   if (stage <= nstages) {
     if ((stage == 1) && (integrator == "vl2")) {

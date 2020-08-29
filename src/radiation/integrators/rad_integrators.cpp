@@ -143,6 +143,8 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     p_velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     n_velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
+    ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
 
   }// end implicit
   implicit_coef_.NewAthenaArray(prad->n_fre_ang);
@@ -185,6 +187,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       }
 
       pco->ZetaArea(prad, zeta_area_);
+
     }
 
     if(npsi > 0){
@@ -395,6 +398,7 @@ RadIntegrator::~RadIntegrator()
     n_vely_.DeleteAthenaArray();
     p_velz_.DeleteAthenaArray();
     n_velz_.DeleteAthenaArray();
+    ang_flx_.DeleteAthenaArray();
   }
   implicit_coef_.DeleteAthenaArray();
 
@@ -430,8 +434,8 @@ RadIntegrator::~RadIntegrator()
 
 
 void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
-    AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
-    AthenaArray<Real> &ir)
+    AthenaArray<Real> &u, AthenaArray<Real> &w, 
+    AthenaArray<Real> &bcc, AthenaArray<Real> &ir)
 {
 
 
@@ -491,6 +495,14 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
            er_freq *= prad->wfreq(ifr);
            er += er_freq;
          }   
+
+         // now the velocity term, 
+         // using velocity from current stage
+         vx = w(IVX,k,j,i);
+         vy = w(IVY,k,j,i);
+         vz = w(IVZ,k,j,i);
+
+         vel = vx * vx + vy * vy + vz * vz;
 
          if(prat * er * invcrat * invcrat > rho){
 

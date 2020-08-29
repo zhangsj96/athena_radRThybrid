@@ -48,6 +48,9 @@ public:
 
   void SecondOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
+
+  void ImplicitAngularFluxes(const Real wght, 
+                              AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
@@ -64,9 +67,10 @@ public:
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &implicit_coef_, AthenaArray<Real> &ir_cm);
 
-  void GetTgasVel(MeshBlock *pmb, const Real dt, 
-       AthenaArray<Real> &u, AthenaArray<Real> &bcc, 
-       AthenaArray<Real> &ir);
+  void GetTgasVel(MeshBlock *pmb, const Real dt,
+    AthenaArray<Real> &u, AthenaArray<Real> &w, 
+    AthenaArray<Real> &bcc, AthenaArray<Real> &ir);
+
   
   void Compton(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_s,
@@ -123,7 +127,7 @@ private:
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
 
   AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
-  AthenaArray<Real> divflx_, implicit_coef_;
+  AthenaArray<Real> divflx_, implicit_coef_, ang_flx_;
   AthenaArray<Real> left_coef1_, left_coef2_, left_coef3_;
   AthenaArray<Real> limiter_, limiterj_, limiterk_, dql_, dqr_;
   AthenaArray<Real> sfac1_x_, sfac2_x_;

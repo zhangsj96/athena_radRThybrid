@@ -17,7 +17,7 @@
 //  \brief implementation of radiation integrators
 //======================================================================================
 
-
+#include <sstream>    // stringstream
 // Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
@@ -91,16 +91,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
                     + (pco->x1v(i) - pco->x1f(i)) * sigmar);
         }// end ifr
-        tau *= taufact_;
-        Real tausq = tau * tau;
-        Real factor1 = 1.0 - 0.5 * tausq;
-        Real factor2 = tausq; 
-        if(tausq > 1.e-3){
-          factor1  = (1.0 - exp(-tausq))/tausq;
-          factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-        }
-        factor1 = sqrt(factor1);
-        factor2 = sqrt(factor2);
+        Real factor1 = 1.0;
+        Real factor2 = 1.0;
+        GetTaufactor(tau,factor1,factor2);
+
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
         Real *velxn = &(velx_(k,j,i,0));
@@ -173,16 +167,9 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             tau += prad->wfreq(ifr) * ((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
                     + (pco->x2v(j) - pco->x2f(j)) * sigmar);
           }
-          tau *= taufact_;
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+          Real factor1 = 1.0;
+          Real factor2 = 1.0;
+          GetTaufactor(tau,factor1,factor2);
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
           Real *velyn = &(vely_(k,j,i,0));
@@ -268,15 +255,9 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                     + (pco->x3v(k) - pco->x3f(k)) * sigmar);
             tau *= taufact_;
           }
-          Real tausq = tau * tau;
-          Real factor1 = 1.0 - 0.5 * tausq;
-          Real factor2 = tausq; 
-          if(tausq > 1.e-3){
-            factor1  = (1.0 - exp(-tausq))/tausq;
-            factor2 = (1.0 - exp(-tausq * tausq))/tausq;
-          }
-          factor1 = sqrt(factor1);
-          factor2 = sqrt(factor2);
+          Real factor1 = 1.0;
+          Real factor2 = 1.0;
+          GetTaufactor(tau,factor1,factor2);
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));
           Real *velzn = &(velz_(k,j,i,0));
@@ -778,8 +759,86 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
   
 }
 
+
+// calculate advective flux for the implicit scheme
+// only work for 1D spherical polar 
+// The equation to solve is
+// \partial /\partial t - c/r \partial(\sin^2 zeta I)/\sin \zeta\partial \zeta
+// the output is stored in angflx
+void RadIntegrator::ImplicitAngularFluxes(const Real wght, 
+                                     AthenaArray<Real> &ir_ini)
+{
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco=pmb->pcoord;
+  std::stringstream msg;
+
+  int &nzeta = prad->nzeta;
+
+  int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
+  ncells3 = pmb->ncells3; 
+
+  AthenaArray<Real> &area_zeta = zeta_area_, &ang_vol = ang_vol_;
+  
+  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+  int il, iu, jl, ju, kl, ku;
+  jl = js, ju=je, kl=ks, ku=ke;
+
+  if(ncells2 > 1){
+    msg << "### ImplicitAngularFluxes only works for 1D now!";
+     ATHENA_ERROR(msg);
+  }
+
+  if(ncells2 > 1)
+  {
+    if(ncells3 == 1){
+      jl=js-1, ju=je+1, kl=ks, ku=ke;
+    }else{
+      jl=js-1, ju=je+1, kl=ks-1, ku=ke+1;
+    }
+ 
+  } 
+
+  for(int k=ks; k<=ke; ++k)
+    for(int j=js; j<=je; ++j)
+      for(int i=0; i<=ie+NGHOST; ++i){
+        // first, related all angle to 2*nzeta
+        pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
+        // The relation is I_m = coef *I_m+1 + const
+        // first, do the last one
+        Real g_coef = g_zeta_(2*nzeta-1);
+        Real coef0 = wght * g_coef * prad->reduced_c * 
+                    area_zeta(2*nzeta-1)/ang_vol(2*nzeta-1);
+        Real coef1 = -wght * g_coef * prad->reduced_c * 
+                    area_zeta(2*nzeta)/ang_vol(2*nzeta-1);
+        // ir_new - ir_old + (coef0 + coef1)i_new=0
+        ang_flx_(k,j,i,2*nzeta-1) = ir_ini(k,j,i,2*nzeta-1)/(1.0 + coef0 + coef1) 
+                                  - ir_ini(k,j,i,2*nzeta-1);
+        // now, all the other angles
+        for(int n=2*nzeta-2; n>=0; --n){
+          Real g_coef = g_zeta_(n);
+          Real coef0 = wght * g_coef * prad->reduced_c * 
+                       area_zeta(n)/ang_vol(n);
+          Real coef1 = -wght * g_coef * prad->reduced_c * 
+                       area_zeta(n+1)/ang_vol(n);
+          Real ir_new1 = ang_flx_(k,j,i,n+1) + ir_ini(k,j,i,n+1);
+          // the equation is
+          // ir_new - ir_old + coef0 * ir_new + coef1 * ir_new1 = 0
+          ang_flx_(k,j,i,n) = (ir_ini(k,j,i,n) - coef1 * ir_new1)/(1.0 + coef0) 
+                              - ir_ini(k,j,i,n);
+        }
+      }// end k,j,i
+
+}// end calculate_flux
+
+
 void RadIntegrator::GetTaufactor(const Real tau, Real &factor1, Real &factor2)
 {
+  std::stringstream msg;
+  
   Real eff_tau = tau * taufact_;
   if(tau_flag_ == 1){
     Real tausq = eff_tau * eff_tau;
@@ -805,6 +864,10 @@ void RadIntegrator::GetTaufactor(const Real tau, Real &factor1, Real &factor2)
       factor1 = 1.0;
 
     factor2 = factor1;
+  }else{
+      msg << "### FATAL ERROR in function [GetTaufactor]"
+          << std::endl << "tau_flag_ '" << tau_flag_ << "' not allowed!";
+      ATHENA_ERROR(msg);
   }
   
 }
