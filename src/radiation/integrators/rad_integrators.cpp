@@ -207,11 +207,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       }
 
       pco->PsiArea(prad, psi_area_); 
+      ir_zeta_r_.NewAthenaArray(2*npsi);
     }
 
     dflx_ang_.NewAthenaArray(nang);
     ang_vol_.NewAthenaArray(nang);
     pco->AngularVol(prad, ang_vol_);
+
   }
 
   // calculate the advection velocity at the cell faces
@@ -424,6 +426,7 @@ RadIntegrator::~RadIntegrator()
       qr_psi_.DeleteAthenaArray();
       psi_flux_.DeleteAthenaArray();     
       psi_area_.DeleteAthenaArray(); 
+      ir_zeta_r_.DeleteAthenaArray();
     }
     dflx_ang_.DeleteAthenaArray();
     ang_vol_.DeleteAthenaArray();
