@@ -83,13 +83,13 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
   for(int k=ks; k<=ke; ++k){
     for(int j=js; j<=je; ++j){
+      pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
       for(int i=is; i<=ie+1; ++i){
         Real tau = 0.0;
         for(int ifr=0; ifr<nfreq; ++ifr){
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
-                    + (pco->x1v(i) - pco->x1f(i)) * sigmar);
+          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
         }// end ifr
         Real factor1 = 1.0;
         Real factor2 = 1.0;
@@ -131,8 +131,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         }
         for(int n=0; n<prad->n_fre_ang; ++n){
           Real vl = vel[n] - adv;
-          x1flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
-                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
+          x1flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
+                          - 0.5 * smax[n] * (irrn[n] - irln[n]);
         }// end n
         if(adv_flag_ > 0){
           Real &advv = adv_vel(0,k,j,i);
@@ -159,13 +159,14 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int k=ks; k<=ke; ++k){
       // first, calculate speed
       for(int j=js; j<=je+1; ++j){
+        pco->CenterWidth2(k,j-1,is,ie,dxw1_);
+        pco->CenterWidth2(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
           Real tau = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * ((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
-                    + (pco->x2v(j) - pco->x2f(j)) * sigmar);
+            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
           Real factor1 = 1.0;
           Real factor2 = 1.0;
@@ -219,8 +220,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           }
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel[n] - adv;
-            x2flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
-                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
+            x2flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
+                            - 0.5 * smax[n] * (irrn[n] - irln[n]);
+//            x2flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
+//                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
           }// end n
           if(adv_flag_ > 0){
             Real &advv = adv_vel(1,k,j,i);
@@ -246,13 +249,14 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
     for(int k=ks; k<=ke+1; ++k){
       for(int j=js; j<=je; ++j){
+        pco->CenterWidth3(k-1,j,is,ie,dxw1_);
+        pco->CenterWidth3(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
           Real tau = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * ((pco->x3f(k) - pco->x3v(k-1)) * sigmal 
-                    + (pco->x3v(k) - pco->x3f(k)) * sigmar);
+            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
             tau *= taufact_;
           }
           Real factor1 = 1.0;
@@ -312,8 +316,10 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           }
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel[n] - adv;
-            x3flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
-                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
+            x3flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
+                            - 0.5 * smax[n] * (irrn[n] - irln[n]);  
+//            x3flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
+//                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
           }// end n
           if(adv_flag_ > 0){
             Real &advv = adv_vel(2,k,j,i);

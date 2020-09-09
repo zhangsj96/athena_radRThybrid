@@ -164,6 +164,8 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   tran_coef_.NewAthenaArray(nang);
   cm_to_lab_.NewAthenaArray(nang);
   ir_cm_.NewAthenaArray(prad->n_fre_ang);
+  dxw1_.NewAthenaArray(ncells1);
+  dxw2_.NewAthenaArray(ncells1);
 
 
 
@@ -406,6 +408,8 @@ RadIntegrator::~RadIntegrator()
 
   tgas_.DeleteAthenaArray();
   vel_source_.DeleteAthenaArray();
+  dxw1_.DeleteAthenaArray();
+  dxw2_.DeleteAthenaArray();
 
 
   if(pmy_rad->angle_flag == 1){
@@ -538,13 +542,13 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
     // vx
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
+        pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
         for(int i=is; i<=ie+1; ++i){
           Real tau = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr)*((pco->x1f(i) - pco->x1v(i-1)) * sigmal 
-                    + (pco->x1v(i) - pco->x1f(i)) * sigmar);
+            tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
           }// end ifr
 
           Real factor = 0.0;
@@ -562,14 +566,15 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
         for(int j=js; j<=je+1; ++j){
           Real ratio = (pco->x2f(j) - pco->x2v(j-1))/
                        (pco->x2v(j) - pco->x2v(j-1));
+          pco->CenterWidth2(k,j-1,is,ie,dxw1_);
+          pco->CenterWidth2(k,j,is,ie,dxw2_);
           for(int i=is; i<=ie; ++i){
             Real tau = 0.0;
             for(int ifr=0; ifr<nfreq; ++ifr){
               Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
               Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-              tau += prad->wfreq(ifr)*((pco->x2f(j) - pco->x2v(j-1)) * sigmal 
-                    + (pco->x2v(j) - pco->x2f(j)) * sigmar);
-            }// end ifr
+              tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            }
 
             Real factor = 0.0;
             GetTaufactorAdv(tau,factor);
@@ -588,14 +593,16 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
         Real ratio = (pco->x3f(k) - pco->x3v(k-1))/
                      (pco->x3v(k) - pco->x3v(k-1));
         for(int j=js; j<=je; ++j){
+          pco->CenterWidth3(k-1,j,is,ie,dxw1_);
+          pco->CenterWidth3(k,j,is,ie,dxw2_);
           for(int i=is; i<=ie; ++i){
             Real tau = 0.0;
             for(int ifr=0; ifr<nfreq; ++ifr){
               Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
               Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-              tau += prad->wfreq(ifr)*((pco->x3f(k) - pco->x3v(k-1)) * sigmal 
-                    + (pco->x3v(j) - pco->x3f(j)) * sigmar);
-            }// end ifr
+              tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+              tau *= taufact_;
+            }
 
             Real factor = 0.0;
             GetTaufactorAdv(tau,factor);
