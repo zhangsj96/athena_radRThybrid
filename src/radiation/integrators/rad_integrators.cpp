@@ -54,7 +54,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  taufact_ = pin->GetOrAddReal("radiation","taucell",1);
+  taufact_ = pin->GetOrAddReal("radiation","taucell",5);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
