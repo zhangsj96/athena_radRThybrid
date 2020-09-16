@@ -74,7 +74,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
   tunit = pin->GetOrAddReal("radiation","Tunit",1.e7);
-  t_floor_ = pin->GetOrAddReal("radiation", "tfloor", TINY_NUMBER);
 
   Mesh *pm = pmb->pmy_mesh;
 
@@ -178,6 +177,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_ae.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_planck.NewAthenaArray(nc3,nc2,nc1,nfreq);
+
+  t_floor_.NewAthenaArray(nc3,nc2,nc1);
+  t_ceiling_.NewAthenaArray(nc3,nc2,nc1);
   
   grey_sigma.NewAthenaArray(3,nc3,nc2,nc1);
 
@@ -208,6 +210,14 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   if(RADIATION_ENABLED){
     pmb->pbval->bvars_main_int.push_back(&rad_bvar);
   }
+
+  // set the default t_floor and t_ceiling
+  for(int k=0; k<nc3; ++k)
+    for(int j=0; j<nc2; ++j)
+      for(int i=0; i<nc1; ++i){
+        t_floor_(k,j,i) = TINY_NUMBER;
+        t_ceiling_(k,j,i) = HUGE_NUMBER;
+      }
   
   // dump the angular grid and radiation parameters in a file
   if(Globals::my_rank ==0){
@@ -227,7 +237,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"Tunit         %4.2e \n",tunit);
     fprintf(pfile,"Compt         %d  \n",pradintegrator->compton_flag_);
     fprintf(pfile,"Planck        %d  \n",pradintegrator->planck_flag_);
-    fprintf(pfile,"Tfloor        %4.2e \n",t_floor_);
     fprintf(pfile,"rotate_theta  %d  \n",rotate_theta);
     fprintf(pfile,"rotate_phi    %d  \n",rotate_phi);
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);

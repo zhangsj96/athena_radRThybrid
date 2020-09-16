@@ -483,7 +483,8 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
          Real vel = vx * vx + vy * vy + vz * vz;
          Real tgas = u(IEN,k,j,i) - pb - 0.5*rho*vel;
          tgas = gm1*tgas/rho;
-         tgas = std::max(tgas,pmb->prad->t_floor_);
+         tgas = std::max(tgas,pmb->prad->t_floor_(k,j,i));
+         tgas = std::min(tgas,pmb->prad->t_ceiling_(k,j,i));
          tgas_(k,j,i) = tgas;
         // Do not use the velocity directly in strongly radiation pressure
          // dominated regime

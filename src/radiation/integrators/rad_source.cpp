@@ -207,6 +207,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
 {
 
   Radiation *prad=pmb->prad;
+  Field *pfield = pmb->pfield;
 
   Real& prat = prad->prat;
   Real invcrat = 1.0/prad->crat;
@@ -360,8 +361,26 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           u(IM1,k,j,i) *= factor;
           u(IM2,k,j,i) *= factor;
           u(IM3,k,j,i) *= factor;
-        
         }
+        // check gas temperature
+        Real ekin = 0.5 *(SQR(u(IM1,k,j,i))+SQR(u(IM2,k,j,i))
+                 +SQR(u(IM3,k,j,i)))/u(IDN,k,j,i);
+        Real pb = 0.0;
+        if(MAGNETIC_FIELDS_ENABLED){
+          pb = 0.5*(SQR(pfield->bcc(IB1,k,j,i))+SQR(pfield->bcc(IB2,k,j,i))
+              +SQR(pfield->bcc(IB3,k,j,i)));
+        }
+        Real eint = u(IEN,k,j,i) - ekin - pb;
+        Real tgas = eint * gm1 /u(IDN,k,j,i);
+        if(tgas < prad->t_floor_(k,j,i)){
+          eint = prad->t_floor_(k,j,i) * u(IDN,k,j,i) /gm1;
+          u(IEN,k,j,i) = ekin + pb + eint;
+        }else if(tgas > prad->t_ceiling_(k,j,i)){
+          eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
+          u(IEN,k,j,i) = ekin + pb + eint;
+        }
+
+
       }// end i
     }// end j
   }// end k

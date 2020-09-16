@@ -114,7 +114,7 @@ public:
   void FrequencyGrid();
 
 private:
-  Real t_floor_; // temperature floor
+  AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
 
 
   friend class BoundaryValues;
