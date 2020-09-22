@@ -74,12 +74,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
   tunit = pin->GetOrAddReal("radiation","Tunit",1.e7);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
   Mesh *pm = pmb->pmy_mesh;
 
 //  ir_output=pin->GetOrAddInteger("radiation","ir_output",0);
   
-  set_source_flag = 0;
+  set_source_flag = pin->GetOrAddInteger("radiation","source_flag",1);
 
   // equivalent temperature for electron
   telectron = 5.94065e9;
@@ -242,9 +243,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
     fprintf(pfile,"nzeta:        %d  \n",nzeta);
     fprintf(pfile,"npsi:         %d  \n",npsi);
-    fprintf(pfile,"taucell:      %e  \n",pradintegrator->taufact_);
+    fprintf(pfile,"taucell:      %e  \n",taucell);
+    fprintf(pfile,"source_flag:  %d  \n",set_source_flag);    
     if(IM_RADIATION_ENABLED){
-    fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme_);
+    fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme);
     fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
     fprintf(pfile,"n_limit:      %d  \n",pmb->pmy_mesh->pimrad->nlimit_);
     fprintf(pfile,"tau_scheme    %d  \n",pradintegrator->tau_flag_); 

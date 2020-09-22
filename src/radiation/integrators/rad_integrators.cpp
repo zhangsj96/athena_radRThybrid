@@ -26,6 +26,7 @@
 #include "../../parameter_input.hpp"
 #include "../../mesh/mesh.hpp"
 #include "../radiation.hpp"
+#include "../implicit/radiation_implicit.hpp"
 #include "rad_integrators.hpp"
 #include "../../coordinates/coordinates.hpp"
 #include "../../eos/eos.hpp"
@@ -54,7 +55,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  taufact_ = pin->GetOrAddReal("radiation","taucell",5);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
@@ -103,9 +104,17 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     sfac2_z_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);    
   }
 
-  if(adv_flag_ > 0){
-    adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
-  }
+
+
+  sm_diff1_.NewAthenaArray(prad->n_fre_ang);
+  sm_diff2_.NewAthenaArray(prad->n_fre_ang);
+  vel_ex_l_.NewAthenaArray(prad->n_fre_ang);
+  vel_ex_r_.NewAthenaArray(prad->n_fre_ang);
+  vel_im_l_.NewAthenaArray(prad->n_fre_ang);
+  vel_im_r_.NewAthenaArray(prad->n_fre_ang);
+
+  adv_vel.NewAthenaArray(3,ncells3,ncells2,ncells1);
+  
   
   if(IM_RADIATION_ENABLED){
     limiter_.NewAthenaArray(ncells1,prad->n_fre_ang);
@@ -136,13 +145,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     left_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-    p_velx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    n_velx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    p_vely_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    n_vely_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    p_velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    n_velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
     ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
 
@@ -150,7 +152,9 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   implicit_coef_.NewAthenaArray(prad->n_fre_ang);
 
   tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
+  tgas_new_.NewAthenaArray(ncells3,ncells2,ncells1);
   vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
+  taufact.NewAthenaArray(ncells3,ncells2,ncells1);
 
 
   vel_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -166,6 +170,14 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   ir_cm_.NewAthenaArray(prad->n_fre_ang);
   dxw1_.NewAthenaArray(ncells1);
   dxw2_.NewAthenaArray(ncells1);
+
+
+  // set the default taufact
+  for(int k=0; k<ncells3; ++k)
+    for(int j=0; j<ncells2; ++j)
+      for(int i=0; i<ncells1; ++i){
+        taufact(k,j,i) = taucell;
+      }
 
 
 
@@ -371,9 +383,16 @@ RadIntegrator::~RadIntegrator()
     sfac2_z_.DeleteAthenaArray();    
   }
 
-  if(adv_flag_ > 0){
-    adv_vel.DeleteAthenaArray();
-  }
+  sm_diff1_.DeleteAthenaArray();
+  sm_diff2_.DeleteAthenaArray();
+  vel_ex_l_.DeleteAthenaArray();
+  vel_ex_r_.DeleteAthenaArray();
+  vel_im_l_.DeleteAthenaArray();
+  vel_im_r_.DeleteAthenaArray();
+
+
+  adv_vel.DeleteAthenaArray();
+  
 
   if(IM_RADIATION_ENABLED){
 
@@ -396,17 +415,15 @@ RadIntegrator::~RadIntegrator()
     left_coef2_.DeleteAthenaArray();
     left_coef3_.DeleteAthenaArray();
 
-    p_velx_.DeleteAthenaArray();
-    n_velx_.DeleteAthenaArray();
-    p_vely_.DeleteAthenaArray();
-    n_vely_.DeleteAthenaArray();
-    p_velz_.DeleteAthenaArray();
-    n_velz_.DeleteAthenaArray();
+
     ang_flx_.DeleteAthenaArray();
   }
   implicit_coef_.DeleteAthenaArray();
 
+
+  taufact.DeleteAthenaArray();
   tgas_.DeleteAthenaArray();
+  tgas_new_.DeleteAthenaArray();
   vel_source_.DeleteAthenaArray();
   dxw1_.DeleteAthenaArray();
   dxw2_.DeleteAthenaArray();
@@ -539,87 +556,205 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
   }// end k  
 
   // Now get interface velocity
-  if(adv_flag_ > 0){
-    // vx
+
+  // vx
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
+      pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
+      for(int i=is; i<=ie+1; ++i){
+        Real tau = 0.0;
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
+          sigmal *= taufact(k,j,i-1);
+          Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+          sigmar *= taufact(k,j,i);
+          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
+        }// end ifr
+
+        Real factor = 0.0;
+        GetTaufactorAdv(tau,factor);
+        Real vl = vel_source_(k,j,i-1,0);
+        Real vr = vel_source_(k,j,i,0);
+        adv_vel(0,k,j,i) = factor*(vl + (pco->x1f(i) - pco->x1v(i-1)) * 
+                               (vr - vl)/(pco->x1v(i) - pco->x1v(i-1)));
+
+      }
+    }
+  }
+  if(je > js){
     for(int k=ks; k<=ke; ++k){
-      for(int j=js; j<=je; ++j){
-        pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
-        for(int i=is; i<=ie+1; ++i){
+      for(int j=js; j<=je+1; ++j){
+        Real ratio = (pco->x2f(j) - pco->x2v(j-1))/
+                     (pco->x2v(j) - pco->x2v(j-1));
+        pco->CenterWidth2(k,j-1,is,ie,dxw1_);
+        pco->CenterWidth2(k,j,is,ie,dxw2_);
+        for(int i=is; i<=ie; ++i){
           Real tau = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
-            Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
+            Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
+            sigmal *= taufact(k,j-1,i);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
-          }// end ifr
+            sigmar *= taufact(k,j,i);
+            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+          }
 
           Real factor = 0.0;
           GetTaufactorAdv(tau,factor);
-          Real vl = vel_source_(k,j,i-1,0);
-          Real vr = vel_source_(k,j,i,0);
-          adv_vel(0,k,j,i) = factor*(vl + (pco->x1f(i) - pco->x1v(i-1)) * 
-                                 (vr - vl)/(pco->x1v(i) - pco->x1v(i-1)));
 
+          Real vl = vel_source_(k,j-1,i,1);
+          Real vr = vel_source_(k,j,i,1);
+          adv_vel(1,k,j,i) = factor*(vl +  ratio * (vr - vl));
         }
-      }
-    }
-    if(je > js){
-      for(int k=ks; k<=ke; ++k){
-        for(int j=js; j<=je+1; ++j){
-          Real ratio = (pco->x2f(j) - pco->x2v(j-1))/
-                       (pco->x2v(j) - pco->x2v(j-1));
-          pco->CenterWidth2(k,j-1,is,ie,dxw1_);
-          pco->CenterWidth2(k,j,is,ie,dxw2_);
-          for(int i=is; i<=ie; ++i){
-            Real tau = 0.0;
-            for(int ifr=0; ifr<nfreq; ++ifr){
-              Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
-              Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-              tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
-            }
+      }// end j
+    }// end k
 
-            Real factor = 0.0;
-            GetTaufactorAdv(tau,factor);
+  }// end je > js
 
-            Real vl = vel_source_(k,j-1,i,1);
-            Real vr = vel_source_(k,j,i,1);
-            adv_vel(1,k,j,i) = factor*(vl +  ratio * (vr - vl));
+  if(ke > ks){
+    for(int k=ks; k<=ke+1; ++k){
+      Real ratio = (pco->x3f(k) - pco->x3v(k-1))/
+                   (pco->x3v(k) - pco->x3v(k-1));
+      for(int j=js; j<=je; ++j){
+        pco->CenterWidth3(k-1,j,is,ie,dxw1_);
+        pco->CenterWidth3(k,j,is,ie,dxw2_);
+        for(int i=is; i<=ie; ++i){
+          Real tau = 0.0;
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
+            sigmal *= taufact(k-1,j,i);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            sigmar *= taufact(k,j,i);
+            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
-        }// end j
-      }// end k
 
-    }// end je > js
+          Real factor = 0.0;
+          GetTaufactorAdv(tau,factor);
 
-    if(ke > ks){
-      for(int k=ks; k<=ke+1; ++k){
-        Real ratio = (pco->x3f(k) - pco->x3v(k-1))/
-                     (pco->x3v(k) - pco->x3v(k-1));
-        for(int j=js; j<=je; ++j){
-          pco->CenterWidth3(k-1,j,is,ie,dxw1_);
-          pco->CenterWidth3(k,j,is,ie,dxw2_);
-          for(int i=is; i<=ie; ++i){
-            Real tau = 0.0;
-            for(int ifr=0; ifr<nfreq; ++ifr){
-              Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
-              Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-              tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
-              tau *= taufact_;
-            }
+          Real vl = vel_source_(k-1,j,i,2);
+          Real vr = vel_source_(k,j,i,2);
+          adv_vel(2,k,j,i) = factor * (vl +  ratio * (vr - vl));
+        }
+      }// end j
+    }// end k
 
-            Real factor = 0.0;
-            GetTaufactorAdv(tau,factor);
+  }// end ke > ks
 
-            Real vl = vel_source_(k-1,j,i,2);
-            Real vr = vel_source_(k,j,i,2);
-            adv_vel(2,k,j,i) = factor * (vl +  ratio * (vr - vl));
-          }
-        }// end j
-      }// end k
 
-    }// end ke > ks
-
-  }// end adv_flag
 
 }// end the function
 
 
+void RadIntegrator::SignalSpeed(const Real adv, const Real f_l, 
+                 const Real f_r, Real *vel, Real *smax, Real *smin)
+{
+
+  for(int n=0; n<pmy_rad->n_fre_ang; ++n){
+    if(vel[n] > 0.0){
+      smax[n] = f_r * vel[n];
+      smin[n] = -f_l * vel[n];
+    }else{
+      smax[n] = -f_r * vel[n];
+      smin[n] = f_l * vel[n];
+    }
+
+  }
+  if(adv_flag_ == 0){
+    for(int n=0; n<pmy_rad->n_fre_ang; ++n){
+      smax[n] += std::fabs(adv);
+      smin[n] -= std::fabs(adv);   
+    }
+
+  }// end adv_flag
+}
+
+void RadIntegrator::SplitVelocity(Real *vel_l, Real *vel_r, const Real advl, 
+            const Real advr, Real *smax_l, Real *smin_l, Real *smax_r, Real *smin_r)
+{
+  int tot_ang = pmy_rad->n_fre_ang;
+  int iteration = pmy_rad->pmy_block->pmy_mesh->pimrad->ite_scheme;
+  // the left side
+  if(iteration == 0){
+    for(int n=0; n<tot_ang; ++n){
+      Real vl = vel_l[n] - advl;
+      vel_ex_l_(n) = 0.0;
+      vel_im_l_(n) = smin_l[n] * (smax_l[n] - vl);
+    }
+    for(int n=0; n<tot_ang; ++n){
+      Real vr = vel_r[n] - advr;
+      vel_ex_r_(n) = 0.0;
+      vel_im_r_(n) = smax_r[n] * (vr - smin_r[n]);   
+    } 
+
+  }// end iteration == 0
+  else if(iteration == 2){
+    for(int n=0; n<tot_ang; ++n){
+      Real vl = vel_l[n] - advl;
+      if(vl > 0.0){
+        vel_ex_l_(n) = -smin_l[n] * vl;
+        vel_im_l_(n) = smin_l[n] * smax_l[n];
+      }else{
+        vel_ex_l_(n) = 0.0;
+        vel_im_l_(n) = smin_l[n] * (smax_l[n] - vl);
+      }
+    }// end n
+
+    for(int n=0; n<tot_ang; ++n){
+      Real vr = vel_r[n] - advr;
+      if(vr > 0.0){
+        vel_ex_r_(n) = 0.0;
+        vel_im_r_(n) = smax_r[n] * (vr - smin_r[n]);  
+      }else{
+        vel_ex_r_(n) = smax_r[n] * vr;
+        vel_im_r_(n) = -smax_r[n] * smin_r[n];
+      } 
+    } 
+
+  }// end if iter == 2
+
+}
+
+
+
+void RadIntegrator::GetTaufactor(const Real tau, Real &factor1)
+{
+  std::stringstream msg;
+  
+  if(tau_flag_ == 1){
+    Real tausq = tau * tau;
+    factor1 = 1.0 - 0.5 * tausq;
+    if(tausq > 1.e-3){
+      factor1  = (1.0 - exp(-tausq))/tausq;
+    }
+    factor1 = sqrt(factor1);
+
+  }else if(tau_flag_ == 2){
+    Real tausq = tau;
+    factor1 = 1.0 - 0.5 * tausq;
+    if(tausq > 1.e-3){
+      factor1  = (1.0 - exp(-tausq))/tausq;
+    }
+  }else if(tau_flag_ == 3){
+    Real tausq = tau;
+    if(tausq > 1)
+      factor1 = 1.0/tausq;
+    else
+      factor1 = 1.0;
+
+  }else{
+      msg << "### FATAL ERROR in function [GetTaufactor]"
+          << std::endl << "tau_flag_ '" << tau_flag_ << "' not allowed!";
+      ATHENA_ERROR(msg);
+  }
+  
+}
+
+// The tau factor for advection velocity
+void RadIntegrator::GetTaufactorAdv(const Real tau, Real &factor)
+{
+  Real tausq = tau * tau;
+  factor = tausq - 0.5 * tausq * tausq;
+  if(tausq > 1.e-3)
+    factor = (1.0 - exp(-tausq));
+
+}
 

@@ -1610,7 +1610,8 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
 
     prad->ir_old = prad->ir;
     prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir, prad->ir);
-    prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_old, prad->ir);
+    if(prad->set_source_flag > 0)
+      prad->pradintegrator->AddSourceTerms(pmb, ph->u, prad->ir_old, prad->ir);
   } else {
     return TaskStatus::fail;
   }

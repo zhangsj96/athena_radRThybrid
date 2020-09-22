@@ -41,7 +41,7 @@
 // tgas is gas temperature
 // This function updates normal absorption plus scattering opacity together
 
-void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
+Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
@@ -147,9 +147,7 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
   // Update gas temperature
   // Do not update gas temperature
 //  tgas = tgasnew;
+  return tgasnew;
   
 
-
-
-  return;
 }

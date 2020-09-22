@@ -85,29 +85,26 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int j=js; j<=je; ++j){
       pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
       for(int i=is; i<=ie+1; ++i){
-        Real tau = 0.0;
+        Real taul = 0.0;
+        Real taur = 0.0;
         for(int ifr=0; ifr<nfreq; ++ifr){
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
+          taul += prad->wfreq(ifr)*dxw1_(i-1) * sigmal;
+          taur += prad->wfreq(ifr)*dxw1_(i) * sigmar;
         }// end ifr
-        Real factor1 = 1.0;
-        Real factor2 = 1.0;
-        GetTaufactor(tau,factor1,factor2);
-
+        Real f_l = 1.0;
+        Real f_r = 1.0;
+        taul *= taufact(k,j,i-1);
+        taur *= taufact(k,j,i);
+        GetTaufactor(taul,f_l);
+        GetTaufactor(taur,f_r);
+        
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
         Real *velxn = &(velx_(k,j,i,0));
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          if(velxn[n] > 0.0){
-            s1n[n] = factor1 * velxn[n];
-            s2n[n] = -factor2 * velxn[n];
-          }else{
-            s1n[n] = -factor2 * velxn[n];
-            s2n[n] = factor1 * velxn[n];
-          }
-
-        }// end n
+        Real adv = adv_vel(0,k,j,i);
+        SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
       }// end i
       if (order == 1) {
         pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
@@ -129,10 +126,18 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         if(adv_flag_ > 0){
           adv = adv_vel(0,k,j,i);
         }
+        Real *sm_diff = &(sm_diff1_(0));
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          Real diff = smax[n] - smin[n];
+          if(std::fabs(diff) < TINY_NUMBER)
+            sm_diff[n] = 0.0;
+          else
+            sm_diff[n] = 1.0/diff;          
+        }        
         for(int n=0; n<prad->n_fre_ang; ++n){
           Real vl = vel[n] - adv;
-          x1flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
-                          - 0.5 * smax[n] * (irrn[n] - irln[n]);
+          x1flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                          + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
         }// end n
         if(adv_flag_ > 0){
           Real &advv = adv_vel(0,k,j,i);
@@ -162,28 +167,26 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         pco->CenterWidth2(k,j-1,is,ie,dxw1_);
         pco->CenterWidth2(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real tau = 0.0;
+          Real taul = 0.0;
+          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
           }
-          Real factor1 = 1.0;
-          Real factor2 = 1.0;
-          GetTaufactor(tau,factor1,factor2);
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k,j-1,i);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul,f_l);
+          GetTaufactor(taur,f_r);
+        
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
           Real *velyn = &(vely_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(velyn[n] > 0.0){
-              s1n[n] = factor1 * velyn[n];
-              s2n[n] = -factor2 * velyn[n];
-            }else{
-              s1n[n] = -factor2 * velyn[n];
-              s2n[n] = factor1 * velyn[n];
-            }
-
-          }// end n
+          Real adv = adv_vel(1,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
 
         }// end i
       }// end j
@@ -218,10 +221,19 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           if(adv_flag_ > 0){
             adv = adv_vel(1,k,j,i);
           }
+          Real *sm_diff = &(sm_diff1_(0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax[n] - smin[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff[n] = 0.0;
+            else
+              sm_diff[n] = 1.0/diff;          
+          }  
+
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel[n] - adv;
-            x2flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
-                            - 0.5 * smax[n] * (irrn[n] - irln[n]);
+            x2flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                            + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
 //            x2flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
 //                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
           }// end n
@@ -252,29 +264,27 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         pco->CenterWidth3(k-1,j,is,ie,dxw1_);
         pco->CenterWidth3(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real tau = 0.0;
+          Real taul = 0.0;
+          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
-            tau *= taufact_;
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
           }
-          Real factor1 = 1.0;
-          Real factor2 = 1.0;
-          GetTaufactor(tau,factor1,factor2);
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k-1,j,i);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul,f_l);
+          GetTaufactor(taur,f_r);
+        
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));
           Real *velzn = &(velz_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(velzn[n] > 0.0){
-              s1n[n] =  factor1 * velzn[n];
-              s2n[n] =  -factor2 * velzn[n];
-            }else{
-              s1n[n] =  -factor2 * velzn[n];
-              s2n[n] =  factor1 * velzn[n];
-            }
+          Real adv = adv_vel(2,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
 
-          }// end n
         }// end i
       }// end j
     }// end k
@@ -314,10 +324,18 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           if(adv_flag_ > 0){
             adv = adv_vel(2,k,j,i);
           }
+          Real *sm_diff = &(sm_diff1_(0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax[n] - smin[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff[n] = 0.0;
+            else
+              sm_diff[n] = 1.0/diff;          
+          }  
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel[n] - adv;
-            x3flux(k,j,i,n) = 0.5 * vl * (irln[n] + irrn[n])
-                            - 0.5 * smax[n] * (irrn[n] - irln[n]);  
+            x3flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                            + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
 //            x3flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
 //                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
           }// end n
@@ -977,51 +995,3 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
 
 }
 
-
-void RadIntegrator::GetTaufactor(const Real tau, Real &factor1, Real &factor2)
-{
-  std::stringstream msg;
-  
-  Real eff_tau = tau * taufact_;
-  if(tau_flag_ == 1){
-    Real tausq = eff_tau * eff_tau;
-    factor1 = 1.0 - 0.5 * tausq;
-    if(tausq > 1.e-3){
-      factor1  = (1.0 - exp(-tausq))/tausq;
-    }
-    factor1 = sqrt(factor1);
-    factor2 = factor1;
-
-  }else if(tau_flag_ == 2){
-    Real tausq = eff_tau;
-    factor1 = 1.0 - 0.5 * tausq;
-    if(tausq > 1.e-3){
-      factor1  = (1.0 - exp(-tausq))/tausq;
-    }
-    factor2 = factor1;
-  }else if(tau_flag_ == 3){
-    Real tausq = eff_tau;
-    if(tausq > 1)
-      factor1 = 1.0/tausq;
-    else
-      factor1 = 1.0;
-
-    factor2 = factor1;
-  }else{
-      msg << "### FATAL ERROR in function [GetTaufactor]"
-          << std::endl << "tau_flag_ '" << tau_flag_ << "' not allowed!";
-      ATHENA_ERROR(msg);
-  }
-  
-}
-
-// The tau factor for advection velocity
-void RadIntegrator::GetTaufactorAdv(const Real tau, Real &factor)
-{
-  Real eff_tau = tau * taufact_;
-  Real tausq = eff_tau * eff_tau;
-  factor = tausq - 0.5 * tausq * tausq;
-  if(tausq > 1.e-3)
-    factor = (1.0 - exp(-tausq));
-
-}

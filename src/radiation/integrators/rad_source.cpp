@@ -132,7 +132,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
             for(int n=0; n<nang; ++n)
               ir_cm(n+ifr*nang) += divflux[n];
             // for Gauss-Seidel iteration, add flux from left hand side
-            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 1){
+            if(pmb->pmy_mesh->pimrad->ite_scheme == 1){
               for(int n=0; n<nang; ++n)
                 ir_cm(n+ifr*nang) -= left_coef1_(k,j,i,n+ifr*nang) 
                                    * ir(k,j,i-1,n+ifr*nang);
@@ -177,7 +177,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         
 
          // Add absorption and scattering opacity source
-         AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
+        tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
                               sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
         
          // Add compton scattering
@@ -248,8 +248,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
 
           if(IM_RADIATION_ENABLED){
 
-            if(pmb->pmy_mesh->pimrad->ite_scheme_ == 0 || 
-               pmb->pmy_mesh->pimrad->ite_scheme_ == 2){ 
+            if(pmb->pmy_mesh->pimrad->ite_scheme == 0 || 
+               pmb->pmy_mesh->pimrad->ite_scheme == 2){ 
               for(int n=0; n<nang; ++n){
                 Real ir_weight = p_ir0[n];
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
@@ -270,7 +270,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                 fry_fr += ir_weight * prad->mu(1,k,j,i,n);
                 frz_fr += ir_weight * prad->mu(2,k,j,i,n);
               }// end Jacobi iteration
-            }else if(pmb->pmy_mesh->pimrad->ite_scheme_ == 1){
+            }else if(pmb->pmy_mesh->pimrad->ite_scheme == 1){
               for(int n=0; n<nang; ++n){
                 Real ir_weight = p_ir0[n];
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
@@ -347,7 +347,22 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
         u(IM1,k,j,i) += (-prat*(frx- frx0) * invredc);
         u(IM2,k,j,i) += (-prat*(fry- fry0) * invredc);
         u(IM3,k,j,i) += (-prat*(frz- frz0) * invredc);
-        u(IEN,k,j,i) += (-prat*(er - er0 ) * invredfactor);
+        if(prad->set_source_flag == 2){
+          Real ekin = 0.5 *(SQR(u(IM1,k,j,i))+SQR(u(IM2,k,j,i))
+                 +SQR(u(IM3,k,j,i)))/u(IDN,k,j,i);
+          Real pb = 0.0;
+          if(MAGNETIC_FIELDS_ENABLED){
+            pb = 0.5*(SQR(pfield->bcc(IB1,k,j,i))+SQR(pfield->bcc(IB2,k,j,i))
+              +SQR(pfield->bcc(IB3,k,j,i)));
+          }
+          Real eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
+          
+          u(IEN,k,j,i) = eint + pb + ekin;         
+
+        }else{
+          u(IEN,k,j,i) += (-prat*(er - er0 ) * invredfactor);          
+        }
+
         
         //limit the velocity by speed of light
         Real vx = u(IM1,k,j,i)/u(IDN,k,j,i);

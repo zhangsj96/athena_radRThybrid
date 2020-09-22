@@ -46,6 +46,8 @@ public:
                 // Small cfl_rad is good for convergence, 
                 // but with smaller time step
 
+  int ite_scheme;
+
 
 private:
 
@@ -53,7 +55,7 @@ private:
   Real sum_full_;
   int nlimit_;       // threadhold for the number of iterations
   Real error_limit_; // 
-  int ite_scheme_;
+
   
 
 };

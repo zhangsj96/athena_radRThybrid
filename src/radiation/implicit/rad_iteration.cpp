@@ -112,15 +112,13 @@ void IMRadiation::Iteration(Mesh *pm,
 
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
-        if(ite_scheme_ == 0)
+        if(ite_scheme == 0 || ite_scheme == 2)
           prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
-        else if(ite_scheme_ == 1)
+        else if(ite_scheme == 1)
           prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
-        else if(ite_scheme_ == 2)
-          prad->pradintegrator->FirstOrderFluxDivergenceSafe(wght, prad->ir);   
         else{
           msg << "### FATAL ERROR in function [Iteration]"
-          << std::endl << "ite_scheme_ '" << ite_scheme_ << "' not allowed!";
+          << std::endl << "ite_scheme_ '" << ite_scheme << "' not allowed!";
           ATHENA_ERROR(msg);
 
         }             
@@ -225,7 +223,7 @@ void IMRadiation::Iteration(Mesh *pm,
     //update the hydro source term
     pmb = pm->pblock;    
     while(pmb != nullptr){
-      if(pmb->prad->set_source_flag  == 0)
+      if(pmb->prad->set_source_flag  > 0)
         pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
                                           pmb->prad->ir1, pmb->prad->ir);
       

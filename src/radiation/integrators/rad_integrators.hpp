@@ -39,8 +39,8 @@ public:
                                 AthenaArray<Real> &ir);
   void FirstOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
-  void FirstOrderFluxDivergenceSafe(const Real wght, 
-                                AthenaArray<Real> &ir);
+
+
   void FirstOrderGSFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
@@ -63,7 +63,7 @@ public:
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,  
        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
-  void AbsorptionScattering(AthenaArray<Real> &wmu_cm,
+  Real AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
           AthenaArray<Real> &implicit_coef_, AthenaArray<Real> &ir_cm);
@@ -89,20 +89,25 @@ public:
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
   
-  void GetTaufactor(const Real tau, Real &factor1, Real &factor2);
+  void GetTaufactor(const Real tau, Real &factor1);
   void GetTaufactorAdv(const Real tau, Real &factor);
 
   void PredictVel(AthenaArray<Real> &ir, int k, int j, int i, Real dt, Real rho,
                   Real *vx, Real *vy, Real *vz);
 
+  void SignalSpeed(const Real adv, const Real factor1, 
+                 const Real factor2, Real *vel, Real *smax, Real *smin);
+
+  void SplitVelocity(Real *vel_l, Real *vel_r, const Real advl, 
+            const Real advr, Real *smax_l, Real *smin_l, Real *smax_r, Real *smin_r);
+
+
   int rad_xorder; 
   AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
+  AthenaArray<Real> taufact;
   
 private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;
-  AthenaArray<Real> p_velx_, n_velx_;
-  AthenaArray<Real> p_vely_, n_vely_;
-  AthenaArray<Real> p_velz_, n_velz_;
   AthenaArray<Real> il_, ilb_, ir_;// for recontruction
                           // temporary array to store the flux, velocity
   AthenaArray<Real> vncsigma_, vncsigma2_, wmu_cm_, tran_coef_, ir_cm_;
@@ -110,12 +115,12 @@ private:
   AthenaArray<Real> g_zeta_, q_zeta_, ql_zeta_, qr_zeta_, zeta_flux_, zeta_area_;
   AthenaArray<Real> g_psi_, q_psi_, ql_psi_, qr_psi_, psi_flux_, psi_area_;
   AthenaArray<Real> dflx_ang_, ang_vol_, ir_zeta_r_;
-  AthenaArray<Real> tgas_, vel_source_; // array to store gas temperature, 
+  AthenaArray<Real> tgas_, vel_source_, tgas_new_; // array to store gas temperature, 
                                         // velocity for source term
 
                                     
  // temporary 1D array with size of nang
-  Real taufact_;
+
   int tau_flag_;
   int compton_flag_; // flag to add simple Compton scattering
   int planck_flag_; // flag to add additional Planck absorption opacity
@@ -134,7 +139,10 @@ private:
   AthenaArray<Real> sfac1_x_, sfac2_x_;
   AthenaArray<Real> sfac1_y_, sfac2_y_;
   AthenaArray<Real> sfac1_z_, sfac2_z_;
+  AthenaArray<Real> sm_diff1_, sm_diff2_;
+  AthenaArray<Real> vel_ex_l_, vel_im_l_, vel_ex_r_, vel_im_r_;
   AthenaArray<Real> dxw1_, dxw2_;
+
 
 };
 

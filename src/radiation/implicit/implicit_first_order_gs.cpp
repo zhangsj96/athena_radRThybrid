@@ -74,39 +74,38 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
     for (int j=js; j<=je; ++j) {
       pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
       for(int i=is; i<=ie+1; ++i){
-        Real tau = 0.0;
+        Real taul = 0.0;
+        Real taur = 0.0;
         for(int ifr=0; ifr<nfreq; ++ifr){
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
+          taul += prad->wfreq(ifr) * dxw1_(i-1) * sigmal;
+          taur += prad->wfreq(ifr) * dxw1_(i) * sigmar;
         }// end ifr
-        Real factor1 = 1.0;
-        Real factor2 = 1.0;
-        GetTaufactor(tau,factor1,factor2);
+        Real f_l = 1.0;
+        Real f_r = 1.0;
+        taul *= taufact(k,j,i-1);
+        taur *= taufact(k,j,i);
+        GetTaufactor(taul,f_l);
+        GetTaufactor(taur,f_r);
 
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
         Real *velxn = &(velx_(k,j,i,0));
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          if(velxn[n] > 0.0){
-            s1n[n] = factor1 * velxn[n];
-            s2n[n] = -factor2 * velxn[n];
-          }else{
-            s1n[n] = -factor2 * velxn[n];
-            s2n[n] = factor1 * velxn[n];
-          }
+        Real adv =  adv_vel(0,k,j,i);
 
-        }
+        SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
+
       }// end i
       // calculate x1-flux divergence 
       pco->Face1Area(k,j,is,ie+1,x1area);
       for(int i=is; i<=ie; ++i){
         Real areal = x1area(i);
         Real arear = x1area(i+1);
-        Real *s1_ln = &(sfac1_x_(i,0));
-        Real *s1_rn = &(sfac1_x_(i+1,0)); // the minimum signal speed
-        Real *s2_ln = &(sfac2_x_(i,0));  
-        Real *s2_rn = &(sfac2_x_(i+1,0)); // the maximum signal speed
+        Real *smax_l = &(sfac1_x_(i,0));
+        Real *smax_r = &(sfac1_x_(i+1,0)); // the minimum signal speed
+        Real *smin_l = &(sfac2_x_(i,0));  
+        Real *smin_r = &(sfac2_x_(i+1,0)); // the maximum signal speed
         Real *vel_ln = &(velx_(k,j,i,0));
         Real *vel_rn = &(velx_(k,j,i+1,0));        
 
@@ -121,36 +120,46 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
           advl = adv_vel(0,k,j,i);
           advr = adv_vel(0,k,j,i+1);
         }
+        Real *sm_diff1 = &(sm_diff1_(0));
+        Real *sm_diff2 = &(sm_diff2_(0));
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          Real diff = smax_l[n] - smin_l[n];
+          if(std::fabs(diff) < TINY_NUMBER)
+            sm_diff1[n] = 0.0;
+          else
+            sm_diff1[n] = 1.0/diff;          
+        }
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          Real diff = smax_r[n] - smin_r[n];
+          if(std::fabs(diff) < TINY_NUMBER)
+            sm_diff2[n] = 0.0;
+          else
+            sm_diff2[n] = 1.0/diff;          
+        }
         // first, consider left hand side
         if(i==is){
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real smax = s1_ln[n];
-            Real smin = s2_ln[n];
             Real vl = vel_ln[n] - advl;
-            Real lflux = 0.5 * vl * irln[n] + 0.5 * smax * irln[n];
+            Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n];
+
             lcoefn[n] = 0.0;
-            coef1n[n] = -areal * 0.5 * (vl - smax); 
+            coef1n[n] = -areal * smin_l[n] * (smax_l[n] - vl) * sm_diff1[n];  
             divn[n] = areal * lflux;          
           }// end n
         }else{
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real smax = s1_ln[n];
-            Real smin = s2_ln[n];
             Real vl = vel_ln[n] - advl;
-
-            lcoefn[n] = -areal * 0.5 * (vl + smax);
-            coef1n[n] = -areal * 0.5 * (vl - smax);  
+            lcoefn[n] = -areal * smax_l[n] * (vl - smin_l[n])*sm_diff1[n];
+            coef1n[n] = -areal * smin_l[n] * (smax_l[n] - vl)*sm_diff1[n];  
             divn[n] = 0.0;          
           }// end n          
         }
 
         // now consider the right hand side, which is always from last iteration
         for(int n=0; n<prad->n_fre_ang; ++n){
-          Real smax = s1_rn[n];
-          Real smin = s2_rn[n];
           Real vr = vel_rn[n] - advr;
-          Real rflux = 0.5 * vr * irrn[n] - 0.5 * smax * irrn[n];
-          coef1n[n] += arear * 0.5 * (vr + smax);
+          Real rflux = smin_r[n] * (smax_r[n] - vr) * irrn[n] * sm_diff2[n];
+          coef1n[n] += arear * smax_r[n] * (vr - smin_r[n])*sm_diff2[n];
           divn[n] += -(arear * rflux);
         }// end n
         if(adv_flag_ > 0){
@@ -174,29 +183,28 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         pco->CenterWidth2(k,j-1,is,ie,dxw1_);
         pco->CenterWidth2(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real tau = 0.0;
+          Real taul = 0.0;
+          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
           }
-          Real factor1 = 1.0;
-          Real factor2 = 1.0;
-          GetTaufactor(tau,factor1,factor2);
+
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k,j-1,i);
+          taur *= taufact(k,j,i); 
+          GetTaufactor(taul,f_l);
+          GetTaufactor(taur,f_r);
 
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
           Real *velyn = &(vely_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(velyn[n] > 0.0){
-              s1n[n] = factor1 * velyn[n];
-              s2n[n] = -factor2 * velyn[n];
-            }else{
-              s1n[n] = -factor2 * velyn[n];
-              s2n[n] = factor1 * velyn[n];
-            }
+          Real adv =  adv_vel(1,k,j,i);
 
-          }// end n
+          SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
 
         }// end i
       }// end j
@@ -211,10 +219,10 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
           Real *vel_rn = &(vely_(k,j+1,i,0));
           Real *coef2n = &(const_coef2_(k,j,i,0));
           Real *lcoefn = &(left_coef2_(k,j,i,0));
-          Real *s1_ln = &(sfac1_y_(j,i,0));
-          Real *s1_rn = &(sfac1_y_(j+1,i,0));
-          Real *s2_ln = &(sfac2_y_(j,i,0));
-          Real *s2_rn = &(sfac2_y_(j+1,i,0));
+          Real *smax_l = &(sfac1_y_(j,i,0));
+          Real *smax_r = &(sfac1_y_(j+1,i,0));
+          Real *smin_l = &(sfac2_y_(j,i,0));
+          Real *smin_r = &(sfac2_y_(j+1,i,0));
 
           Real *irln = &(ir(k,j-1,i,0));
           Real *irrn = &(ir(k,j+1,i,0));
@@ -227,35 +235,44 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
             advl = adv_vel(1,k,j,i);
             advr = adv_vel(1,k,j+1,i);
           }
+          Real *sm_diff1 = &(sm_diff1_(0));
+          Real *sm_diff2 = &(sm_diff2_(0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax_l[n] - smin_l[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff1[n] = 0.0;
+            else
+              sm_diff1[n] = 1.0/diff;          
+          }
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax_r[n] - smin_r[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff2[n] = 0.0;
+            else
+              sm_diff2[n] = 1.0/diff;          
+          }
           // the left hand side
           if(j==js){
             for(int n=0; n<prad->n_fre_ang; ++n){
-              Real smax = s1_ln[n];
-              Real smin = s2_ln[n];
               Real vl = vel_ln[n] - advl;
-              Real lflux = 0.5 * vl * irln[n] + 0.5 * smax * irln[n];
+              Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n];
               lcoefn[n] = 0.0;
-              coef2n[n] = -areal * 0.5 * (vl - smax); 
+              coef2n[n] = -areal * smin_l[n] * (smax_l[n] - vl)*sm_diff1[n];  
               divn[n] += areal * lflux;          
             }// end n
           }else{
             for(int n=0; n<prad->n_fre_ang; ++n){
-              Real smax = s1_ln[n];
-              Real smin = s2_ln[n];
               Real vl = vel_ln[n] - advl;
-
-              lcoefn[n] = -areal * 0.5 * (vl + smax);
-              coef2n[n] = -areal * 0.5 * (vl - smax);  
+              lcoefn[n] = -areal * smax_l[n] * (vl - smin_l[n])*sm_diff1[n];
+              coef2n[n] = -areal * smin_l[n] * (smax_l[n] - vl)*sm_diff1[n];  
 //              divn[n] += 0.0;          
             }// end n          
           }
           // the right hand side
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real smax = s1_rn[n];
-            Real smin = s2_rn[n];
             Real vr = vel_rn[n] - advr;
-            Real rflux = 0.5 * vr * irrn[n] - 0.5 * smax * irrn[n];
-            coef2n[n] += arear * 0.5 * (vr + smax);
+            Real rflux =  smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n];
+            coef2n[n] += arear * smax_r[n] * (vr - smin_r[n])*sm_diff2[n];
             divn[n] += -(arear * rflux);  
 
           }// end n
@@ -280,30 +297,30 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         pco->CenterWidth3(k-1,j,is,ie,dxw1_);
         pco->CenterWidth3(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real tau = 0.0;
+          Real taul = 0.0;
+          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
-            tau *= taufact_;
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
           }
-          Real factor1 = 1.0;
-          Real factor2 = 1.0;
-          GetTaufactor(tau,factor1,factor2);
+
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k-1,j,i);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul,f_l);
+          GetTaufactor(taur,f_r);
 
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));
           Real *velzn = &(velz_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(velzn[n] > 0.0){
-              s1n[n] =  factor1 * velzn[n];
-              s2n[n] =  -factor2 * velzn[n];
-            }else{
-              s1n[n] =  -factor2 * velzn[n];
-              s2n[n] =  factor1 * velzn[n];
-            }
+          Real adv =  adv_vel(2,k,j,i);
 
-          }// end n
+          SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
+
+          
         }// end i
       }// end j
     }// end k
@@ -312,10 +329,10 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         pmb->pcoord->Face3Area(k  ,j,is,ie,x3area   );
         pmb->pcoord->Face3Area(k+1,j,is,ie,x3area_p1);
         for(int i=is; i<=ie; ++i){
-          Real *s1_ln = &(sfac1_z_(k,j,i,0));
-          Real *s1_rn = &(sfac1_z_(k+1,j,i,0));
-          Real *s2_ln = &(sfac2_z_(k,j,i,0));
-          Real *s2_rn = &(sfac2_z_(k+1,j,i,0));
+          Real *smax_l = &(sfac1_z_(k,j,i,0));
+          Real *smax_r = &(sfac1_z_(k+1,j,i,0));
+          Real *smin_l = &(sfac2_z_(k,j,i,0));
+          Real *smin_r = &(sfac2_z_(k+1,j,i,0));
           Real *vel_ln = &(velz_(k,j,i,0));
           Real *vel_rn = &(velz_(k+1,j,i,0));
           Real *coef3n = &(const_coef3_(k,j,i,0));
@@ -331,35 +348,44 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
             advl = adv_vel(2,k,j,i);
             advr = adv_vel(2,k+1,j,i);
           }
+          Real *sm_diff1 = &(sm_diff1_(0));
+          Real *sm_diff2 = &(sm_diff2_(0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax_l[n] - smin_l[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff1[n] = 0.0;
+            else
+              sm_diff1[n] = 1.0/diff;          
+          }
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax_r[n] - smin_r[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff2[n] = 0.0;
+            else
+              sm_diff2[n] = 1.0/diff;          
+          }
           // the left hand side
           if(k==ks){
             for(int n=0; n<prad->n_fre_ang; ++n){
-              Real smax = s1_ln[n];
-              Real smin = s2_ln[n];
               Real vl = vel_ln[n] - advl;
-              Real lflux = 0.5 * vl * irln[n] + 0.5 * smax * irln[n];
+              Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n];
               lcoefn[n] = 0.0;
-              coef3n[n] = -areal * 0.5 * (vl - smax);  
+              coef3n[n] = -areal * smin_l[n] * (smax_l[n] - vl)*sm_diff1[n];  
               divn[n] += areal * lflux;          
             }// end n
           }else{
             for(int n=0; n<prad->n_fre_ang; ++n){
-              Real smax = s1_ln[n];
-              Real smin = s2_ln[n];
               Real vl = vel_ln[n] - advl;
-               
-              lcoefn[n] = -areal * 0.5 * (vl + smax);
-              coef3n[n] = -areal * 0.5 * (vl - smax);  
+              lcoefn[n] = -areal * smax_l[n] * (vl - smin_l[n])*sm_diff1[n];
+              coef3n[n] = -areal * smin_l[n] * (smax_l[n] - vl)*sm_diff1[n]; 
 //              divn[n] += 0.0;          
             }// end n          
           }
           // the right hand side
           for(int n=0; n<prad->n_fre_ang; ++n){
-            Real smax = s1_rn[n];
-            Real smin = s2_rn[n];
             Real vr = vel_rn[n] - advr;
-            Real rflux = 0.5 * vr * irrn[n] - 0.5 * smax * irrn[n];
-            coef3n[n] += arear * 0.5 * (vr + smax);
+            Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n];
+            coef3n[n] += arear * smax_r[n] * (vr - smin_r[n])*sm_diff2[n];
             divn[n] += -(arear * rflux);  
 
           }// end n  
