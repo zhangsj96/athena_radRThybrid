@@ -86,8 +86,8 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
         Real f_r = 1.0;
         taul *= taufact(k,j,i-1);
         taur *= taufact(k,j,i);
-        GetTaufactor(taul+taur,f_l);
-        GetTaufactor(taur+taul,f_r);
+        GetTaufactor(taul+taur,f_r,1);
+        GetTaufactor(taur+taul,f_l,-1);
 
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
@@ -184,8 +184,8 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
           Real f_r = 1.0;
           taul *= taufact(k,j-1,i);
           taur *= taufact(k,j,i);
-          GetTaufactor(taul+taur,f_l);
-          GetTaufactor(taur+taul,f_r);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taur+taul,f_l,-1);
 
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
@@ -289,8 +289,8 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
           Real f_r = 1.0;
           taul *= taufact(k-1,j,i);
           taur *= taufact(k,j,i);
-          GetTaufactor(taul+taur,f_l);
-          GetTaufactor(taur+taul,f_r);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taur+taul,f_l,-1);
 
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));

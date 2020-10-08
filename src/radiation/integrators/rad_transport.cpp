@@ -97,8 +97,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         Real f_r = 1.0;
         taul *= taufact(k,j,i-1);
         taur *= taufact(k,j,i);
-        GetTaufactor(taul,f_l);
-        GetTaufactor(taur,f_r);
+        GetTaufactor(taul+taur,f_r,1);
+        GetTaufactor(taul+taur,f_l,-1);
         
         Real *s1n = &(sfac1_x_(i,0));
         Real *s2n = &(sfac2_x_(i,0));
@@ -179,8 +179,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           Real f_r = 1.0;
           taul *= taufact(k,j-1,i);
           taur *= taufact(k,j,i);
-          GetTaufactor(taul,f_l);
-          GetTaufactor(taur,f_r);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
         
           Real *s1n = &(sfac1_y_(j,i,0));
           Real *s2n = &(sfac2_y_(j,i,0));
@@ -276,8 +276,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           Real f_r = 1.0;
           taul *= taufact(k-1,j,i);
           taur *= taufact(k,j,i);
-          GetTaufactor(taul,f_l);
-          GetTaufactor(taur,f_r);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
         
           Real *s1n = &(sfac1_z_(k,j,i,0));
           Real *s2n = &(sfac2_z_(k,j,i,0));

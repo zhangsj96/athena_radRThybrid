@@ -89,7 +89,7 @@ public:
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
   
-  void GetTaufactor(const Real tau, Real &factor1);
+  void GetTaufactor(const Real tau, Real &factor1, int dir);
   void GetTaufactorAdv(const Real tau, Real &factor);
 
   void PredictVel(AthenaArray<Real> &ir, int k, int j, int i, Real dt, Real rho,
