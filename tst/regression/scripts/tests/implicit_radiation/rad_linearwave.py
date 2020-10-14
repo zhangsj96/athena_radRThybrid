@@ -73,7 +73,7 @@ def run(**kwargs):
   #case 5
   for i in (32,64,128,256):
     arguments = ['problem/regime=5', 'radiation/Prat=0.01','radiation/Crat=10.0',
-    'radiation/error_limit=1.e-15',
+    'radiation/error_limit=1.e-15','radiation/taucell=15',
     'time/tlim=0.7746132569285668', 'problem/compute_error=true',
     'mesh/nx1=' + repr(i), 'mesh/nx2=8', 'mesh/nx3=1',
     'meshblock/nx1=' + repr(i/2),

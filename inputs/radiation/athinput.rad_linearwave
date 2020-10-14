@@ -78,6 +78,7 @@ nmu             = 1
 Prat            = 0.01
 Crat            = 10
 error_limit     = 1.e-12
+taucell         = 5
 
 <problem>
 regime          = 1

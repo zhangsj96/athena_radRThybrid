@@ -36,6 +36,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../radiation/radiation.hpp"
 #include "../radiation/integrators/rad_integrators.hpp"
+#include "../radiation/implicit/radiation_implicit.hpp"
 
 //void  LoadRadVariable(MeshBlock *pmb);
 
@@ -89,7 +90,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   // Initialize opacity and specific intensity
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     int nfreq = prad->nfreq;
 
     Real *ir_lab;
@@ -106,8 +107,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           for (int ifr=0; ifr < nfreq; ++ifr){
             prad->sigma_s(k,j,i,ifr) = 0.0;
             if (pcoord->x1v(i) < 1.0) {
-                prad->sigma_a(k,j,i,ifr) = 10.0;
-                prad->sigma_ae(k,j,i,ifr) = 10.0;
+                prad->sigma_a(k,j,i,ifr) = 100.0;
+                prad->sigma_ae(k,j,i,ifr) = 100.0;
             }
             else {
                 prad->sigma_a(k,j,i,ifr) = 0.0;
@@ -170,7 +171,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserBoundaryFunction(BoundaryFace::inner_x1, HydroInnerX1);
   EnrollUserBoundaryFunction(BoundaryFace::outer_x1, HydroOuterX1);
 
-  if(RADIATION_ENABLED) {
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED) {
     // Enroll radiation boundary functions
     EnrollUserRadBoundaryFunction(BoundaryFace::inner_x1, RadConstantFluxInnerX1);
     EnrollUserRadBoundaryFunction(BoundaryFace::outer_x1, RadConstantFluxOuterX1);
