@@ -55,7 +55,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",4);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
@@ -146,6 +146,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     left_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
     ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
 
   }// end implicit
@@ -417,6 +418,7 @@ RadIntegrator::~RadIntegrator()
 
 
     ang_flx_.DeleteAthenaArray();
+    imp_ang_coef_.DeleteAthenaArray();
   }
   implicit_coef_.DeleteAthenaArray();
 

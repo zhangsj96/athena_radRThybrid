@@ -47,6 +47,11 @@ public:
   void SecondOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
+  void ImplicitAngularFluxesNonSplit(const Real wght, 
+                                     AthenaArray<Real> &ir_ini);
+  void ImplicitPsiFluxNonSplit(int k, int j, int i, int n_zeta, Real wght, Real zeta_coef1, 
+            Real zeta_coef, AthenaArray<Real> &ir_ini, AthenaArray<Real> &imp_ang_coef);
+
   void ImplicitAngularFluxes(const Real wght, 
                               AthenaArray<Real> &ir);
   void ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
@@ -133,7 +138,7 @@ private:
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
 
   AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
-  AthenaArray<Real> divflx_, implicit_coef_, ang_flx_;
+  AthenaArray<Real> divflx_, implicit_coef_, ang_flx_, imp_ang_coef_;
   AthenaArray<Real> left_coef1_, left_coef2_, left_coef3_;
   AthenaArray<Real> limiter_, limiterj_, limiterk_, dql_, dqr_;
   AthenaArray<Real> sfac1_x_, sfac2_x_;

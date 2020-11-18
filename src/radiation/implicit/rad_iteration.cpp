@@ -78,7 +78,7 @@ void IMRadiation::Iteration(Mesh *pm,
       // first, calculate the angular flux, nothing is updated
       // This is done separately with other transport terms
       if(prad->angle_flag == 1){
-          prad->pradintegrator->ImplicitAngularFluxes(wght,ir_ini);  
+          prad->pradintegrator->ImplicitAngularFluxesNonSplit(wght,ir_ini);  
       }
 
       // Calculate advection flux due to flow velocity explicitly

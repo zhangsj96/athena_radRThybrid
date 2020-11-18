@@ -50,11 +50,11 @@ class EquationOfState {
   //   int iu, int jl, int ju, int kl, int ku);
 
   void PassiveScalarConservedToPrimitive(
-      AthenaArray<Real> &s, const AthenaArray<Real> &w, const AthenaArray<Real> &r_old,
+      AthenaArray<Real> &s, const AthenaArray<Real> &u, const AthenaArray<Real> &r_old,
       AthenaArray<Real> &r,
       Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
   void PassiveScalarPrimitiveToConserved(
-    const AthenaArray<Real> &r, const AthenaArray<Real> &w,
+    const AthenaArray<Real> &r, const AthenaArray<Real> &u,
     AthenaArray<Real> &s, Coordinates *pco,
     int il, int iu, int jl, int ju, int kl, int ku);
   void PassiveScalarConservedToPrimitiveCellAverage(
@@ -90,10 +90,6 @@ class EquationOfState {
   Real FastMagnetosonicSpeed(const Real prim[(NWAVE)], const Real bx);
 #endif  // !MAGNETIC_FIELDS_ENABLED
   void SoundSpeedsSR(Real, Real, Real, Real, Real *, Real *) {return;}
-  void FastMagnetosonicSpeedsSR(
-      const AthenaArray<Real> &, const AthenaArray<Real> &,
-      int, int, int, int, int, AthenaArray<Real> &,
-      AthenaArray<Real> &) {return;}
   void SoundSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real *, Real *)
   {return;}
   void FastMagnetosonicSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real, Real *,
@@ -108,21 +104,16 @@ class EquationOfState {
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
   void SoundSpeedsSR(Real rho_h, Real pgas, Real vx, Real gamma_lorentz_sq,
                      Real *plambda_plus, Real *plambda_minus);
-  void FastMagnetosonicSpeedsSR(
-      const AthenaArray<Real> &, const AthenaArray<Real> &,
-      int, int, int, int, int, AthenaArray<Real> &,
-      AthenaArray<Real> &) {return;}
+  void FastMagnetosonicSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real,
+                                Real *, Real *) {return;}
 #else  // SR MHD: SR hydro defined as no-op
   void SoundSpeedsSR(Real, Real, Real, Real, Real *, Real *) {return;}
-  void FastMagnetosonicSpeedsSR(
-      const AthenaArray<Real> &prim, const AthenaArray<Real> &bbx_vals,
-      int k, int j, int il, int iu, int ivx,
-      AthenaArray<Real> &lambdas_p, AthenaArray<Real> &lambdas_m);
+  void FastMagnetosonicSpeedsGR(Real wgas, Real pgas, Real u0, Real u1, Real b_sq,
+                                Real g00, Real g01, Real g11,
+                                Real *p_lambda_plus, Real *p_lambda_minus);
 #endif  // !MAGNETIC_FIELDS_ENABLED
   void SoundSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real *, Real *)
   {return;}
-  void FastMagnetosonicSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real,
-                                Real *, Real *) {return;}
 #else  // GR: Newtonian defined as no-op
   Real SoundSpeed(const Real[]) {return 0.0;}
   Real FastMagnetosonicSpeed(const Real[], const Real) {return 0.0;}
@@ -133,10 +124,6 @@ class EquationOfState {
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
   void SoundSpeedsSR(Real rho_h, Real pgas, Real vx, Real gamma_lorentz_sq,
                      Real *plambda_plus, Real *plambda_minus);
-  void FastMagnetosonicSpeedsSR(
-      const AthenaArray<Real> &, const AthenaArray<Real> &,
-      int, int, int, int, int, AthenaArray<Real> &,
-      AthenaArray<Real> &) {return;}
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
   void SoundSpeedsGR(Real rho_h, Real pgas, Real u0, Real u1,
                      Real g00, Real g01, Real g11,
@@ -145,20 +132,15 @@ class EquationOfState {
                                 Real *, Real *) {return;}
 #else  // GR MHD: GR+SR hydro defined as no-op
   void SoundSpeedsSR(Real, Real, Real, Real, Real *, Real *) {return;}
-  void FastMagnetosonicSpeedsSR(
-      const AthenaArray<Real> &prim, const AthenaArray<Real> &bbx_vals,
-      int k, int j, int il, int iu, int ivx,
-      AthenaArray<Real> &lambdas_p, AthenaArray<Real> &lambdas_m);
   void SoundSpeedsGR(Real, Real, Real, Real, Real, Real, Real, Real *, Real *)
   {return;}
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this)
-  void FastMagnetosonicSpeedsGR(Real rho_h, Real pgas, Real u0, Real u1, Real b_sq,
+  void FastMagnetosonicSpeedsGR(Real wgas, Real pgas, Real u0, Real u1, Real b_sq,
                                 Real g00, Real g01, Real g11,
-                                Real *plambda_plus, Real *plambda_minus);
+                                Real *p_lambda_plus, Real *p_lambda_minus);
 #endif  // !MAGNETIC_FIELDS_ENABLED (GR)
 #endif  // #else (#if !RELATIVISTIC_DYNAMICS, #elif !GENERAL_RELATIVITY)
 
-  Real RiemannAsq(Real rho, Real hint);
   Real PresFromRhoEg(Real rho, Real egas);
   Real EgasFromRhoP(Real rho, Real pres);
   Real AsqFromRhoP(Real rho, Real pres);
@@ -168,7 +150,7 @@ class EquationOfState {
   EosTable* ptable; // pointer to EOS table data
 #if GENERAL_EOS
   Real GetGamma();
-#else // not EOS_TABLE_ENABLED
+#else // not GENERAL_EOS
   Real GetGamma() const {return gamma_;}
 #endif
 
@@ -179,18 +161,21 @@ class EquationOfState {
   Real iso_sound_speed_, gamma_;         // isothermal Cs, ratio of specific heats
   Real density_floor_, pressure_floor_;  // density and pressure floors
   Real energy_floor_;                    // energy floor
-  Real scalar_floor_{0.0};               // dimensionless concentration scalar floor
+  Real scalar_floor_; // dimensionless concentration floor
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor
   Real rho_min_, rho_pow_;               // variables to control power-law denity floor
   Real pgas_min_, pgas_pow_;             // variables to control power-law pressure floor
+  Real rho_unit_, inv_rho_unit_;         // physical unit/sim unit for mass density
+  Real egas_unit_, inv_egas_unit_;       // physical unit/sim unit for energy density
+  Real vsqr_unit_, inv_vsqr_unit_;       // physical unit/sim unit for speed^2
   AthenaArray<Real> g_, g_inv_;          // metric and its inverse, used in GR
-  AthenaArray<Real> fixed_;              // cells with problems, used in GR hydro
-  AthenaArray<Real> normal_dd_;          // normal-frame densities, used in GR MHD
-  AthenaArray<Real> normal_ee_;          // normal-frame energies, used in GR MHD
-  AthenaArray<Real> normal_mm_;          // normal-frame momenta, used in GR MHD
-  AthenaArray<Real> normal_bb_;          // normal-frame fields, used in GR MHD
-  AthenaArray<Real> normal_tt_;          // normal-frame M.B, used in GR MHD
+  AthenaArray<Real> normal_dd_;          // normal-frame densities, used in relativity
+  AthenaArray<Real> normal_ee_;          // normal-frame energies, used in relativity
+  AthenaArray<Real> normal_mm_;          // normal-frame momenta, used in relativity
+  AthenaArray<Real> normal_bb_;          // normal-frame fields, used in relativistic MHD
+  AthenaArray<Real> normal_tt_;          // normal-frame M.B, used in relativistic MHD
+  void InitEosConstants(ParameterInput *pin);
 };
 
 #endif // EOS_EOS_HPP_

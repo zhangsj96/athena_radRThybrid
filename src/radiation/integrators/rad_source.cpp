@@ -170,6 +170,9 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
               if(ke > ks){
                 implicit_coef_(n+ifr*nang) += const_coef3_(k,j,i,n);
               }
+              if(prad->angle_flag == 1){
+                implicit_coef_(n+ifr*nang) += imp_ang_coef_(k,j,i,n);
+              }
             }
           }// end ang
 
@@ -255,6 +258,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
                 if(prad->angle_flag == 1){
                   ir_weight += ang_flx_(k,j,i,ifr*nang+n);
+                  ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
+                           * ir(k,j,i,ifr*nang+n));
                 }
                 ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));
