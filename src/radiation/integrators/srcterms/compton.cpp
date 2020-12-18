@@ -104,10 +104,10 @@ void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
     
           tgasnew = (jrnew - jr_cm)/(suma1*jr_cm) + trnew;
           source = rdtcsigma * 4.0 * jr_cm * telectron * (tgasnew - trnew);
-       }
+        }
       }
-      // Update the co-moving frame specific intensity
 
+      // Update the co-moving frame specific intensity
 #pragma omp simd aligned(irn,tcoef:ALI_LEN)
       for(int n=0; n<nang; n++){
         irn[n] += source * tcoef[n];

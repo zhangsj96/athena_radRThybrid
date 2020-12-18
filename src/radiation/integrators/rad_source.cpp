@@ -154,6 +154,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
               for(int n=0; n<nang; ++n)
                 ir_cm(n+ifr*nang) += p_angflx[n];
             }// end angle_flag == 1
+
           }
 #pragma omp simd
           for(int n=0; n<nang; ++n){
@@ -178,6 +179,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
         }// End frequency
         
+        Real jr_new = 0.0;
 
          // Add absorption and scattering opacity source
         tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
@@ -185,7 +187,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         
          // Add compton scattering
          if(compton_flag_ > 0)
-           Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_(k,j,i), ir_cm);
+           Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_new_(k,j,i), ir_cm);
        
          //update specific intensity in the lab frame
          // do not modify ir_ini
@@ -281,6 +283,8 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
                 if(prad->angle_flag == 1){
                   ir_weight += ang_flx_(k,j,i,ifr*nang+n);
+                  ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
+                           * ir(k,j,i,ifr*nang+n));                  
                 }
                 ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));

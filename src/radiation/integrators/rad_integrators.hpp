@@ -47,16 +47,11 @@ public:
   void SecondOrderFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
-  void ImplicitAngularFluxesNonSplit(const Real wght, 
-                                     AthenaArray<Real> &ir_ini);
-  void ImplicitPsiFluxNonSplit(int k, int j, int i, int n_zeta, Real wght, Real zeta_coef1, 
-            Real zeta_coef, AthenaArray<Real> &ir_ini, AthenaArray<Real> &imp_ang_coef);
+  void ImplicitAngularFluxes(const Real wght, AthenaArray<Real> &ir);
 
-  void ImplicitAngularFluxes(const Real wght, 
-                              AthenaArray<Real> &ir);
+
   void ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
-            Real zeta_coef1, Real zeta_coef, AthenaArray<Real> &ir_ini, 
-            AthenaArray<Real> &ir_zeta_r);
+            Real zeta_coefl, Real zeta_coefr, AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
@@ -119,7 +114,7 @@ private:
   AthenaArray<Real> cm_to_lab_;
   AthenaArray<Real> g_zeta_, q_zeta_, ql_zeta_, qr_zeta_, zeta_flux_, zeta_area_;
   AthenaArray<Real> g_psi_, q_psi_, ql_psi_, qr_psi_, psi_flux_, psi_area_;
-  AthenaArray<Real> dflx_ang_, ang_vol_, ir_zeta_r_;
+  AthenaArray<Real> dflx_ang_, ang_vol_;
   AthenaArray<Real> tgas_, vel_source_, tgas_new_; // array to store gas temperature, 
                                         // velocity for source term
 

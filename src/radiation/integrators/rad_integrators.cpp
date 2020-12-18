@@ -222,7 +222,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       }
 
       pco->PsiArea(prad, psi_area_); 
-      ir_zeta_r_.NewAthenaArray(2*npsi);
+
     }
 
     dflx_ang_.NewAthenaArray(nang);
@@ -419,6 +419,7 @@ RadIntegrator::~RadIntegrator()
 
     ang_flx_.DeleteAthenaArray();
     imp_ang_coef_.DeleteAthenaArray();
+    
   }
   implicit_coef_.DeleteAthenaArray();
 
@@ -449,7 +450,7 @@ RadIntegrator::~RadIntegrator()
       qr_psi_.DeleteAthenaArray();
       psi_flux_.DeleteAthenaArray();     
       psi_area_.DeleteAthenaArray(); 
-      ir_zeta_r_.DeleteAthenaArray();
+
     }
     dflx_ang_.DeleteAthenaArray();
     ang_vol_.DeleteAthenaArray();

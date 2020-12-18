@@ -13,11 +13,11 @@ MPIFFT_FILE =
 
 # General compiler specifications
 
-CXX := g++
+CXX := mpicxx
 CPPFLAGS := 
 CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
-LDLIBS := 
+LDLIBS :=  -lhdf5
 GCOV_CMD := gcov
 
 # Preliminary definitions

@@ -75,12 +75,6 @@ void IMRadiation::Iteration(Mesh *pm,
       // use the current stage velocity for advection
       prad->pradintegrator->GetTgasVel(pmb,wght,ph->u,ph->w,pf->bcc,ir_ini);
 
-      // first, calculate the angular flux, nothing is updated
-      // This is done separately with other transport terms
-      if(prad->angle_flag == 1){
-          prad->pradintegrator->ImplicitAngularFluxesNonSplit(wght,ir_ini);  
-      }
-
       // Calculate advection flux due to flow velocity explicitly
       // advection velocity uses the partially updated velocity and ir from half 
       // time step 
@@ -122,13 +116,19 @@ void IMRadiation::Iteration(Mesh *pm,
           ATHENA_ERROR(msg);
 
         }             
-
-        // the second order iteration scheme is not working  
-   // add flux divergence
-
+        // calculate the coefficients and angular part before the source term
+        if(prad->angle_flag == 1){
+          prad->pradintegrator->ImplicitAngularFluxes(wght,prad->ir);  
+        }
 
      // the source term, ir1 is the ir_ini
+        // the source term will combine everything together
         prad->pradintegrator->CalSourceTerms(pmb, wght, ph->u, prad->ir1, prad->ir);
+
+        // add the angular flux
+        // this is added separately with other terms
+        // but included in the iterative process
+
 
         prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
 

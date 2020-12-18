@@ -43,7 +43,7 @@
 
 Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
+          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
@@ -125,12 +125,14 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     }
     // even if tr=told, there can be change for intensity, making them isotropic
     if(!badcell){
+
+
     
       Real emission = tgasnew * tgasnew * tgasnew * tgasnew;
       
       // get update jr_cm
       jr_cm = (suma1 * emission + suma2)/(1.0-suma3);
-    
+
     // Update the co-moving frame specific intensity
       Real *irn = &(ir_cm(nang*ifr));
       Real *vn2 = &(vncsigma2(0));
@@ -139,9 +141,9 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
         irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
-                        - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
+                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
       }
-    }
+    }// end badcell
   }// End Frequency
   
   // Update gas temperature
