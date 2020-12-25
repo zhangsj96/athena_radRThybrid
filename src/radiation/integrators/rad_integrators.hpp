@@ -53,7 +53,8 @@ public:
   void ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefl, Real zeta_coefr, AthenaArray<Real> &ir);
   void ImplicitPsiFluxCenter(int k, int j, int i, int n_zeta, Real wght, 
-            Real zeta_coefl, Real zeta_coefr, AthenaArray<Real> &ir);
+            Real zeta_coefr, Real zeta_coefl, Real f_l, Real f_r, 
+            AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);

@@ -38,7 +38,7 @@
 #include "../radiation/radiation.hpp"
 #include "../radiation/integrators/rad_integrators.hpp"
 
-static Real amp = 1.e-4;
+static Real amp = 1.e-6;
 
 
 // The real and imaginary parts of the linear waves
