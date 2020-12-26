@@ -176,12 +176,12 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
       z_coef1 = zeta_coef1 * zeta_area(m,n_zeta+1)/ang_vol(ang_num);
       z_coef = zeta_coef * zeta_area(m,n_zeta)/ang_vol(ang_num);
       if(n_zeta == 2*prad->nzeta-1){
+        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l);
+        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;
+      }else{
         ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l)
                                 -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
         imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;
-      }else{
-        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l);
-        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;       
       }
 
     }
@@ -195,7 +195,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
             area_psi(n_zeta,2*npsi-1)/ang_vol(ang_num);
     z_coef1 = zeta_coef1 * zeta_area(2*npsi-1,n_zeta+1)/ang_vol(ang_num);
     z_coef = zeta_coef * zeta_area(2*npsi-1,n_zeta)/ang_vol(ang_num);
-    if(n_zeta == 2*prad->nzeta-1){
+    if(n_zeta < 2*prad->nzeta-1){
       ang_flx_(k,j,i,ang_num) = -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
       imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
     }else{
@@ -215,7 +215,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
               area_psi(n_zeta,m+1)/ang_vol(ang_num);
       z_coef1 = zeta_coef1 * zeta_area(m,n_zeta+1)/ang_vol(ang_num);
       z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta == 2*prad->nzeta - 1){
+      if(n_zeta < 2*prad->nzeta - 1){
         ang_flx_(k,j,i,ang_num) = -coef1 * ir_ini(k,j,i,ang_psi_r) 
                             - z_coef1 * ir_ini(k,j,i,ang_zeta_r);
         imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef; 
@@ -235,7 +235,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
     Real coef1 = 0.0;
     Real z_coef1 = zeta_coef1*zeta_area(npsi-1,n_zeta+1)/ang_vol(ang_num);
     Real z_coef = zeta_coef*zeta_area(npsi-1,n_zeta)/ang_vol(ang_num);
-    if(n_zeta == 2*prad->nzeta -1){
+    if(n_zeta < 2*prad->nzeta -1){
       ang_flx_(k,j,i,ang_num) = -z_coef1*ir_ini(k,j,i,ang_zeta_r);
       imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
     }else{
@@ -255,7 +255,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
               area_psi(n_zeta,m+1)/ang_vol(ang_num);
       z_coef1 = zeta_coef1*zeta_area(m,n_zeta+1)/ang_vol(ang_num);
       z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta == 2*prad->nzeta-1){
+      if(n_zeta < 2*prad->nzeta-1){
         ang_flx_(k,j,i,ang_num) = -coef1*ir_ini(k,j,i,ang_psi_r)
                                 -z_coef1*ir_ini(k,j,i,ang_zeta_r);
         imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
@@ -275,7 +275,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
             area_psi(n_zeta,npsi+1)/ang_vol(ang_num);
     z_coef1 = zeta_coef1*zeta_area(npsi,n_zeta+1)/ang_vol(ang_num);
     z_coef = zeta_coef*zeta_area(npsi,n_zeta)/ang_vol(ang_num);
-    if(n_zeta == 2*prad->nzeta-1){
+    if(n_zeta < 2*prad->nzeta-1){
       ang_flx_(k,j,i,ang_num) = -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
       imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;
     }else{
@@ -295,7 +295,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
               area_psi(n_zeta,m+1)/ang_vol(ang_num);
       z_coef1 = zeta_coef1*zeta_area(m,n_zeta+1)/ang_vol(ang_num);
       z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta == 2*prad->nzeta-1){
+      if(n_zeta < 2*prad->nzeta-1){
         ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l)
                                 -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
         imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;     
