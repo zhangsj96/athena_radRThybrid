@@ -45,8 +45,7 @@
 // Gauss-Seidel iteration, use upper triangle from last iteration
 // lower triangle is from next iteration
 
-void RadIntegrator::FirstOrderFluxDivergence(const Real wght, 
-                                       AthenaArray<Real> &ir)
+void RadIntegrator::FirstOrderFluxDivergenceCoef(const Real wght)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
@@ -59,7 +58,7 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
   
   AthenaArray<Real> &x1area = x1face_area_, &x2area = x2face_area_,
                  &x2area_p1 = x2face_area_p1_, &x3area = x3face_area_,
-                 &x3area_p1 = x3face_area_p1_, &vol = cell_volume_, &dflx = dflx_;
+                 &x3area_p1 = x3face_area_p1_, &vol = cell_volume_;
 
   AthenaArray<Real> &x1flux=prad->flux[X1DIR];
   AthenaArray<Real> &x2flux=prad->flux[X2DIR];
@@ -67,7 +66,7 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
 
   AthenaArray<Real> &area_zeta = zeta_area_, &area_psi = psi_area_, 
-                 &ang_vol = ang_vol_, &dflx_ang = dflx_ang_;
+                 &ang_vol = ang_vol_;
   int &nzeta = prad->nzeta, &npsi = prad->npsi;
 
   for (int k=ks; k<=ke; ++k) { 
@@ -108,11 +107,11 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
         Real *vel_ln = &(velx_(k,j,i,0));
         Real *vel_rn = &(velx_(k,j,i+1,0));        
 
-        Real *coef1n = &(const_coef1_(k,j,i,0));
-        Real *irln = &(ir(k,j,i-1,0));
-        Real *irrn = &(ir(k,j,i+1,0));
-        Real *irn = &(ir(k,j,i,0));
-        Real *divn = &(divflx_(k,j,i,0));
+        Real *coef1n = &(const_coef_(k,j,i,0));
+        Real *coef1ln= &(const_coef1_l_(k,j,i,0));
+        Real *coef1rn= &(const_coef1_r_(k,j,i,0));
+        Real *exp_coefn=&(exp_coef_(k,j,i,0));
+
         Real advl = 0.0;
         Real advr = 0.0;
         if(adv_flag_ > 0){
@@ -140,24 +139,21 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
         for(int n=0; n<prad->n_fre_ang; ++n){
           Real vl = vel_ln[n] - advl;
-          Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
-                    + vel_ex_l_(n) * sm_diff1[n] * irn[n];
+//          Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
+//                    + vel_ex_l_(n) * sm_diff1[n] * irn[n];
+
           coef1n[n] = -areal * vel_im_l_(n) * sm_diff1[n];
+          coef1ln[n] = -areal * smax_l[n] * (vl - smin_l[n]) * sm_diff1[n];
+          exp_coefn[n] = -areal * vel_ex_l_(n) * sm_diff1[n];
 
           Real vr = vel_rn[n] - advr;
-          Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
-                    + vel_ex_r_(n) * sm_diff2[n] * irn[n];
+//          Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
+//                    + vel_ex_r_(n) * sm_diff2[n] * irn[n];
           coef1n[n] += arear * vel_im_r_(n) * sm_diff2[n];
+          coef1rn[n] = arear * smin_r[n] * (smax_r[n] - vr) * sm_diff2[n];
+          exp_coefn[n] += arear * vel_ex_r_(n) * sm_diff2[n];
 
-          divn[n] = -(arear * rflux - areal * lflux);
         }// end n
-        if(adv_flag_ > 0){
-          Real *flxr = &(x1flux(k,j,i+1,0));
-          Real *flxl = &(x1flux(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            divn[n] += -(arear * flxr[n] - areal * flxl[n]);
-          }        
-        }// end adv_flag
 
       }// End i
 
@@ -204,18 +200,19 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
         for(int i=is; i<=ie; ++i){
           Real *vel_ln = &(vely_(k,j,i,0));
           Real *vel_rn = &(vely_(k,j+1,i,0));
-          Real *coef2n = &(const_coef2_(k,j,i,0));
+          Real *coef2n = &(const_coef_(k,j,i,0));
+          Real *coef2ln= &(const_coef2_l_(k,j,i,0));
+          Real *coef2rn= &(const_coef2_r_(k,j,i,0));
+          Real *exp_coefn=&(exp_coef_(k,j,i,0));
+
           Real *smax_l = &(sfac1_y_(j,i,0));
           Real *smax_r = &(sfac1_y_(j+1,i,0));
           Real *smin_l = &(sfac2_y_(j,i,0));
           Real *smin_r = &(sfac2_y_(j+1,i,0));
 
-          Real *irln = &(ir(k,j-1,i,0));
-          Real *irrn = &(ir(k,j+1,i,0));
-          Real *irn = &(ir(k,j,i,0));
           Real areal = x2area(i);
           Real arear = x2area_p1(i);
-          Real *divn = &(divflx_(k,j,i,0));
+
           Real advl = 0.0;
           Real advr = 0.0;
           if(adv_flag_ > 0){
@@ -243,25 +240,20 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel_ln[n] - advl;
-            Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
-                       + vel_ex_l_(n) * sm_diff1[n] * irn[n];
-            coef2n[n] = -areal * vel_im_l_(n) * sm_diff1[n];
+//            Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
+//                       + vel_ex_l_(n) * sm_diff1[n] * irn[n];
+            coef2n[n] += -areal * vel_im_l_(n) * sm_diff1[n];
+            coef2ln[n] = -areal * smax_l[n] * (vl - smin_l[n]) * sm_diff1[n];
+            exp_coefn[n] += -areal * vel_ex_l_(n) * sm_diff1[n];
 
             Real vr = vel_rn[n] - advr;
-            Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
-                       + vel_ex_r_(n) * sm_diff2[n] * irn[n];
+//            Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
+//                       + vel_ex_r_(n) * sm_diff2[n] * irn[n];
             coef2n[n] += arear * vel_im_r_(n) * sm_diff2[n];
+            coef2rn[n] = arear * smin_r[n] * (smax_r[n] - vr) * sm_diff2[n];
+            exp_coefn[n] += arear * vel_ex_r_(n) * sm_diff2[n];
 
-            divn[n] += -(arear * rflux - areal * lflux);
           }// end n
-
-          if(adv_flag_ > 0){
-            Real *flxr = &(x2flux(k,j+1,i,0));
-            Real *flxl = &(x2flux(k,j,i,0));
-            for(int n=0; n<prad->n_fre_ang; ++n){
-              divn[n] += -(arear * flxr[n] - areal * flxl[n]);
-            }// end n        
-          }// end adv_flag
 
         }// end i
       }// end j
@@ -312,13 +304,12 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
           Real *smin_r = &(sfac2_z_(k+1,j,i,0));
           Real *vel_ln = &(velz_(k,j,i,0));
           Real *vel_rn = &(velz_(k+1,j,i,0));
-          Real *coef3n = &(const_coef3_(k,j,i,0));
-          Real *irln = &(ir(k-1,j,i,0));
-          Real *irrn = &(ir(k+1,j,i,0));
-          Real *irn = &(ir(k,j,i,0));
+          Real *coef3n = &(const_coef_(k,j,i,0));
+          Real *coef3ln= &(const_coef3_l_(k,j,i,0));
+          Real *coef3rn= &(const_coef3_r_(k,j,i,0));
+          Real *exp_coefn=&(exp_coef_(k,j,i,0));          
           Real areal = x3area(i);
           Real arear = x3area_p1(i);
-          Real *divn = &(divflx_(k,j,i,0));
           Real advl = 0.0;
           Real advr = 0.0;
           if(adv_flag_ > 0){
@@ -346,25 +337,22 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
           for(int n=0; n<prad->n_fre_ang; ++n){
             Real vl = vel_ln[n] - advl;
-            Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
-                       + vel_ex_l_(n) * sm_diff1[n] * irn[n];
-            coef3n[n] = -areal * vel_im_l_(n) * sm_diff1[n];
+//            Real lflux = smax_l[n] * (vl - smin_l[n]) * sm_diff1[n] * irln[n]
+//                       + vel_ex_l_(n) * sm_diff1[n] * irn[n];
+            coef3n[n] += -areal * vel_im_l_(n) * sm_diff1[n];
+            coef3ln[n] = -areal * smax_l[n] * (vl - smin_l[n]) * sm_diff1[n];
+            exp_coefn[n] += -areal * vel_ex_l_(n) * sm_diff1[n];
+
 
             Real vr = vel_rn[n] - advr;
-            Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
-                       + vel_ex_r_(n) * sm_diff2[n] * irn[n];
+//            Real rflux = smin_r[n] * (smax_r[n] - vr) * sm_diff2[n] * irrn[n]
+//                       + vel_ex_r_(n) * sm_diff2[n] * irn[n];
             coef3n[n] += arear * vel_im_r_(n) * sm_diff2[n];
+            coef3rn[n] = arear * smin_r[n] * (smax_r[n] - vr) * sm_diff2[n];
+            exp_coefn[n] += arear * vel_ex_r_(n) * sm_diff2[n];            
 
-            divn[n] += -(arear * rflux - areal * lflux);
-          }// end n
-   
-          if(adv_flag_ > 0){
-            Real *flxr = &(x3flux(k+1,j,i,0));
-            Real *flxl = &(x3flux(k,j,i,0));
-            for(int n=0; n<prad->n_fre_ang; ++n){
-              divn[n] += -(arear * flxr[n] - areal * flxl[n]);
-            }// end n        
-          }// end adv_flag
+
+          }// end n   
 
         }// end i
       }// end j
@@ -375,25 +363,31 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
     for(int j=js; j<=je; ++j){
       pmb->pcoord->CellVolume(k,j,is,ie,vol);
       for(int i=is; i<=ie; ++i){
-        Real *divn = &(divflx_(k,j,i,0));
         Real dtvol = wght/vol(i);
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          divn[n] *= dtvol;
-        }
-        Real *coef1n = &(const_coef1_(k,j,i,0));
+        Real *coef1n = &(const_coef_(k,j,i,0));
+        Real *exp_coefn=&(exp_coef_(k,j,i,0));
+        Real *coef1ln=&(const_coef1_l_(k,j,i,0));
+        Real *coef1rn=&(const_coef1_r_(k,j,i,0));        
         for(int n=0; n<prad->n_fre_ang; ++n){
           coef1n[n] *= dtvol;
+          exp_coefn[n] *= dtvol;
+          coef1ln[n] *= dtvol;
+          coef1rn[n] *= dtvol;
         }
         if(pmb->block_size.nx2 > 1){
-          Real *coef2n = &(const_coef2_(k,j,i,0));
+          Real *coef2ln = &(const_coef2_l_(k,j,i,0));
+          Real *coef2rn = &(const_coef2_r_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            coef2n[n] *= dtvol;
+            coef2ln[n] *= dtvol;
+            coef2rn[n] *= dtvol;
           }          
         }// end nx2 > 1
         if(pmb->block_size.nx3 > 1){
-          Real *coef3n = &(const_coef3_(k,j,i,0));
+          Real *coef3ln = &(const_coef3_l_(k,j,i,0));
+          Real *coef3rn = &(const_coef3_r_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            coef3n[n] *= dtvol;
+            coef3ln[n] *= dtvol;
+            coef3rn[n] *= dtvol;
           }          
         }// end nx3 > 1
 
@@ -404,5 +398,56 @@ void RadIntegrator::FirstOrderFluxDivergence(const Real wght,
 
 }// end function
 
+void RadIntegrator::FirstOrderFluxDivergence(AthenaArray<Real> &ir_ini)
+{
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
 
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
 
+  for (int k=ks; k<=ke; ++k) { 
+    for (int j=js; j<=je; ++j) {
+      for(int i=is; i<=ie; ++i){
+        Real *divn = &(divflx_(k,j,i,0));
+        Real *irn = &(ir_ini(k,j,i,0));
+        Real *irln = &(ir_ini(k,j,i-1,0));
+        Real *irrn = &(ir_ini(k,j,i+1,0));
+        Real *exp_coefn = &(exp_coef_(k,j,i,0));
+        Real *coef1ln = &(const_coef1_l_(k,j,i,0));
+        Real *coef1rn = &(const_coef1_r_(k,j,i,0));
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          divn[n] = -(coef1ln[n] * irln[n] + coef1rn[n] * irrn[n] 
+                      + exp_coefn[n] * irn[n]);
+        }
+        if(adv_flag_ > 0){
+          Real *advn = &(adv_flx_(k,j,i,0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += advn[n];
+          }
+        }
+        if(pmb->block_size.nx2 > 1){
+          Real *irjln = &(ir_ini(k,j-1,i,0));
+          Real *irjrn = &(ir_ini(k,j+1,i,0));
+          Real *coef2ln = &(const_coef2_l_(k,j,i,0));
+          Real *coef2rn = &(const_coef2_r_(k,j,i,0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
+          }
+        }// end nx2
+
+        if(pmb->block_size.nx3 > 1){
+          Real *irkln = &(ir_ini(k-1,j,i,0));
+          Real *irkrn = &(ir_ini(k+1,j,i,0));
+          Real *coef3ln = &(const_coef3_l_(k,j,i,0));
+          Real *coef3rn = &(const_coef3_r_(k,j,i,0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
+          }
+        }// end nx2
+
+      }// end i
+    }// end j
+  }// end k
+
+}

@@ -46,11 +46,10 @@
 // \partial /\partial t - c/r \partial(\sin^2 zeta I)/\sin \zeta\partial \zeta
 // the output is stored in angflx
 
-
-
-void RadIntegrator::ImplicitAngularFluxes(const Real wght, 
-                                     AthenaArray<Real> &ir_ini)
+// calculate the coefficient for angular flux
+void RadIntegrator::ImplicitAngularFluxesCoef(const Real wght)
 {
+
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
   Coordinates *pco=pmb->pcoord;
@@ -76,29 +75,22 @@ void RadIntegrator::ImplicitAngularFluxes(const Real wght,
 
         // now, all the other angles
         //  Ir_new - ir_old + coef0 * Ir_l + coef1 ir_ new = 0.0;
-          for(int n=0; n<2*nzeta-1; ++n){
-            Real g_coef_l = g_zeta_(n);
-            Real g_coef_r = g_zeta_(n+1);
-            Real coef0 = wght * g_coef_l * prad->reduced_c * 
+          for(int n=0; n<2*nzeta; ++n){
+            Real coef0 = wght * g_zeta_(n) * prad->reduced_c * 
                        area_zeta(n)/ang_vol(n);
-            Real coef1 = -wght * g_coef_r * prad->reduced_c * 
+            Real coef1 = -wght * g_zeta_(n+1) * prad->reduced_c * 
                        area_zeta(n+1)/ang_vol(n);
           // the equation is
           // ir_new - ir_old + coef0 * ir_new + coef1 * ir_new1 = 0
-            ang_flx_(k,j,i,n) = -coef1 * ir_ini(k,j,i,n+1);
-            imp_ang_coef_(k,j,i,n) = coef0;
-          }// end nzeta
-          // the last one
-          Real g_coef_l = g_zeta_(2*nzeta-1);
-          Real g_coef_r = g_zeta_(2*nzeta);
-          Real coef0 = wght * g_coef_l * prad->reduced_c * 
-                    area_zeta(2*nzeta-1)/ang_vol(2*nzeta-1);
-          Real coef1 = -wght * g_coef_r * prad->reduced_c * 
-                    area_zeta(2*nzeta)/ang_vol(2*nzeta-1);
-        // ir_new - ir_old + (coef0 + coef1)i_new=0
-          ang_flx_(k,j,i,2*nzeta-1) = 0.0;
-          imp_ang_coef_(k,j,i,2*nzeta-1) = coef0 + coef1;
+            if(n == 2*nzeta-1){
+              imp_ang_coef_r_(k,j,i,n) = 0.0;
+              imp_ang_coef_(k,j,i,n) = coef0 + coef1;
+            }else{
+              imp_ang_coef_r_(k,j,i,n) = coef1;
+              imp_ang_coef_(k,j,i,n) = coef0;
+            }
 
+          }// end nzeta
         ///////////////////////////////////////////////////////////////////////////////
         }else{//end npsi ==0
           // first, starting from the zeta angle 2*nzeta-1
@@ -107,25 +99,19 @@ void RadIntegrator::ImplicitAngularFluxes(const Real wght,
 
           // now go from 2*nzeta-2 to 0
           for(int n=0; n<2*nzeta; ++n){
-            Real g_zeta_coef_l = g_zeta_(n);
-            Real g_zeta_coef_r = g_zeta_(n+1);
-            Real zeta_coef0 =  wght * g_zeta_coef_l * prad->reduced_c;
-            Real zeta_coef1 = -wght * g_zeta_coef_r * prad->reduced_c;
+            Real zeta_coef0 =  wght * g_zeta_(n) * prad->reduced_c;
+            Real zeta_coef1 = -wght * g_zeta_(n+1) * prad->reduced_c;
   
-            ImplicitPsiFlux(k,j,i, n, wght, zeta_coef1, 
-                              zeta_coef0, ir_ini);
+            ImplicitPsiFluxCoef(k,j,i, n, wght, zeta_coef1, zeta_coef0);
 
           }// end n
         }// end npsi > 0
       }// end k,j,i
-
-}// end calculate_flux
-
+}
 
 
-
-void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, Real zeta_coef1, 
-            Real zeta_coef, AthenaArray<Real> &ir_ini)
+void RadIntegrator::ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, Real zeta_coef1, 
+            Real zeta_coef)
 {
 
   Radiation *prad=pmy_rad;
@@ -133,180 +119,123 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
   AthenaArray<Real> &area_psi = psi_area_, &ang_vol = ang_vol_, &zeta_area = zeta_area_;
   int &npsi = prad->npsi;
 
-  int nzeta_r = n_zeta + 1;
-  if(n_zeta == 2*prad->nzeta - 1)
-    nzeta_r = n_zeta;
 
   // the equation to solve
   //(1+zeta_coef0+zeta_coef1) I + Div F_psi = 0
   pco->GetGeometryPsi(prad,k,j,i,n_zeta,g_psi_);
   // g_psi_ =sin zeta * cot \theta sin\psi/r
   // g_psi_(0) is always 0
-  if(g_psi_(1) < 0){
-  // starting from m=0, 
-    int ang_num = n_zeta*2*npsi;
-    int ang_psi_r = n_zeta*2+npsi+1;
-    int ang_zeta_r = nzeta_r*2*npsi;
-    Real g_psi_coef_l = 0.0;
-    Real g_psi_coef_r = g_psi_(1);
-    Real coef0 = 0.0;
-    Real coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-                       area_psi(n_zeta,1)/ang_vol(ang_num);
-    Real z_coef1 = zeta_coef1 * zeta_area(0,n_zeta+1)/ang_vol(ang_num);
-    Real z_coef = zeta_coef * zeta_area(0,n_zeta)/ang_vol(ang_num);
+
+  for(int m=0; m<2*npsi; ++m){ // all take the left state
+    int ang_num = n_zeta*2*npsi+m;
+
+    Real coef0 = wght * g_psi_(m) * prad->reduced_c * 
+            area_psi(n_zeta,m)/ang_vol(ang_num);
+    Real coef1 = -wght * g_psi_(m+1) * prad->reduced_c * 
+            area_psi(n_zeta,m+1)/ang_vol(ang_num);
+    Real z_coef1 = zeta_coef1 * zeta_area(m,n_zeta+1)/ang_vol(ang_num);
+    Real z_coef = zeta_coef * zeta_area(m,n_zeta)/ang_vol(ang_num);
+    Real coef_c = 0.0;
+    if((g_psi_(m) < 0) || (g_psi_(m+1) < 0)){
+      imp_ang_psi_l_(k,j,i,ang_num) = coef0;
+      imp_ang_psi_r_(k,j,i,ang_num) = 0.0;
+      coef_c = coef1;
+    }else if((g_psi_(m) > 0) || (g_psi_(m+1) > 0)){
+      imp_ang_psi_l_(k,j,i,ang_num) = 0.0;
+      imp_ang_psi_r_(k,j,i,ang_num) = coef1;
+      coef_c = coef0;       
+    }
     if(n_zeta == 2*prad->nzeta-1){
-      ang_flx_(k,j,i,ang_num) = 0.0;
-      imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;
+      imp_ang_coef_r_(k,j,i,ang_num) = 0.0;
+      imp_ang_coef_(k,j,i,ang_num) = coef_c + z_coef + z_coef1;
     }else{
-      ang_flx_(k,j,i,ang_num) = -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-      imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;      
+      imp_ang_coef_r_(k,j,i,ang_num) = z_coef1;
+      imp_ang_coef_(k,j,i,ang_num) = coef_c + z_coef;       
     }
 
-    for(int m=1; m<npsi; ++m){ // all take the left state
-      ang_num = n_zeta*2*npsi+m;
-      int ang_psi_l = n_zeta*2*npsi+m-1;
-      ang_zeta_r = nzeta_r*2*npsi+m;
+  }
+}// end psiflux_coef
 
-      g_psi_coef_l = g_psi_(m);
-      g_psi_coef_r = g_psi_(m+1);
-      coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-              area_psi(n_zeta,m)/ang_vol(ang_num);
-      coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-              area_psi(n_zeta,m+1)/ang_vol(ang_num);
-      z_coef1 = zeta_coef1 * zeta_area(m,n_zeta+1)/ang_vol(ang_num);
-      z_coef = zeta_coef * zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta == 2*prad->nzeta-1){
-        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l);
-        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;
-      }else{
-        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l)
-                                -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;
-      }
+void RadIntegrator::ImplicitAngularFluxes(AthenaArray<Real> &ir_ini)
+{
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco=pmb->pcoord;
+  std::stringstream msg;
 
+  int &nzeta = prad->nzeta;
+  int &npsi = prad->npsi;
+
+  AthenaArray<Real> &area_zeta = zeta_area_, &ang_vol = ang_vol_;
+
+  
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+
+
+  for(int k=ks; k<=ke; ++k)
+    for(int j=js; j<=je; ++j)
+      for(int i=is; i<=ie; ++i){
+        if(prad->npsi == 0){
+          // the angle 2*nzeta-1 does not contribute to ang_flx_
+          Real *p_angflx = &(ang_flx_(k,j,i,0));
+          Real *coef_r = &(imp_ang_coef_r_(k,j,i,0));
+          Real *p_ir = &(ir_ini(k,j,i,0));
+          for(int n=0; n<2*nzeta-1; ++n){
+            p_angflx[n] = -coef_r[n] * p_ir[n+1];
+          }// end nzeta
+        ///////////////////////////////////////////////////////////////////////////////
+        }else{//end npsi ==0
+          // now go from 2*nzeta-2 to 0
+          for(int n=0; n<2*nzeta; ++n){
+            ImplicitPsiFlux(k,j,i, n, ir_ini);
+          }// end n
+        }// end npsi > 0
+      }// end k,j,i
+
+}// end calculate_flux
+
+
+void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, AthenaArray<Real> &ir_ini)
+{
+  
+  Radiation *prad=pmy_rad;
+  int &npsi = prad->npsi;
+  //m=0
+  int ang_num = n_zeta*2*npsi;
+
+  Real *psi_l = &(imp_ang_psi_l_(k,j,i,ang_num));
+  Real *psi_r = &(imp_ang_psi_r_(k,j,i,ang_num));
+  Real *p_ir = &(ir_ini(k,j,i,ang_num));
+  Real *p_angflx = &(ang_flx_(k,j,i,ang_num));
+
+
+
+  if(n_zeta == 2*prad->nzeta-1){
+    // m=0
+    p_angflx[0] = -(psi_l[0] * p_ir[2*npsi-1] + psi_r[0] * p_ir[1]);
+    for(int m=1; m<2*npsi-1; ++m){ // all take the left state
+      p_angflx[m] = -(psi_l[m] * p_ir[m-1] + psi_r[m] * p_ir[m+1]);
     }
-            // from npsi to 2*npsi, we take the right state`.
-            // starting from 2*npsi
-    ang_num = n_zeta*2*npsi + 2*npsi-1;
-    ang_zeta_r = nzeta_r*2*npsi+2*npsi-1;
+    //m=2*npsi-1
+    p_angflx[2*npsi-1] = -(psi_l[2*npsi-1] * p_ir[2*npsi-2] + psi_r[2*npsi-1] * p_ir[0]);
+  }else{//end nzeta=2*prad->nzeta-1
+    Real *p_ir_zetar = &(ir_ini(k,j,i,(n_zeta+1)*2*npsi));
+    Real *zeta_r = &(imp_ang_coef_r_(k,j,i,ang_num));
 
-    g_psi_coef_l = g_psi_(2*npsi-1);
-    coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-            area_psi(n_zeta,2*npsi-1)/ang_vol(ang_num);
-    z_coef1 = zeta_coef1 * zeta_area(2*npsi-1,n_zeta+1)/ang_vol(ang_num);
-    z_coef = zeta_coef * zeta_area(2*npsi-1,n_zeta)/ang_vol(ang_num);
-    if(n_zeta < 2*prad->nzeta-1){
-      ang_flx_(k,j,i,ang_num) = -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-      imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
-    }else{
-      ang_flx_(k,j,i,ang_num) = 0.0;
-      imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef + z_coef1;      
+    p_angflx[0] = -(psi_l[0] * p_ir[2*npsi-1] + psi_r[0] * p_ir[1])
+                  -zeta_r[0] * p_ir_zetar[0];
+    for(int m=1; m<2*npsi-1; ++m){ // all take the left state
+      p_angflx[m] = -(psi_l[m] * p_ir[m-1] + psi_r[m] * p_ir[m+1])
+                    -zeta_r[m] * p_ir_zetar[m];
     }
-
-    for(int m=2*npsi-2; m>=npsi; --m){
-      ang_num = n_zeta*2*npsi+m;
-      int ang_psi_r = n_zeta*2*npsi+m+1;
-      ang_zeta_r = nzeta_r*2*npsi+m;
-      g_psi_coef_l = g_psi_(m);
-      g_psi_coef_r = g_psi_(m+1);
-      coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-              area_psi(n_zeta,m)/ang_vol(ang_num);
-      coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-              area_psi(n_zeta,m+1)/ang_vol(ang_num);
-      z_coef1 = zeta_coef1 * zeta_area(m,n_zeta+1)/ang_vol(ang_num);
-      z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta < 2*prad->nzeta - 1){
-        ang_flx_(k,j,i,ang_num) = -coef1 * ir_ini(k,j,i,ang_psi_r) 
-                            - z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef; 
-      }else{
-        ang_flx_(k,j,i,ang_num) = -coef1 * ir_ini(k,j,i,ang_psi_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef + z_coef1; 
-      }           
-    }
-  }else{// end g_psi(1) < 0
-           // go from npsi-1 to 0s
-    int ang_num = n_zeta*2*npsi+npsi-1;
-    int ang_zeta_r = nzeta_r*2*npsi+npsi-1;
-    Real g_psi_coef_l = g_psi_(npsi-1);
-    Real g_psi_coef_r = 0.0;
-    Real coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-                 area_psi(n_zeta,npsi-1)/ang_vol(ang_num);
-    Real coef1 = 0.0;
-    Real z_coef1 = zeta_coef1*zeta_area(npsi-1,n_zeta+1)/ang_vol(ang_num);
-    Real z_coef = zeta_coef*zeta_area(npsi-1,n_zeta)/ang_vol(ang_num);
-    if(n_zeta < 2*prad->nzeta -1){
-      ang_flx_(k,j,i,ang_num) = -z_coef1*ir_ini(k,j,i,ang_zeta_r);
-      imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
-    }else{
-      ang_flx_(k,j,i,ang_num) = 0.0;
-      imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef + z_coef1;      
-    }
-
-    for(int m=npsi-2; m>=0; --m){ // all take the right state
-      ang_num = n_zeta*2*npsi+m;
-      ang_zeta_r = nzeta_r*2*npsi+m;
-      int ang_psi_r = n_zeta*2*npsi+m+1;
-      g_psi_coef_l = g_psi_(m);
-      g_psi_coef_r = g_psi_(m+1);
-      coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-              area_psi(n_zeta,m)/ang_vol(ang_num);
-      coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-              area_psi(n_zeta,m+1)/ang_vol(ang_num);
-      z_coef1 = zeta_coef1*zeta_area(m,n_zeta+1)/ang_vol(ang_num);
-      z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta < 2*prad->nzeta-1){
-        ang_flx_(k,j,i,ang_num) = -coef1*ir_ini(k,j,i,ang_psi_r)
-                                -z_coef1*ir_ini(k,j,i,ang_zeta_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef;
-      }else{
-        ang_flx_(k,j,i,ang_num) = -coef1*ir_ini(k,j,i,ang_psi_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef0 + z_coef + z_coef1;
-      }
-
-    }
-            // from npsi to 2*npsi, we take the left state`.
-            // starting from npsi
-    ang_num = n_zeta*2*npsi + npsi;
-    ang_zeta_r=nzeta_r*2*npsi+npsi;
-    g_psi_coef_r = g_psi_(npsi+1);
-
-    coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-            area_psi(n_zeta,npsi+1)/ang_vol(ang_num);
-    z_coef1 = zeta_coef1*zeta_area(npsi,n_zeta+1)/ang_vol(ang_num);
-    z_coef = zeta_coef*zeta_area(npsi,n_zeta)/ang_vol(ang_num);
-    if(n_zeta < 2*prad->nzeta-1){
-      ang_flx_(k,j,i,ang_num) = -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-      imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;
-    }else{
-      ang_flx_(k,j,i,ang_num) = 0.0;
-      imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;      
-    }
-
-    for(int m=npsi+1; m<2*npsi; ++m){
-      ang_num = n_zeta*2*npsi+m;
-      ang_zeta_r=nzeta_r*2*npsi+m;
-      int ang_psi_l=n_zeta*2*npsi+m-1;
-      g_psi_coef_l = g_psi_(m);
-      g_psi_coef_r = g_psi_(m+1);
-      coef0 = wght * g_psi_coef_l * prad->reduced_c * 
-              area_psi(n_zeta,m)/ang_vol(ang_num);
-      coef1 = -wght * g_psi_coef_r * prad->reduced_c * 
-              area_psi(n_zeta,m+1)/ang_vol(ang_num);
-      z_coef1 = zeta_coef1*zeta_area(m,n_zeta+1)/ang_vol(ang_num);
-      z_coef = zeta_coef*zeta_area(m,n_zeta)/ang_vol(ang_num);
-      if(n_zeta < 2*prad->nzeta-1){
-        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l)
-                                -z_coef1 * ir_ini(k,j,i,ang_zeta_r);
-        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef;     
-      }else{
-        ang_flx_(k,j,i,ang_num) = -coef0 * ir_ini(k,j,i,ang_psi_l);
-        imp_ang_coef_(k,j,i,ang_num) = coef1 + z_coef + z_coef1;         
-      } 
-    }// end m
-  }// end g_psi(1) > 0
+    //m=2*npsi-1
+    p_angflx[2*npsi-1] = -(psi_l[2*npsi-1] * p_ir[2*npsi-2] + psi_r[2*npsi-1] * p_ir[0])
+                         -zeta_r[2*npsi-1] * p_ir_zetar[2*npsi-1];
+  }
 
 }
+
 
 //switch to centered difference in optically thick regime
 // the flux is 

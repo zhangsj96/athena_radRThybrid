@@ -643,6 +643,90 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &ir, const int order)
 }// end calculate_flux
 
 
+// add flux divergence due to advection for the implicit scheme
+void RadIntegrator::FluxDivergence(const Real wght)
+{
+
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco= pmb->pcoord;
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+
+  
+  AthenaArray<Real> &x1area = x1face_area_, &x2area = x2face_area_,
+                 &x2area_p1 = x2face_area_p1_, &x3area = x3face_area_,
+                 &x3area_p1 = x3face_area_p1_, &vol = cell_volume_;
+
+  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
+  AthenaArray<Real> &x2flux=prad->flux[X2DIR];
+  AthenaArray<Real> &x3flux=prad->flux[X3DIR];
+
+  for (int k=ks; k<=ke; ++k) { 
+    for (int j=js; j<=je; ++j) {
+      pco->CellVolume(k,j,is,ie,vol);
+      pco->Face1Area(k,j,is,ie+1,x1area);
+      for(int i=is; i<=ie; ++i){
+        Real *divn = &(adv_flx_(k,j,i,0));
+        Real *flxr = &(x1flux(k,j,i+1,0));
+        Real *flxl = &(x1flux(k,j,i,0));
+        Real areal = x1area(i);
+        Real arear = x1area(i+1);
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          divn[n] = -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+        } 
+
+      }
+    }
+  }
+  if(pmb->block_size.nx2 > 1){
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        pco->CellVolume(k,j,is,ie,vol);
+        pco->Face2Area(k,j  ,is,ie,x2area   );
+        pco->Face2Area(k,j+1,is,ie,x2area_p1);
+        for(int i=is; i<=ie; ++i){
+          Real *divn = &(adv_flx_(k,j,i,0));
+          Real *flxr = &(x2flux(k,j+1,i,0));
+          Real *flxl = &(x2flux(k,j,i,0));
+          Real areal = x2area(i);
+          Real arear = x2area_p1(i);
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+          } 
+
+        }
+      }
+    }// end k
+    
+  }// end nx2 > 1
+
+  if(pmb->block_size.nx3 > 1){
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        pco->CellVolume(k,j,is,ie,vol);
+        pco->Face3Area(k,j  ,is,ie,x3area   );
+        pco->Face3Area(k+1,j,is,ie,x3area_p1);
+        for(int i=is; i<=ie; ++i){
+          Real *divn = &(adv_flx_(k,j,i,0));
+          Real *flxr = &(x3flux(k+1,j,i,0));
+          Real *flxl = &(x3flux(k,j,i,0));
+          Real areal = x3area(i);
+          Real arear = x3area_p1(i);
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+          } 
+
+        }
+      }
+    }// end k
+    
+  }// end nx3 > 1
+
+
+}
+
 void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                                     AthenaArray<Real> &ir_out)
 {

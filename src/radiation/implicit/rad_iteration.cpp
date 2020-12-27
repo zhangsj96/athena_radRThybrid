@@ -81,8 +81,20 @@ void IMRadiation::Iteration(Mesh *pm,
       if(prad->pradintegrator->adv_flag_ > 0){
         if(stage == 1)
           prad->pradintegrator->CalculateFluxes(prad->ir, 1);
-       else
+        else
           prad->pradintegrator->CalculateFluxes(prad->ir, prad->pradintegrator->rad_xorder);
+
+        // store the flux divergence due to advection
+        prad->pradintegrator->FluxDivergence(wght);
+      }
+
+      // prepare the coefficients
+      if(ite_scheme == 0 || ite_scheme == 2)
+        prad->pradintegrator->FirstOrderFluxDivergenceCoef(wght);      
+
+      // prepare coefficients for angular fluxes
+      if(prad->angle_flag == 1){
+        prad->pradintegrator->ImplicitAngularFluxesCoef(wght);  
       }
 
       prad->ir_old = prad->ir;
@@ -107,7 +119,7 @@ void IMRadiation::Iteration(Mesh *pm,
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
         if(ite_scheme == 0 || ite_scheme == 2)
-          prad->pradintegrator->FirstOrderFluxDivergence(wght, prad->ir);
+          prad->pradintegrator->FirstOrderFluxDivergence(prad->ir);
         else if(ite_scheme == 1)
           prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
         else{
@@ -118,7 +130,7 @@ void IMRadiation::Iteration(Mesh *pm,
         }             
         // calculate the coefficients and angular part before the source term
         if(prad->angle_flag == 1){
-          prad->pradintegrator->ImplicitAngularFluxes(wght,prad->ir);  
+          prad->pradintegrator->ImplicitAngularFluxes(prad->ir);  
         }
 
      // the source term, ir1 is the ir_ini

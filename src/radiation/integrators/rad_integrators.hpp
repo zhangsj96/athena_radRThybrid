@@ -34,24 +34,23 @@ public:
   
   void FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                        AthenaArray<Real> &ir_out);
+  void FluxDivergence(const Real wght);
 
-  void FirstOrderFluxDivergenceUpwind(const Real wght, 
-                                AthenaArray<Real> &ir);
-  void FirstOrderFluxDivergence(const Real wght, 
-                                AthenaArray<Real> &ir);
+
+  void FirstOrderFluxDivergenceCoef(const Real wght);
+  void FirstOrderFluxDivergence(AthenaArray<Real> &ir);
 
 
   void FirstOrderGSFluxDivergence(const Real wght, 
                                 AthenaArray<Real> &ir);
 
-  void SecondOrderFluxDivergence(const Real wght, 
-                                AthenaArray<Real> &ir);
-
-  void ImplicitAngularFluxes(const Real wght, AthenaArray<Real> &ir);
+  void ImplicitAngularFluxesCoef(const Real wght);
+  void ImplicitAngularFluxes(AthenaArray<Real> &ir);
   void ImplicitAngularFluxesCenter(const Real wght, AthenaArray<Real> &ir);
 
-  void ImplicitPsiFlux(int k, int j, int i, int n_zeta, Real wght, 
-            Real zeta_coefl, Real zeta_coefr, AthenaArray<Real> &ir);
+  void ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, 
+            Real zeta_coefr, Real zeta_coefl);
+  void ImplicitPsiFlux(int k, int j, int i, int n_zeta, AthenaArray<Real> &ir);
   void ImplicitPsiFluxCenter(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefr, Real zeta_coefl, Real f_l, Real f_r, 
             AthenaArray<Real> &ir);
@@ -135,8 +134,15 @@ private:
   AthenaArray<Real> x2face_area_p1_, x3face_area_p1_;
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
 
-  AthenaArray<Real> const_coef1_, const_coef2_, const_coef3_;
+  AthenaArray<Real> adv_flx_;
+
+  AthenaArray<Real> const_coef_, exp_coef_;
+  AthenaArray<Real> const_coef1_l_, const_coef1_r_;
+  AthenaArray<Real> const_coef2_l_, const_coef2_r_;
+  AthenaArray<Real> const_coef3_l_, const_coef3_r_;
   AthenaArray<Real> divflx_, implicit_coef_, ang_flx_, imp_ang_coef_;
+  AthenaArray<Real> imp_ang_coef_r_;
+  AthenaArray<Real> imp_ang_psi_l_, imp_ang_psi_r_;
   AthenaArray<Real> left_coef1_, left_coef2_, left_coef3_;
   AthenaArray<Real> limiter_, limiterj_, limiterk_, dql_, dqr_;
   AthenaArray<Real> sfac1_x_, sfac2_x_;

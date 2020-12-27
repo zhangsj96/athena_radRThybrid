@@ -164,13 +164,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           for(int n=0; n<nang; n++){
             implicit_coef_(n+ifr*nang) = 1.0;
             if(IM_RADIATION_ENABLED){
-              implicit_coef_(n+ifr*nang) += const_coef1_(k,j,i,n);
-              if(je > js){
-                implicit_coef_(n+ifr*nang) += const_coef2_(k,j,i,n); 
-              }
-              if(ke > ks){
-                implicit_coef_(n+ifr*nang) += const_coef3_(k,j,i,n);
-              }
+              implicit_coef_(n+ifr*nang) += const_coef_(k,j,i,n);
               if(prad->angle_flag == 1){
                 implicit_coef_(n+ifr*nang) += imp_ang_coef_(k,j,i,n);
               }
@@ -263,13 +257,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                   ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
                            * ir(k,j,i,ifr*nang+n));
                 }
-                ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
-                if(je > js)
-                  ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
-                if(ke > ks)
-                  ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
+                ir_weight -= (const_coef_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));
                 ir_weight *= prad->wmu(n);
                 er_fr  += ir_weight;
@@ -286,19 +274,15 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                   ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
                            * ir(k,j,i,ifr*nang+n));                  
                 }
-                ir_weight -= (const_coef1_(k,j,i,ifr*nang+n) 
+                ir_weight -= (const_coef_(k,j,i,ifr*nang+n) 
                            * ir(k,j,i,ifr*nang+n));
                 ir_weight -= (left_coef1_(k,j,i,ifr*nang+n)
                            * ir(k,j,i-1,ifr*nang+n));
                 if(je > js){
-                  ir_weight -= (const_coef2_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
                   ir_weight -= (left_coef2_(k,j,i,ifr*nang+n)
                            * ir(k,j-1,i,ifr*nang+n));
                 }
                 if(ke > ks){
-                  ir_weight -= (const_coef3_(k,j,i,ifr*nang+n) 
-                           * ir(k,j,i,ifr*nang+n));
                   ir_weight -= (left_coef3_(k,j,i,ifr*nang+n)
                            * ir(k-1,j,i,ifr*nang+n));
                 }

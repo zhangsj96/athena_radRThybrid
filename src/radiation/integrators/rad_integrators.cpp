@@ -130,12 +130,17 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     dql_.NewAthenaArray(prad->n_fre_ang);
     dqr_.NewAthenaArray(prad->n_fre_ang);
 
-    const_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    const_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    exp_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    const_coef1_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    const_coef1_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     if(ncells2 > 1){
-      const_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+      const_coef2_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+      const_coef2_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     }
     if(ncells3 > 1){
-      const_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+      const_coef3_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+      const_coef3_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     }
     divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
@@ -147,9 +152,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
     ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
+    imp_ang_coef_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);   
+    imp_ang_psi_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang); 
+    imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
+    adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
   }// end implicit
+
   implicit_coef_.NewAthenaArray(prad->n_fre_ang);
 
   tgas_.NewAthenaArray(ncells3,ncells2,ncells1);
@@ -397,15 +406,20 @@ RadIntegrator::~RadIntegrator()
 
   if(IM_RADIATION_ENABLED){
 
-    const_coef1_.DeleteAthenaArray();
+    const_coef_.DeleteAthenaArray();
+    exp_coef_.DeleteAthenaArray();
+    const_coef1_l_.DeleteAthenaArray();
+    const_coef1_r_.DeleteAthenaArray();
     limiter_.DeleteAthenaArray();
 
     if(pmy_rad->pmy_block->ncells2 > 1){
-      const_coef2_.DeleteAthenaArray();
+      const_coef2_l_.DeleteAthenaArray();
+      const_coef2_r_.DeleteAthenaArray();
       limiterj_.DeleteAthenaArray();
     }
     if(pmy_rad->pmy_block->ncells3 > 1){
-      const_coef3_.DeleteAthenaArray();
+      const_coef3_l_.DeleteAthenaArray();
+      const_coef3_r_.DeleteAthenaArray();
       limiterk_.DeleteAthenaArray();
     }
     divflx_.DeleteAthenaArray();
@@ -419,6 +433,10 @@ RadIntegrator::~RadIntegrator()
 
     ang_flx_.DeleteAthenaArray();
     imp_ang_coef_.DeleteAthenaArray();
+    imp_ang_coef_r_.DeleteAthenaArray();
+    imp_ang_psi_l_.DeleteAthenaArray();
+    imp_ang_psi_r_.DeleteAthenaArray();
+    adv_flx_.DeleteAthenaArray();
     
   }
   implicit_coef_.DeleteAthenaArray();
