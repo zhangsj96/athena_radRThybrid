@@ -32,6 +32,7 @@
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../radiation/radiation.hpp"
+#include "../radiation/implicit/radiation_implicit.hpp"
 #include "../cr/cr.hpp"
 #include "../thermal_conduction/tc.hpp"
 #include "../parameter_input.hpp"
@@ -128,7 +129,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 //set the total number of frequency x angles
 
   nfre_ang = 0;
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
   
     int nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
     int nmu = pin->GetInteger("radiation","nmu");
@@ -243,9 +244,11 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   peos = new EquationOfState(this, pin);
 
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
     prad = new Radiation(this, pin);
+  }
+  if(RADIATION_ENABLED){
     pbval->AdvanceCounterPhysID(RadBoundaryVariable::max_phys_id);
   }
 
@@ -348,7 +351,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   nfre_ang = 0;
    
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
 
     int nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
     int nmu = pin->GetInteger("radiation","nmu");
@@ -442,9 +445,11 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   peos = new EquationOfState(this, pin);
 
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
     prad = new Radiation(this, pin);
+  }
+  if(RADIATION_ENABLED){
     pbval->AdvanceCounterPhysID(RadBoundaryVariable::max_phys_id);
   }
 
@@ -486,7 +491,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     std::memcpy(prad->ir.data(), &(mbdata[os]), prad->ir.GetSizeInBytes());
     std::memcpy(prad->ir1.data(), &(mbdata[os]), prad->ir1.GetSizeInBytes());
     os += prad->ir.GetSizeInBytes();
@@ -545,7 +550,7 @@ MeshBlock::~MeshBlock() {
   delete peos;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
   if (NSCALARS > 0) delete pscalars;
-  if(RADIATION_ENABLED) delete prad;
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED) delete prad;
   if(CR_ENABLED) delete pcr;
   if(TC_ENABLED) delete ptc;
 
@@ -648,7 +653,7 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
     size += pgrav->phi.GetSizeInBytes();
   if (NSCALARS > 0)
     size += pscalars->s.GetSizeInBytes();
-  if (RADIATION_ENABLED)
+  if (RADIATION_ENABLED || IM_RADIATION_ENABLED)
     size += prad->ir.GetSizeInBytes();
   if(CR_ENABLED)
     size += pcr->u_cr.GetSizeInBytes();

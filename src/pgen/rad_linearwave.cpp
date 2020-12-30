@@ -295,6 +295,97 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       omegaimg=  0.7044806086435424;
       sigma0 = 1.0;
       break;
+    case 9:
+      v_r= 1.2092908080104792;
+      v_i= 0.25516371383473957;
+      p_r= 1.1686533807826482;
+      p_i= 0.28223448062039036;
+      er_r= 0.6544229491473885;
+      er_i= 1.0653905194884314;
+      fr_r= -0.04918496753828805;
+      fr_i= 0.17766949176109614;
+      omegareal= 7.598198236998773;
+      omegaimg=  1.6032408976918122;
+      sigma0 = 10.0;
+      break;
+    case 10:
+      v_r= 1.3993585014150265;
+      v_i= 0.03450304866280985;
+      p_r= 1.4211576732442506;
+      p_i= 0.04441546638644912;
+      er_r= 1.6841247487314883;
+      er_i= 0.17440949185811563;
+      fr_r= 0.18330452762195915;
+      fr_i= 0.038269237092134034;
+      omegareal= 8.792428775567739; 
+      omegaimg=  0.21678904841106914;
+      sigma0 = 100.0;
+      break;
+    case 11:
+      v_r= 1.271935073054169;
+      v_i= 0.08266820679991217;
+      p_r= 1.6110935636801302;
+      p_i= 0.20757539251245596;
+      er_r= -0.0006798060846963105;
+      er_i= 0.0023794592885675314;
+      fr_r= -0.0014238164476813107;
+      fr_i= 0.004188456336444625;
+      omegareal= 7.991803762700347; 
+      omegaimg=  0.5194196623360917;
+      sigma0 = 0.01;
+      break;
+    case 12:
+      v_r= 1.014892795882639;
+      v_i= 0.08976614261743401;
+      p_r= 1.0234931616949725;
+      p_i= 0.15900654619222715;
+      er_r= -0.003705180537531039;
+      er_i= 0.007369404109744249;
+      fr_r= -0.010447571816544906;
+      fr_i= 0.0022692464424416106;
+      omegareal= 6.376759503452208; 
+      omegaimg=  0.5640173083760487;
+      sigma0 = 0.1;
+      break;
+    case 13:
+      v_r= 0.9977393625226653;
+      v_i= 0.1324385410980396;
+      p_r= 0.9963589910920785;
+      p_i= 0.03350714894270625;
+      er_r= -0.009348064816826119;
+      er_i= 0.07057816396845434;
+      fr_r= -0.011965869992714585;
+      fr_i=  0.006087909287739512;
+      omegareal= 6.268981302997137;
+      omegaimg= 0.8321358955315021;
+      sigma0 = 1.0;
+      break;
+    case 14:
+      v_r= 2.1806327929670344;
+      v_i= 0.6503652227748439;
+      p_r= 1.2398074098916425;
+      p_i= 0.24885283255343593;
+      er_r= 0.9567316753829218;
+      er_i= 0.9851131720168348;
+      fr_r= 0.12816968396550954;
+      fr_i= 0.2810151431629262;
+      omegareal= 13.701319925124455;
+      omegaimg=  4.086365212039477;
+      sigma0 = 10.0;
+      break;
+    case 15:
+      v_r= 2.2904573528686267;
+      v_i= 0.0604384248330597;
+      p_r= 1.344412710622572;
+      p_i= 0.025960902814908177;
+      er_r= 1.3776131567434966;
+      er_i= 0.10314648118800326;
+      fr_r= 0.3038178476543796;
+      fr_i= 0.032551125836846495 ;
+      omegareal= 14.391367986265605;
+      omegaimg=  0.37974582290015857; 
+      sigma0 = 100.0;
+      break;
     default:
     std::stringstream msg;
     msg << "### FATAL ERROR in ProblemGenerator" << std::endl
@@ -310,9 +401,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
   
   // Initialize hydro variable
-  for(int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for(int k=0; k<ncells3; ++k) {
+    for (int j=0; j<ncells2; ++j) {
+      for (int i=0; i<ncells1; ++i) {
         Real &x1 = pcoord->x1v(i);
         Real &x2 = pcoord->x2v(j);
         Real &x3 = pcoord->x3v(k);
@@ -332,7 +423,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           phydro->u(IEN,k,j,i) += 0.5*SQR(phydro->u(IM3,k,j,i))/phydro->u(IDN,k,j,i);
         }
         
-        if(RADIATION_ENABLED){
+        if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
           Real der = amp * (er_r * cos(theta) + er_i * sin(theta));
           Real dfr = amp * (fr_r * cos(theta) + fr_i * sin(theta));
         

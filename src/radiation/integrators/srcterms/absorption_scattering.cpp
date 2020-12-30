@@ -41,10 +41,10 @@
 // tgas is gas temperature
 // This function updates normal absorption plus scattering opacity together
 
-void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
+Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
-          AthenaArray<Real> &ir_cm)
+          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
+          AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
   Real& prat = pmy_rad->prat;
@@ -85,14 +85,16 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
       dtcsigmap = ct * sigma_p[ifr];
       rdtcsigmap = redfactor * dtcsigmap;
     }
+
     Real *ircm = &(ir_cm(nang*ifr));
     Real *vn = &(vncsigma(0));
     Real *vn2 = &(vncsigma2(0));
     Real *tcoef = &(tran_coef(0));
-    Real *wmu = &(wmu_cm(0));     
+    Real *wmu = &(wmu_cm(0));  
+    Real *imcoef = &(implicit_coef(0));   
 #pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       vn[n] = 1.0/(1.0 + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
+       vn[n] = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
        vn2[n] = tcoef[n] * vn[n];
        Real ir_weight = ircm[n] * wmu[n];
        jr_cm += ir_weight;
@@ -123,28 +125,31 @@ void RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     }
     // even if tr=told, there can be change for intensity, making them isotropic
     if(!badcell){
+
+
     
       Real emission = tgasnew * tgasnew * tgasnew * tgasnew;
       
       // get update jr_cm
       jr_cm = (suma1 * emission + suma2)/(1.0-suma3);
-    
+
     // Update the co-moving frame specific intensity
       Real *irn = &(ir_cm(nang*ifr));
       Real *vn2 = &(vncsigma2(0));
+      Real *imcoef = &(implicit_coef(nang*ifr));
+      Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
         irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
-                        - (rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
+                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
       }
-    }
+    }// end badcell
   }// End Frequency
   
   // Update gas temperature
-  tgas = tgasnew;
+  // Do not update gas temperature
+//  tgas = tgasnew;
+  return tgasnew;
   
 
-
-
-  return;
 }

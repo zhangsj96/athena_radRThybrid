@@ -27,7 +27,6 @@ data_format = %12.6e    # Optional data format string
 dt          = 1.0    # time increment between outputs
 x2_slice    =  0       # slice in x2
 x1_slice    = 0
-dt         = 0.01       # time increment between outputs
 
 
 <time>
@@ -56,9 +55,9 @@ ox2_rad_bc = periodic
 nx3        = 1280         # Number of zones in X3-direction
 x3min      = -10.0      # minimum value of X3
 x3max      = 10.0       # maximum value of X3
-ix3_bc     = outflow  # inner-X3 boundary flag
+ix3_bc     = user  # inner-X3 boundary flag
 ox3_bc     = outflow  # inner-X3 boundary flag
-ix3_rad_bc = outflow
+ix3_rad_bc = user
 ox3_rad_bc = vacuum
 
 
@@ -75,6 +74,7 @@ gamma           = 1.6666666666667       # gamma = C_p/C_v
 nmu             = 1
 Prat            = 0.01
 Crat            = 10.0
+error_limit     = 1.e-5
 
 <problem>
 

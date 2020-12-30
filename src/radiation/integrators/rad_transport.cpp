@@ -17,7 +17,7 @@
 //  \brief implementation of radiation integrators
 //======================================================================================
 
-
+#include <sstream>    // stringstream
 // Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
@@ -37,6 +37,9 @@
 #ifdef OPENMP_PARALLEL
 #include <omp.h>
 #endif
+
+// calculate the transport flux as 
+// (v- vel)I + vel*I
 
 
 void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
@@ -78,433 +81,281 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 //--------------------------------------------------------------------------------------
 // i-direction
 
-
-
-  // This part is used for all three directions when adv_flag is turned on
-  if(adv_flag_ > 0){
-
-    for(int k=0; k<ncells3; ++k){
-      for(int j=0; j<ncells2; ++j){
-          if (ncells2 > 1) pco->CenterWidth2(k,j,0,ncells1-1,cwidth2_);
-          if (ncells3 > 1) pco->CenterWidth3(k,j,0,ncells1-1,cwidth3_);
-        for(int i=0; i<ncells1; ++i){
-           Real vx = w(IVX,k,j,i);
-           Real vy = w(IVY,k,j,i);
-           Real vz = w(IVZ,k,j,i);
-           for(int ifr=0; ifr<nfreq; ++ifr){
-             Real ds = pco->dx1v(i);
-             if(ncells2 > 1) ds += cwidth2_(i);
-             if(ncells3 > 1) ds += cwidth3_(i);
-               
-             GetTaufactor(vx, vy, vz, ds,
-                      prad->sigma_a(k,j,i,ifr)+prad->sigma_s(k,j,i,ifr), &tau_fact);
-             Real *cosx = &(prad->mu(0,k,j,i,0));
-             Real *cosy = &(prad->mu(1,k,j,i,0));
-             Real *cosz = &(prad->mu(2,k,j,i,0));
-             Real *irn = &(ir(k,j,i,ifr*nang));
-             Real *tempi1n = &(temp_i1_(k,j,i,ifr*nang));
-             Real *tempi2n = &(temp_i2_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosx,cosy,cosz,irn,tempi1n,tempi2n:ALI_LEN)
-             for(int n=0; n<nang; ++n){
-               
-               Real vdotn = vx*cosx[n]+vy*cosy[n]+vz*cosz[n];
-                 
-               vdotn *= invcrat;
-                 
-               Real adv_coef = tau_fact * vdotn * (3.0 + vdotn * vdotn);
-               Real q1 = irn[n] * (1.0 - adv_coef);
-               tempi1n[n] = q1;
-               tempi2n[n] = adv_coef;
-               
-             }
-          }
-        }// end i
-      }// end j
-    }// end k
-
-    for (int k=kl; k<=ku; ++k){
-      for (int j=jl; j<=ju; ++j){
-        // get the velocity at the interface
-        for(int i=is-1; i<=ie+1; ++i){
-          Real dxl = pco->x1f(i)-pco->x1v(i-1);
-          Real dxr = pco->x1v(i) - pco->x1f(i);
-          Real factl = dxr/(dxl+dxr);
-          Real factr = dxl/(dxl+dxr);
-          for(int ifr=0; ifr<nfreq; ++ifr){
-            Real *cosx = &(prad->mu(0,k,j,i-1,0));
-            Real *cosx1 = &(prad->mu(0,k,j,i,0));
-            Real *tempi2 = &(temp_i2_(k,j,i-1,ifr*nang));
-            Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-            Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosx,cosx1,tempi2,tempi2_1,veln:ALI_LEN)
-            for(int n=0; n<nang; ++n){
-              // linear intepolation between x1v(i-1), x1f(i), x1v(i)
-              veln[n] = prad->reduced_c *
-                    (factl * cosx[n] * tempi2[n]
-                     + factr * cosx1[n] * tempi2_1[n]);
-            }
-
-
-          }// end ifr
-        }// end i
-      }// end j
-    }// endk
-
-  } // End adv_flag
-
-
-    // First, do reconstruction of the specific intensities
-
-  for (int k=kl; k<=ku; ++k) {
-    for (int j=jl; j<=ju; ++j) {
-      // reconstruct L/R states
-      if(adv_flag_ > 0)
-      {
-        if (order == 1) {
-          pmb->precon->DonorCellX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, temp_i1_, -1, il_, ir_);
-        }
-      }else{
-        if (order == 1) {
-          pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        }        
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
+      pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
+      for(int i=is; i<=ie+1; ++i){
+        Real taul = 0.0;
+        Real taur = 0.0;
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
+          Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+          taul += prad->wfreq(ifr)*dxw1_(i-1) * sigmal;
+          taur += prad->wfreq(ifr)*dxw1_(i) * sigmar;
+        }// end ifr
+        Real f_l = 1.0;
+        Real f_r = 1.0;
+        taul *= taufact(k,j,i-1);
+        taur *= taufact(k,j,i);
+        GetTaufactor(taul+taur,f_r,1);
+        GetTaufactor(taul+taur,f_l,-1);
+        
+        Real *s1n = &(sfac1_x_(i,0));
+        Real *s2n = &(sfac2_x_(i,0));
+        Real *velxn = &(velx_(k,j,i,0));
+        Real adv = adv_vel(0,k,j,i);
+        SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
+      }// end i
+      if (order == 1) {
+        pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
       }
 
-      // calculate flux with velocity times the interface state
+      // calculate flux with HLLE type flux
+      //(smax F(u_L) - Smin F(U_R))/(smax-smin)+smax*smin(u(R)-u_L)/(smax-smin)
       for(int i=is; i<=ie+1; ++i){
         Real *vel = &(velx_(k,j,i,0));
+        Real *smax = &(sfac1_x_(i,0));
+        Real *smin = &(sfac2_x_(i,0));
+        Real *irln = &(il_(i,0));
+        Real *irrn = &(ir_(i,0));
+        Real adv = 0.0;
+        if(adv_flag_ > 0){
+          adv = adv_vel(0,k,j,i);
+        }
+        Real *sm_diff = &(sm_diff1_(0));
         for(int n=0; n<prad->n_fre_ang; ++n){
-          if(vel[n] > 0.0)
-            x1flux(k,j,i,n) = vel[n] * il_(i,n);
-          else if(vel[n] < 0.0)
-            x1flux(k,j,i,n) = vel[n] * ir_(i,n);
+          Real diff = smax[n] - smin[n];
+          if(std::fabs(diff) < TINY_NUMBER)
+            sm_diff[n] = 0.0;
           else
-            x1flux(k,j,i,n) = 0.0;
+            sm_diff[n] = 1.0/diff;          
+        }        
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          Real vl = vel[n] - adv;
+          x1flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                          + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
         }// end n
-      }// end i
+        if(adv_flag_ > 0){
+          Real &advv = adv_vel(0,k,j,i);
+          if(advv >0){
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x1flux(k,j,i,n) += advv * irln[n];
+            }// end n
+          }else{
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x1flux(k,j,i,n) += advv * irrn[n];
+            }// end n
+          }// end vel
+        }// end adv_flag_
+      }// end i        
 
     }// end j
   }// end k
 
-  if(adv_flag_ > 0){
-
-    for (int k=kl; k<=ku; ++k) {
-      for (int j=jl; j<=ju; ++j) {
-        // reconstruct L/R states
-        if (order == 1) {
-          pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
-        }
-
-        // calculate flux with velocity times the interface state
-        for(int i=is; i<=ie+1; ++i){
-          Real *vel = &(vel_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(vel[n] > 0.0)
-              x1flux(k,j,i,n) += vel[n] * il_(i,n);
-            else if(vel[n] < 0.0)
-              x1flux(k,j,i,n) += vel[n] * ir_(i,n);
-
-          }// end n
-        }// end i
-
-      }// end j
-    }// end k
-
-  }// end adv_flag
 
 // j-direction
   if(pmb->pmy_mesh->f2){
     AthenaArray<Real> &x2flux=prad->flux[X2DIR];
 
-    il = is-1, iu = ie+1, kl = ks, ku = ke;
-    if (ncells3 ==  1) // 2D
-      kl = ks, ku = ke;
-    else // 3D
-      kl = ks-1, ku = ke+1;
+    for(int k=ks; k<=ke; ++k){
+      // first, calculate speed
+      for(int j=js; j<=je+1; ++j){
+        pco->CenterWidth2(k,j-1,is,ie,dxw1_);
+        pco->CenterWidth2(k,j,is,ie,dxw2_);
+        for(int i=is; i<=ie; ++i){
+          Real taul = 0.0;
+          Real taur = 0.0;
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
+          }
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k,j-1,i);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
+        
+          Real *s1n = &(sfac1_y_(j,i,0));
+          Real *s2n = &(sfac2_y_(j,i,0));
+          Real *velyn = &(vely_(k,j,i,0));
+          Real adv = adv_vel(1,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
 
+        }// end i
+      }// end j
 
-    if(adv_flag_ > 0){
+      // reconstruction
+      if (order == 1) {
+        pmb->precon->DonorCellX2(k, js-1, is, ie, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX2(k, js-1, is, ie, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX2(k, js-1, is, ie, ir, -1, il_, ir_);
+      }        
 
-      for (int k=kl; k<=ku; ++k){
-#pragma omp for schedule(static)
-        for (int j=js; j<=je+1; ++j){
-        // get the velocity
-          for(int i=il; i<=iu; ++i){
-            Real dxl = pco->x2f(j)-pco->x2v(j-1);
-            Real dxr = pco->x2v(j) - pco->x2f(j);
-            Real factl = dxr/(dxl+dxr);
-            Real factr = dxl/(dxl+dxr);
-            for(int ifr=0; ifr<nfreq; ++ifr){
-              Real *cosy = &(prad->mu(1,k,j-1,i,0));
-              Real *cosy1 = &(prad->mu(1,k,j,i,0));
-              Real *tempi2 = &(temp_i2_(k,j-1,i,ifr*nang));
-              Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-              Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosy,cosy1,tempi2,tempi2_1,veln:ALI_LEN)
-              for(int n=0; n<nang; ++n){
-              // linear intepolation between x2v(j-1), x2f(j), x2v(j)                 
-                veln[n] = prad->reduced_c *
-                    (factl * cosy[n] * tempi2[n]
-                     + factr * cosy1[n] * tempi2_1[n]);
-              }
-            }// end ifr
-          }// end i
-        }// end j
-      }// end k
-    }// end adv_flag
-
-    for (int k=kl; k<=ku; ++k) {
-      //reconstruct the first row
-      if(adv_flag_ > 0){
-        if (order == 1) {
-          pmb->precon->DonorCellX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, temp_i1_, -1, il_, ir_);
-        }
-      }else{// end adv_flag
-        if (order == 1) {
-          pmb->precon->DonorCellX2(k, js-1, il, iu, ir, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, ir, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, ir, -1, il_, ir_);
-        }        
-      }
 
       for(int j=js; j<=je+1; ++j){
 
-        if(adv_flag_ > 0){
-
-          if (order == 1) {
-            pmb->precon->DonorCellX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX2(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          }
-
-        }else{
-          if (order == 1) {
-            pmb->precon->DonorCellX2(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX2(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX2(k, j, il, iu, ir, -1, ilb_, ir_);
-          }       
-        }
-
-        //calculate the flux
-      // calculate flux with velocity times the interface state
-        for(int i=il; i<=iu; ++i){
-          Real *vel = &(vely_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            if(vel[n] > 0.0)
-              x2flux(k,j,i,n) = vel[n] * il_(i,n);
-            else if(vel[n] < 0.0)
-              x2flux(k,j,i,n) = vel[n] * ir_(i,n);
-            else
-              x2flux(k,j,i,n) = 0.0;
-          }// end n
-        }// end i
-
-        //swap the array for the next step
-
-        il_.SwapAthenaArray(ilb_);
-
-      }// end j loop from js to je+1
-
-      if(adv_flag_ > 0){
-
         if (order == 1) {
-          pmb->precon->DonorCellX2(k, js-1, il, iu, ir, -1, il_, ir_);
+          pmb->precon->DonorCellX2(k, j, is, ie, ir, -1, ilb_, ir_);
         } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, ir, -1, il_, ir_);
+          pmb->precon->PiecewiseLinearX2(k, j, is, ie, ir, -1, ilb_, ir_);
         } else {
-          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, ir, -1, il_, ir_);
-        }
+          pmb->precon->PiecewiseParabolicX2(k, j, is, ie, ir, -1, ilb_, ir_);
+        }  
 
-        for(int j=js; j<=je+1; ++j){
-          if (order == 1) {
-            pmb->precon->DonorCellX2(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX2(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        for(int i=is; i<=ie; ++i){
+          Real *vel = &(vely_(k,j,i,0));
+          Real *smax = &(sfac1_y_(j,i,0));
+          Real *smin = &(sfac2_y_(j,i,0));
+          Real *irln = &(il_(i,0));
+          Real *irrn = &(ir_(i,0));
+          Real adv = 0.0;
+          if(adv_flag_ > 0){
+            adv = adv_vel(1,k,j,i);
           }
+          Real *sm_diff = &(sm_diff1_(0));
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real diff = smax[n] - smin[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff[n] = 0.0;
+            else
+              sm_diff[n] = 1.0/diff;          
+          }  
 
-        //calculate the flux
-      // calculate flux with velocity times the interface state
-          for(int i=il; i<=iu; ++i){
-            Real *vel = &(vel_(k,j,i,0));
-            for(int n=0; n<prad->n_fre_ang; ++n){
-              if(vel[n] > 0.0)
-                x2flux(k,j,i,n) += vel[n] * il_(i,n);
-              else if(vel[n] < 0.0)
-                x2flux(k,j,i,n) += vel[n] * ir_(i,n);
-            }// end n
-          }// end i
-
-        //swap the array for the next step
-
-          il_.SwapAthenaArray(ilb_);
-
-        }// end j loop from js to je+1
-
-      }// end adv_flag_ > 0
-
-
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real vl = vel[n] - adv;
+            x2flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                            + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
+//            x2flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
+//                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
+          }// end n
+          if(adv_flag_ > 0){
+            Real &advv = adv_vel(1,k,j,i);
+            if(advv >0){
+              for(int n=0; n<prad->n_fre_ang; ++n){
+                x2flux(k,j,i,n) += advv * irln[n];
+              }// end n
+            }else{
+              for(int n=0; n<prad->n_fre_ang; ++n){
+                x2flux(k,j,i,n) += advv * irrn[n];
+              }// end n
+            }// end vel
+          }// end adv_flag_
+        }// end i        
+        il_.SwapAthenaArray(ilb_);
+      }// end j
     }// end k
-
-
-
   }//end pmy_mesh->f2 
     
   if(pmb->pmy_mesh->f3){
     AthenaArray<Real> &x3flux=prad->flux[X3DIR];
-
-    il =is-1, iu=ie+1, jl=js-1, ju=je+1;
-
     // First, calculate the transport velocity
 
-    if(adv_flag_ > 0){
-
-      for (int k=ks; k<=ke+1; ++k){
-#pragma omp for schedule(static)
-        for (int j=jl; j<=ju; ++j){
-        // get the velocity
-          for(int i=il; i<=iu; ++i){
-            Real dxl = pco->x3f(k) - pco->x3v(k-1);
-            Real dxr = pco->x3v(k) - pco->x3f(k);
-            Real factl = dxr/(dxl+dxr);
-            Real factr = dxl/(dxl+dxr);
-            for(int ifr=0; ifr<nfreq; ++ifr){
-              Real *cosz = &(prad->mu(2,k-1,j,i,0));
-              Real *cosz1 = &(prad->mu(2,k,j,i,0));
-              Real *tempi2 = &(temp_i2_(k-1,j,i,ifr*nang));
-              Real *tempi2_1 = &(temp_i2_(k,j,i,ifr*nang));
-              Real *veln = &(vel_(k,j,i,ifr*nang));
-#pragma omp simd aligned(cosz,cosz1,tempi2,tempi2_1,veln:ALI_LEN)
-              for(int n=0; n<nang; ++n){
-              // linear intepolation between x2v(j-1), x2f(j), x2v(j)                 
-                veln[n] = prad->reduced_c *
-                  (factl * cosz[n] * tempi2[n] + factr * cosz1[n] * tempi2_1[n]);
-              }
-            }// end ifr
+    for(int k=ks; k<=ke+1; ++k){
+      for(int j=js; j<=je; ++j){
+        pco->CenterWidth3(k-1,j,is,ie,dxw1_);
+        pco->CenterWidth3(k,j,is,ie,dxw2_);
+        for(int i=is; i<=ie; ++i){
+          Real taul = 0.0;
+          Real taur = 0.0;
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
+            Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
+            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
           }
-        }// end j
-      }// end k
-    }// end adv_flag
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k-1,j,i);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
+        
+          Real *s1n = &(sfac1_z_(k,j,i,0));
+          Real *s2n = &(sfac2_z_(k,j,i,0));
+          Real *velzn = &(velz_(k,j,i,0));
+          Real adv = adv_vel(2,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
 
-    for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
+        }// end i
+      }// end j
+    }// end k
+
+
+
+    for (int j=js; j<=je; ++j) { // this loop ordering is intentional
       // reconstruct the first row
-      if(adv_flag_ > 0){
-        if (order == 1) {
-          pmb->precon->DonorCellX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, temp_i1_, -1, il_, ir_);
-        }
-      }else{
-        if (order == 1) {
-          pmb->precon->DonorCellX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        }        
-      }
+
+      if (order == 1) {
+        pmb->precon->DonorCellX3(ks-1, j, is, ie, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX3(ks-1, j, is, ie, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX3(ks-1, j, is, ie, ir, -1, il_, ir_);
+      }        
+
 
       for (int k=ks; k<=ke+1; ++k) {
         // reconstruct L/R states at k
-        if(adv_flag_ > 0){
-          if (order == 1) {
-            pmb->precon->DonorCellX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX3(k, j, il, iu, temp_i1_, -1, ilb_, ir_);
-          }
-        }else{
-          if (order == 1) {
-            pmb->precon->DonorCellX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          }
 
+        if (order == 1) {
+          pmb->precon->DonorCellX3(k, j, is, ie, ir, -1, ilb_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(k, j, is, ie, ir, -1, ilb_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX3(k, j, is, ie, ir, -1, ilb_, ir_);
         }
 
-      // calculate flux with velocity times the interface state
-        for(int i=il; i<=iu; ++i){
-            Real *vel = &(velz_(k,j,i,0));
+        for(int i=is; i<=ie; ++i){
+          Real *vel = &(velz_(k,j,i,0));
+          Real *smax = &(sfac1_z_(k,j,i,0));
+          Real *smin = &(sfac2_z_(k,j,i,0));
+          Real *irln = &(il_(i,0));
+          Real *irrn = &(ir_(i,0));
+          Real adv = 0.0;
+          if(adv_flag_ > 0){
+            adv = adv_vel(2,k,j,i);
+          }
+          Real *sm_diff = &(sm_diff1_(0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            if(vel[n] > 0.0)
-                x3flux(k,j,i,n) = vel[n] * il_(i,n);
-            else if(vel[n] < 0.0)
-                x3flux(k,j,i,n) = vel[n] * ir_(i,n);
+            Real diff = smax[n] - smin[n];
+            if(std::fabs(diff) < TINY_NUMBER)
+              sm_diff[n] = 0.0;
             else
-                x3flux(k,j,i,n) = 0.0;
+              sm_diff[n] = 1.0/diff;          
+          }  
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            Real vl = vel[n] - adv;
+            x3flux(k,j,i,n) = smax[n] * (vl - smin[n]) * irln[n] * sm_diff[n]
+                            + smin[n] * (smax[n] - vl) * irrn[n] * sm_diff[n];
+//            x3flux(k,j,i,n) = (smax[n] * vl * irln[n] - smin[n] * vl * irrn[n]
+//                            + smax[n] * smin[n] * (irrn[n] - irln[n]))/(smax[n] - smin[n]);
           }// end n
-        }// end i        
-
+          if(adv_flag_ > 0){
+            Real &advv = adv_vel(2,k,j,i);
+            if(advv >0){
+              for(int n=0; n<prad->n_fre_ang; ++n){
+                x3flux(k,j,i,n) += advv * irln[n];
+              }// end n
+            }else{
+              for(int n=0; n<prad->n_fre_ang; ++n){
+                x3flux(k,j,i,n) += advv * irrn[n];
+              }// end n
+            }// end vel
+          }// end adv_flag_
+        }// end i  
         // swap the arrays for the next step
         il_.SwapAthenaArray(ilb_);
       }// end k loop
     }// end j from jl to ju
-
-    if(adv_flag_ > 0){
-
-      for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
-      // reconstruct the first row
-        if (order == 1) {
-          pmb->precon->DonorCellX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        } else if (order == 2) {
-          pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        } else {
-          pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, ir, -1, il_, ir_);
-        }
-        for (int k=ks; k<=ke+1; ++k) {
-          // reconstruct L/R states at k
-          if (order == 1) {
-            pmb->precon->DonorCellX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else if (order == 2) {
-            pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          } else {
-            pmb->precon->PiecewiseParabolicX3(k, j, il, iu, ir, -1, ilb_, ir_);
-          }
-
-      // calculate flux with velocity times the interface state
-          for(int i=il; i<=iu; ++i){
-              Real *vel = &(vel_(k,j,i,0));
-            for(int n=0; n<prad->n_fre_ang; ++n){
-              if(vel[n] > 0.0)
-                  x3flux(k,j,i,n) += vel[n] * il_(i,n);
-              else if(vel[n] < 0.0)
-                  x3flux(k,j,i,n) += vel[n] * ir_(i,n);
-            }// end n
-          }// end i        
-
-        // swap the arrays for the next step
-          il_.SwapAthenaArray(ilb_);
-        }// end k loop
-      }// end j from jl to ju
-    }// end adv_flag > 0
-
 
   }// end k direction
 
@@ -629,7 +480,255 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 }// end calculate_flux
 
 
-void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
+// calculate advective flux for the implicit scheme
+void RadIntegrator::CalculateFluxes(AthenaArray<Real> &ir, const int order)
+{
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco=pmb->pcoord;
+  
+  int nang=prad->nang;
+  int nfreq=prad->nfreq;
+
+  int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
+  ncells3 = pmb->ncells3; 
+
+  
+  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+  int il, iu, jl, ju, kl, ku;
+  jl = js, ju=je, kl=ks, ku=ke;
+
+  if(ncells2 > 1)
+  {
+    if(ncells3 == 1){
+      jl=js-1, ju=je+1, kl=ks, ku=ke;
+    }else{
+      jl=js-1, ju=je+1, kl=ks-1, ku=ke+1;
+    }
+ 
+  }       
+//--------------------------------------------------------------------------------------
+// i-direction
+
+    // First, do reconstruction of the specific intensities
+
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+      // reconstruct L/R states
+      if (order == 1) {
+        pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
+      }     
+
+      // calculate flux with velocity times the interface state
+      for(int i=is; i<=ie+1; ++i){
+        Real &vel = adv_vel(0,k,j,i);
+        if(vel >0){
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            x1flux(k,j,i,n) = vel * il_(i,n);
+          }// end n
+        }else{
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            x1flux(k,j,i,n) = vel * ir_(i,n);
+          }// end n
+        }// end vel
+      }// end i
+
+    }// end j
+  }// end k
+
+// j-direction
+  if(pmb->pmy_mesh->f2){
+    AthenaArray<Real> &x2flux=prad->flux[X2DIR];
+
+    il = is-1, iu = ie+1, kl = ks, ku = ke;
+    if (ncells3 ==  1) // 2D
+      kl = ks, ku = ke;
+    else // 3D
+      kl = ks-1, ku = ke+1;
+
+
+    for (int k=kl; k<=ku; ++k) {
+      //reconstruct the first row
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, ir, -1, il_, ir_);
+        }        
+
+
+      for(int j=js; j<=je+1; ++j){
+
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX2(k, j, il, iu, ir, -1, ilb_, ir_);
+        }       
+        
+        //calculate the flux
+      // calculate flux with velocity times the interface state
+        for(int i=il; i<=iu; ++i){
+          Real &vel = adv_vel(1,k,j,i);
+          if(vel > 0){
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x2flux(k,j,i,n) = vel * il_(i,n);
+            }// end n
+          }else{
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x2flux(k,j,i,n) = vel * ir_(i,n);
+            }// end n
+          }
+        }// end i
+        //swap the array for the next step
+        il_.SwapAthenaArray(ilb_);
+      }// end j loop from js to je+1
+    }//end k
+  }//end pmy_mesh->f2 
+    
+  if(pmb->pmy_mesh->f3){
+    AthenaArray<Real> &x3flux=prad->flux[X3DIR];
+
+    il =is-1, iu=ie+1, jl=js-1, ju=je+1;
+
+    // First, calculate the transport velocity
+    for (int j=jl; j<=ju; ++j) { // this loop ordering is intentional
+      // reconstruct the first row
+      if (order == 1) {
+        pmb->precon->DonorCellX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      } else {
+        pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, ir, -1, il_, ir_);
+      }        
+
+      for (int k=ks; k<=ke+1; ++k) {
+        // reconstruct L/R states at k
+        if (order == 1) {
+          pmb->precon->DonorCellX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        } else {
+          pmb->precon->PiecewiseParabolicX3(k, j, il, iu, ir, -1, ilb_, ir_);
+        }
+
+      // calculate flux with velocity times the interface state
+        for(int i=il; i<=iu; ++i){
+          Real &vel = adv_vel(2,k,j,i);
+          if(vel > 0){
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x3flux(k,j,i,n) = vel * il_(i,n);
+            }// end n
+          }else{
+            for(int n=0; n<prad->n_fre_ang; ++n){
+              x3flux(k,j,i,n) = vel * ir_(i,n);
+            }// end n
+          }
+        }// end i        
+
+        // swap the arrays for the next step
+        il_.SwapAthenaArray(ilb_);
+      }// end k loop
+    }// end j from jl to ju
+  }// end k direction
+}// end calculate_flux
+
+
+// add flux divergence due to advection for the implicit scheme
+void RadIntegrator::FluxDivergence(const Real wght)
+{
+
+  Radiation *prad=pmy_rad;
+  MeshBlock *pmb=prad->pmy_block;
+  Coordinates *pco= pmb->pcoord;
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+
+  
+  AthenaArray<Real> &x1area = x1face_area_, &x2area = x2face_area_,
+                 &x2area_p1 = x2face_area_p1_, &x3area = x3face_area_,
+                 &x3area_p1 = x3face_area_p1_, &vol = cell_volume_;
+
+  AthenaArray<Real> &x1flux=prad->flux[X1DIR];
+  AthenaArray<Real> &x2flux=prad->flux[X2DIR];
+  AthenaArray<Real> &x3flux=prad->flux[X3DIR];
+
+  for (int k=ks; k<=ke; ++k) { 
+    for (int j=js; j<=je; ++j) {
+      pco->CellVolume(k,j,is,ie,vol);
+      pco->Face1Area(k,j,is,ie+1,x1area);
+      for(int i=is; i<=ie; ++i){
+        Real *divn = &(adv_flx_(k,j,i,0));
+        Real *flxr = &(x1flux(k,j,i+1,0));
+        Real *flxl = &(x1flux(k,j,i,0));
+        Real areal = x1area(i);
+        Real arear = x1area(i+1);
+        for(int n=0; n<prad->n_fre_ang; ++n){
+          divn[n] = -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+        } 
+
+      }
+    }
+  }
+  if(pmb->block_size.nx2 > 1){
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        pco->CellVolume(k,j,is,ie,vol);
+        pco->Face2Area(k,j  ,is,ie,x2area   );
+        pco->Face2Area(k,j+1,is,ie,x2area_p1);
+        for(int i=is; i<=ie; ++i){
+          Real *divn = &(adv_flx_(k,j,i,0));
+          Real *flxr = &(x2flux(k,j+1,i,0));
+          Real *flxl = &(x2flux(k,j,i,0));
+          Real areal = x2area(i);
+          Real arear = x2area_p1(i);
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+          } 
+
+        }
+      }
+    }// end k
+    
+  }// end nx2 > 1
+
+  if(pmb->block_size.nx3 > 1){
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        pco->CellVolume(k,j,is,ie,vol);
+        pco->Face3Area(k,j  ,is,ie,x3area   );
+        pco->Face3Area(k+1,j,is,ie,x3area_p1);
+        for(int i=is; i<=ie; ++i){
+          Real *divn = &(adv_flx_(k,j,i,0));
+          Real *flxr = &(x3flux(k+1,j,i,0));
+          Real *flxl = &(x3flux(k,j,i,0));
+          Real areal = x3area(i);
+          Real arear = x3area_p1(i);
+          for(int n=0; n<prad->n_fre_ang; ++n){
+            divn[n] += -wght * (arear * flxr[n] - areal * flxl[n])/vol(i);
+          } 
+
+        }
+      }
+    }// end k
+    
+  }// end nx3 > 1
+
+
+}
+
+void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
+                                                    AthenaArray<Real> &ir_out)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
@@ -696,11 +795,12 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
       // update variable with flux divergence
       pmb->pcoord->CellVolume(k,j,is,ie,vol);
       for(int i=is; i<=ie; ++i){
+        Real *irin = &(ir_in(k,j,i,0));
         Real *iro = &(ir_out(k,j,i,0));
         Real *flxn = &(dflx(i,0));
-#pragma omp simd aligned(iro,flxn:ALI_LEN)
+#pragma omp simd aligned(irin,iro,flxn:ALI_LEN)
         for(int n=0; n<prad->n_fre_ang; ++n){
-          iro[n] = std::max(iro[n]-wght*flxn[n]/vol(i), TINY_NUMBER);
+          iro[n] = std::max(irin[n]-wght*flxn[n]/vol(i), TINY_NUMBER);
         }
       }
 
@@ -750,6 +850,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
             }           
           }// end npsi > 0
           // apply the flux divergence back
+          // We need ir_out, not ir_in, as ir_out is already partially updated
           Real *iro = &(ir_out(k,j,i,0));
           Real *flxn = &(dflx_ang(0));
           Real *angv = &(ang_vol(0));
@@ -766,15 +867,3 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_out)
   
 }
 
-void RadIntegrator::GetTaufactor(const Real vx, const Real vy, const Real vz,
-                                 const Real ds, const Real sigma, Real *factor)
-{
-
-   Real invcrat = 1.0/pmy_rad->crat;
-   Real vel = vx*vx+vy*vy+vz*vz;
-   Real taucell = taufact_ * ds * sigma;
-   Real tausq = taucell * taucell * (vel*invcrat*invcrat);
-   if(tausq > 1.e-3) tausq = 1.0 - exp(-tausq);
-   (*factor) = tausq;
-
-}

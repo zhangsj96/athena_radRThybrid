@@ -43,6 +43,7 @@ class Coordinates;
 class Reconstruction;
 class Hydro;
 class Radiation;
+class IMRadiation;
 class CosmicRay;
 class ThermalConduction;
 class Field;
@@ -202,6 +203,7 @@ class Mesh {
   friend class HydroSourceTerms;
   friend class Hydro;
   friend class Radiation;
+  friend class IMRadiation;
   friend class CosmicRay;
   friend class ThermalConduction;
   friend class FFTDriver;
@@ -251,6 +253,9 @@ class Mesh {
   TurbulenceDriver *ptrbd;
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
+
+  // implicit radiation iteration
+  IMRadiation *pimrad;
 
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;

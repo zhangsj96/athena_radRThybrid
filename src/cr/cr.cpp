@@ -213,6 +213,8 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     cr_bvar(pmb, &u_cr, &coarse_cr_, flux){
 
   Mesh *pm = pmy_block->pmy_mesh;
+
+  pmb->RegisterMeshBlockData(u_cr);
   // "Enroll" in S/AMR by adding to vector of tuples of pointers in MeshRefinement class
   if (pm->multilevel) {
     refinement_idx = pmy_block->pmr->AddToRefinement(&u_cr, &coarse_cr_);

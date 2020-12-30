@@ -32,6 +32,7 @@
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
 #include "integrators/rad_integrators.hpp"
+#include "implicit/radiation_implicit.hpp"
 
 // constructor, initializes data structures and parameters
 
@@ -73,13 +74,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
   tunit = pin->GetOrAddReal("radiation","Tunit",1.e7);
-  t_floor_ = pin->GetOrAddReal("radiation", "tfloor", TINY_NUMBER);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
   Mesh *pm = pmb->pmy_mesh;
 
 //  ir_output=pin->GetOrAddInteger("radiation","ir_output",0);
   
-  set_source_flag = 0;
+  set_source_flag = pin->GetOrAddInteger("radiation","source_flag",1);
 
   // equivalent temperature for electron
   telectron = 5.94065e9;
@@ -161,6 +162,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     // future extension may add "int nregister" to Hydro class
     ir2.NewAthenaArray(nc3, nc2, nc1, n_fre_ang);
   }
+
+
+  ir_old.NewAthenaArray(nc3,nc2,nc1,n_fre_ang);
   
  // Do not add to cell-centered refinement, as 
 // radiation variables need to be done in different order      
@@ -174,6 +178,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_ae.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_planck.NewAthenaArray(nc3,nc2,nc1,nfreq);
+
+  t_floor_.NewAthenaArray(nc3,nc2,nc1);
+  t_ceiling_.NewAthenaArray(nc3,nc2,nc1);
   
   grey_sigma.NewAthenaArray(3,nc3,nc2,nc1);
 
@@ -197,12 +204,21 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   
   pradintegrator = new RadIntegrator(this, pin);
-  
-// enroll radiation boundary value object
+
   rad_bvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&rad_bvar);
-  pmb->pbval->bvars_main_int.push_back(&rad_bvar);
+// enroll radiation boundary value object
+  if(RADIATION_ENABLED){
+    pmb->pbval->bvars_main_int.push_back(&rad_bvar);
+  }
 
+  // set the default t_floor and t_ceiling
+  for(int k=0; k<nc3; ++k)
+    for(int j=0; j<nc2; ++j)
+      for(int i=0; i<nc1; ++i){
+        t_floor_(k,j,i) = TINY_NUMBER;
+        t_ceiling_(k,j,i) = HUGE_NUMBER;
+      }
   
   // dump the angular grid and radiation parameters in a file
   if(Globals::my_rank ==0){
@@ -222,12 +238,19 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"Tunit         %4.2e \n",tunit);
     fprintf(pfile,"Compt         %d  \n",pradintegrator->compton_flag_);
     fprintf(pfile,"Planck        %d  \n",pradintegrator->planck_flag_);
-    fprintf(pfile,"Tfloor        %4.2e \n",t_floor_);
     fprintf(pfile,"rotate_theta  %d  \n",rotate_theta);
     fprintf(pfile,"rotate_phi    %d  \n",rotate_phi);
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
     fprintf(pfile,"nzeta:        %d  \n",nzeta);
     fprintf(pfile,"npsi:         %d  \n",npsi);
+    fprintf(pfile,"taucell:      %e  \n",taucell);
+    fprintf(pfile,"source_flag:  %d  \n",set_source_flag);    
+    if(IM_RADIATION_ENABLED){
+    fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme);
+    fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
+    fprintf(pfile,"n_limit:      %d  \n",pmb->pmy_mesh->pimrad->nlimit_);
+    fprintf(pfile,"tau_scheme    %d  \n",pradintegrator->tau_flag_); 
+    }
     
     for(int n=0; n<nang; ++n){
       fprintf(pfile,"%2d   %e   %e   %e    %e\n",n,mu(0,0,0,0,n),mu(1,0,0,0,n),

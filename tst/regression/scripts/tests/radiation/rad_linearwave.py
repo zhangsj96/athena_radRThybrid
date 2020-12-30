@@ -127,7 +127,7 @@ def analyze():
     print "error in regime 1: ", data[3][4]
     return False
   if data[3][4]/data[2][4] > 0.55:
-    print "not converging for regime 8: ",data[3][4],data[2][4]
+    print "not converging for regime 1: ",data[3][4],data[2][4]
     return False
 
     #regime2
@@ -135,7 +135,7 @@ def analyze():
     print "error in regime 2: ", data[7][4]
     return False
   if data[7][4]/data[6][4] > 0.55:
-    print "not converging for regime 8: ",data[7][4],data[6][4]
+    print "not converging for regime 2: ",data[7][4],data[6][4]
     return False
 
   #regime3
@@ -143,7 +143,7 @@ def analyze():
     print "error in regime 3: ", data[11][4]
     return False
   if data[11][4]/data[10][4] > 0.55:
-    print "not converging for regime 8: ",data[11][4],data[10][4]
+    print "not converging for regime 3: ",data[11][4],data[10][4]
     return False
 
   #regime4
@@ -151,7 +151,7 @@ def analyze():
     print "error in regime 4: ", data[15][4]
     return False
   if data[15][4]/data[14][4] > 0.55:
-    print "not converging for regime 8: ",data[15][4],data[14][4]
+    print "not converging for regime 4: ",data[15][4],data[14][4]
     return False
 
   #regime5
@@ -159,7 +159,7 @@ def analyze():
     print "error in regime 5: ", data[19][4]
     return False
   if data[19][4]/data[18][4] > 0.55:
-    print "not converging for regime 8: ",data[19][4],data[18][4]
+    print "not converging for regime 5: ",data[19][4],data[18][4]
     return False
 
   #regime6
@@ -167,7 +167,7 @@ def analyze():
     print "error in regime 6: ", data[23][4]
     return False
   if data[23][4]/data[22][4] > 0.55:
-    print "not converging for regime 8: ",data[23][4],data[22][4]
+    print "not converging for regime 6: ",data[23][4],data[22][4]
     return False
 
   #regime7
@@ -175,7 +175,7 @@ def analyze():
     print "error in regime 7: ", data[27][4]
     return False
   if data[27][4]/data[26][4] > 0.55:
-    print "not converging for regime 8: ",data[27][4],data[26][4]
+    print "not converging for regime 7: ",data[27][4],data[26][4]
     return False
 
   #regime8

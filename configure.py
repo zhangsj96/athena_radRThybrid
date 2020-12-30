@@ -156,6 +156,12 @@ parser.add_argument('-radiation',
                     default=False,
                     help='enable radiative transfer')
 
+# -radiation argument
+parser.add_argument('-implicit_radiation',
+                    action='store_true',
+                    default=False,
+                    help='enable radiative transfer')
+
 # -cosmic ray argument
 parser.add_argument('-cr',
                     action='store_true',
@@ -480,6 +486,11 @@ if args['radiation']:
     definitions['RADIATION_ENABLED'] = '1'
 else:
     definitions['RADIATION_ENABLED'] = '0'
+
+if args['implicit_radiation']:
+    definitions['IM_RADIATION_ENABLED'] = '1'
+else:
+    definitions['IM_RADIATION_ENABLED'] = '0'
 
 # -cr argument
 if args['cr']:
@@ -854,6 +865,7 @@ print('  Number of scalars:          ' + args['nscalars'])
 print('  Special relativity:         ' + ('ON' if args['s'] else 'OFF'))
 print('  General relativity:         ' + ('ON' if args['g'] else 'OFF'))
 print('  Radiative Transfer:         ' + ('ON' if args['radiation'] else 'OFF'))
+print('  Implicit Radiation:         ' + ('ON' if args['implicit_radiation'] else 'OFF'))
 print('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF'))
 print('  Thermal Conduction:         ' + ('ON' if args['tc'] else 'OFF'))
 print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
@@ -889,6 +901,7 @@ flog.write('  Number of scalars:          ' + args['nscalars'] + '\n')
 flog.write('  Special relativity:         ' + ('ON' if args['s'] else 'OFF') + '\n')
 flog.write('  General relativity:         ' + ('ON' if args['g'] else 'OFF')+ '\n')
 flog.write('  Radiative Transfer:         ' + ('ON' if args['radiation'] else 'OFF') + '\n')
+flog.write('  Implicit Radiation:         ' + ('ON' if args['implicit_radiation'] else 'OFF') + '\n')
 flog.write('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF') + '\n')
 flog.write('  Thermal Conduction:         ' + ('ON' if args['tc'] else 'OFF') + '\n')
 flog.write('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF') + '\n')

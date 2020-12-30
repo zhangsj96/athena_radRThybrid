@@ -45,7 +45,7 @@ public:
   Radiation(MeshBlock *pmb, ParameterInput *pin);
 //  ~Radiation();
     
-  AthenaArray<Real> ir, ir1, ir2; // radiation specific intensity
+  AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments
   AthenaArray<Real> rad_mom_cm; // co-moving frame Er, Frx, Fry, Frz
   AthenaArray<Real> sigma_s, sigma_a, sigma_ae; //   opacity
@@ -67,6 +67,8 @@ public:
   Real reduced_c; // reduced speed of light
   Real tunit, telectron; // gas temperature cgs unit,
                          // effective electron scattering temperature
+  Real sum_diff;
+  Real sum_full; // store 
   
   int nang, nfreq, noct, n_fre_ang; // n_fre_ang=nang*nfreq
   int angle_flag;
@@ -111,8 +113,9 @@ public:
 
   void FrequencyGrid();
 
+  AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
+
 private:
-  Real t_floor_; // temperature floor
 
 
   friend class BoundaryValues;

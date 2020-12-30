@@ -83,7 +83,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   //Now initialize opacity and specific intensity
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     int nfreq = prad->nfreq;
     int nang = prad->nang;
     AthenaArray<Real> ir_cm;
@@ -110,15 +110,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
              ir_lab[n] = er;
           }
           
+        }
+      }
+    }
+
+    for(int k=0; k<ncells3; ++k)
+     for(int j=0; j<ncells2; ++j)
+       for(int i=0; i<ncells1; ++i){
           for (int ifr=0; ifr < nfreq; ++ifr){
             prad->sigma_s(k,j,i,ifr) = 0.0;
             prad->sigma_a(k,j,i,ifr) = sigma;
             prad->sigma_ae(k,j,i,ifr) = sigma;
-            
+
           }
-        }
-      }
-    }
+
+       }
     
     ir_cm.DeleteAthenaArray();
     

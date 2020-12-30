@@ -58,7 +58,7 @@ void TwoBeamHydro(
 void Mesh::InitUserMeshData(ParameterInput *pin)
 {
   EnrollUserBoundaryFunction(BoundaryFace::inner_x2, TwoBeamHydro);
-  if(RADIATION_ENABLED)
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
     EnrollUserRadBoundaryFunction(BoundaryFace::inner_x2, TwoBeams);
 }
 
@@ -102,7 +102,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   //Now initialize opacity and specific intensity
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     int nfreq = prad->nfreq;
     int nang = prad->nang;
     for(int k=ks; k<=ke; ++k) {

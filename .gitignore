@@ -5,5 +5,10 @@ src/bvals/.DS_Store
 src/bvals/cc/.DS_Store
 .DS_Store
 src/cr/.DS_Store
+src/hydro/.DS_Store
 bin/
 obj/
+tst/regression/.DS_Store
+tst/regression/scripts/tests/.DS_Store
+tst/.DS_Store
+configure.log

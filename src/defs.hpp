@@ -15,10 +15,10 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "bbhdisk"
+#define PROBLEM_GENERATOR "rad_linearwave"
 
 // coordinate system
-#define COORDINATE_SYSTEM "spherical_polar"
+#define COORDINATE_SYSTEM "cartesian"
 
 // Riemann solver
 #define RIEMANN_SOLVER "hllc"
@@ -50,6 +50,9 @@
 
 // include radiative transfer? default=0 (false)
 #define RADIATION_ENABLED 0
+
+#define IM_RADIATION_ENABLED 1
+
 
 // include cosmic ray transport? default=0 (false)
 #define CR_ENABLED 0

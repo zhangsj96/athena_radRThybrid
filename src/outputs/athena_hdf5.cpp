@@ -133,7 +133,7 @@ void ATHDF5Output::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
     if (SELF_GRAVITY_ENABLED)
       num_variables[n_dataset] += 1;
     
-    if(RADIATION_ENABLED)
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
       num_variables[n_dataset] += 20;
 
     if(CR_ENABLED)

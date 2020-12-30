@@ -48,6 +48,7 @@
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "../radiation/radiation.hpp"
+#include "../radiation/implicit/radiation_implicit.hpp"
 #include "../cr/cr.hpp"
 #include "../thermal_conduction/tc.hpp"
 #include "mesh.hpp"
@@ -495,6 +496,10 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
   }
+
+  if(IM_RADIATION_ENABLED){
+    pimrad = new IMRadiation(this, pin);
+  }
   //  if (SELF_GRAVITY_ENABLED == 2 && ...) // independent allocation
   //    gflag = 2;
 
@@ -818,6 +823,10 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
   }
+
+  if(IM_RADIATION_ENABLED){
+    pimrad = new IMRadiation(this, pin);
+  }
   //  if (SELF_GRAVITY_ENABLED == 2 && ...) // independent allocation
   //    gflag=2;
 
@@ -886,6 +895,7 @@ Mesh::~Mesh() {
   delete [] loclist;
   if (SELF_GRAVITY_ENABLED == 1) delete pfgrd;
   else if (SELF_GRAVITY_ENABLED == 2) delete pmgrd;
+  if(IM_RADIATION_ENABLED) delete pimrad;
   if (turb_flag > 0) delete ptrbd;
   if (adaptive) { // deallocate arrays for AMR
     delete [] nref;
@@ -936,8 +946,8 @@ void Mesh::OutputMeshStructure(int ndim) {
   std::cout << "Number of logical  refinement levels = " << current_level << std::endl;
 
   // compute/output number of blocks per level, and cost per level
-  int *nb_per_plevel = new int[max_level];
-  int *cost_per_plevel = new int[max_level];
+  int *nb_per_plevel = new int[max_level+1];
+  int *cost_per_plevel = new int[max_level+1];
   for (int i=0; i<=max_level; ++i) {
     nb_per_plevel[i] = 0;
     cost_per_plevel[i] = 0;
@@ -1433,6 +1443,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       // other BoundaryVariable objects:
       if (SELF_GRAVITY_ENABLED == 1)
         pmb->pgrav->gbvar.SetupPersistentMPI();
+      if(IM_RADIATION_ENABLED)
+        pmb->prad->rad_bvar.SetupPersistentMPI();
     }
 
     // solve gravity for the first time
@@ -1454,6 +1466,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pbval->ComputeShear(time);
         }
         pbval->StartReceiving(BoundaryCommSubset::mesh_init);
+        if(IM_RADIATION_ENABLED)
+          pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
       }
 
       // send conserved variables
@@ -1468,7 +1482,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         // and (conserved variable) passive scalar masses:
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.SendBoundaryBuffers();
-        if(RADIATION_ENABLED)
+        if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
           pmb->prad->rad_bvar.SendBoundaryBuffers();
         if(CR_ENABLED)
           pmb->pcr->cr_bvar.SendBoundaryBuffers();
@@ -1485,7 +1499,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
-        if(RADIATION_ENABLED)
+        if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
           pmb->prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
         if(CR_ENABLED)
           pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
@@ -1495,6 +1509,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }
         pbval->ClearBoundary(BoundaryCommSubset::mesh_init);
+        if(IM_RADIATION_ENABLED)
+          pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
       }
 
       // With AMR/SMR GR send primitives to enable cons->prim before prolongation
@@ -1599,7 +1615,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       }
 
       //for radiation, calculate opacity and moments
-      if(RADIATION_ENABLED){
+      if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
         for (int i=0; i<nmb; ++i){
           pmb = pmb_array[i]; ph = pmb->phydro;
           Radiation *prad = pmb->prad;
@@ -1876,7 +1892,7 @@ void Mesh::CorrectMidpointInitialCondition(std::vector<MeshBlock*> &pmb_array, i
     // and (conserved variable) passive scalar masses:
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.SendBoundaryBuffers();
-    if(RADIATION_ENABLED)
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
       pmb->prad->rad_bvar.SendBoundaryBuffers();
     if(CR_ENABLED)
       pmb->pcr->cr_bvar.SendBoundaryBuffers();
@@ -1895,7 +1911,7 @@ void Mesh::CorrectMidpointInitialCondition(std::vector<MeshBlock*> &pmb_array, i
       pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
-    if(RADIATION_ENABLED)
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
       pmb->prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
     if(CR_ENABLED)
       pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
@@ -1949,7 +1965,7 @@ void Mesh::ReserveMeshBlockPhysIDs() {
   if (NSCALARS > 0) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
-  if(RADIATION_ENABLED)
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
     ReserveTagPhysIDs(RadBoundaryVariable::max_phys_id);
   if(CR_ENABLED)
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);

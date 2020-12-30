@@ -3,8 +3,8 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = bbhdisk.cpp
-COORDINATES_FILE = spherical_polar.cpp
+PROBLEM_FILE = rad_linearwave.cpp
+COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
 RSOLVER_FILE = hllc.cpp
@@ -48,6 +48,7 @@ SRC_FILES := $(wildcard src/*.cpp) \
              $(wildcard src/radiation/*.cpp) \
              $(wildcard src/radiation/integrators/*.cpp) \
              $(wildcard src/radiation/integrators/srcterms/*.cpp) \
+             $(wildcard src/radiation/implicit/*.cpp) \
              $(wildcard src/cr/*.cpp) \
              $(wildcard src/cr/integrators/*.cpp) \
              $(wildcard src/thermal_conduction/*.cpp) \

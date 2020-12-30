@@ -39,7 +39,7 @@
 // "3" for 1-KE, 2-KE, 3-KE additional columns (come before tot-E)
 //14 radiation variables, 
 // if no RADIATION_ENABLED, they are always 0
-#if (RADIATION_ENABLED > 0)
+#if ((RADIATION_ENABLED > 0) || (IM_RADIATION_ENABLED > 0))
   #define NRAD (14)
 #else
   #define NRAD 0
@@ -137,7 +137,7 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
             constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD;
             hst_data[prev_out + n] += vol(i)*s;
           }
-          if(RADIATION_ENABLED){
+          if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
             constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS;
             hst_data[prev_out + 0] += vol(i)*prad->rad_mom(IER,k,j,i);
             hst_data[prev_out + 1] += vol(i)*prad->rad_mom(IFR1,k,j,i);
@@ -263,7 +263,7 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       for (int n=0; n<NSCALARS; n++) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
-      if(RADIATION_ENABLED){
+      if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
         std::fprintf(pfile,"[%d]=Er    ", iout++);
         std::fprintf(pfile,"[%d]=Fr1    ", iout++);
         std::fprintf(pfile,"[%d]=Fr2    ", iout++);
