@@ -587,9 +587,25 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
               }
             }
           }else{// the case in x -y plane
-            for(int m=0; m<2*npsi; ++m){
-              mu(0,0,j,i,m) = cos(psi_v(m));
-              mu(1,0,j,i,m) = sin(psi_v(m));
+            if(std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0){
+              // in spherical polar, 2D, we still need 3D angular grid
+              for(int n=0; n<2*nzeta; ++n){
+                for(int m=0; m<2*npsi; ++m){
+                  int ang_num = n*(2*npsi)+m;
+                  Real sinzeta_v = sqrt(1.0 - coszeta_v(n) 
+                                      * coszeta_v(n));
+                  mu(axisx,0,j,i,ang_num) = sinzeta_v * cos(psi_v(m));
+                  mu(axisy,0,j,i,ang_num) = sinzeta_v * sin(psi_v(m));
+                  mu(axisz,0,j,i,ang_num) = coszeta_v(n);          
+
+                }
+              }
+
+            }else{
+              for(int m=0; m<2*npsi; ++m){
+                mu(0,0,j,i,m) = cos(psi_v(m));
+                mu(1,0,j,i,m) = sin(psi_v(m));
+              }
             }
           }
         }// end i

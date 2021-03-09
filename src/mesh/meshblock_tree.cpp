@@ -366,7 +366,7 @@ MeshBlockTree* MeshBlockTree::FindNeighbor(LogicalLocation myloc,
     else
       return nullptr;
   }
-  if (lx>=pmesh_->nrbx1<<(ll-pmesh_->root_level)) {;
+  if (lx>=pmesh_->nrbx1<<(ll-pmesh_->root_level)) {
     if (pmesh_->mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::periodic
         || pmesh_->mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::shear_periodic)
       lx=0;
@@ -458,6 +458,7 @@ MeshBlockTree* MeshBlockTree::FindNeighbor(LogicalLocation myloc,
 
 MeshBlockTree* MeshBlockTree::FindMeshBlock(LogicalLocation tloc) {
   if (tloc.level == loc_.level) return this;
+  if (pleaf_ == nullptr) return nullptr;
   // get leaf indexes
   int sh = tloc.level - loc_.level - 1;
   int mx = (((tloc.lx1>>sh) & 1LL) == 1LL);

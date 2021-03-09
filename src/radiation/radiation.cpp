@@ -109,7 +109,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
       }else{
         n_ang = nzeta*npsi;
       }
-      noct = 4;
+      if(std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0){
+        noct = 8;
+        n_ang = nzeta*npsi/2;
+      }
+      else
+        noct = 4;
     }else if(ndim == 3){
       n_ang = nzeta*npsi/2;
       noct = 8;
@@ -189,6 +194,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   wmu.NewAthenaArray(nang);
 
   wfreq.NewAthenaArray(nfreq);
+
+
   
   if(angle_flag == 1)
     AngularGrid(angle_flag, nzeta, npsi);
