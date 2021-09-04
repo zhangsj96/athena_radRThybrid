@@ -19,21 +19,21 @@ import h5py
 from mpi4py import MPI
 
 # setup latex fonts
-#rcParams['text.usetex']=True
-#rcParams['text.latex.unicode']=True
+rcParams['text.usetex']=True
+rcParams['text.latex.unicode']=True
 
 
-#matplotlib.rc('font', family='serif', serif='cm10')
-#matplotlib.rc('text', usetex=True)
-#matplotlib.rcParams['text.latex.preamble'] = [r'\boldmath']
+matplotlib.rc('font', family='serif', serif='cm10')
+matplotlib.rc('text', usetex=True)
+matplotlib.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 
 # Athena++ modules
 import athena_read
 
-grav0=3.18807e-03
-r0=1016.3;
-time0=1.0/grav0
+grav0=16.4983
+r0=12.9837;
+time0=3.93232 # in hours
 
 rhomin=1.e-3
 rhomax=0.2
@@ -104,9 +104,43 @@ def MakeRhoVSlice(data_cart, vx_cart, vy_cart, minval, maxval, vlim1, vlim2, wid
     plt.close(plots)
 
 
+def MakePolarPlot(data,xgrid,ygrid,minval,maxval,title,clabel,outputname,ctick,xtick=None,xticklabel=None,ytick=None,yticklabel=None,logscale=0,cmap='RdGy_r'):
+
+    plots, axes = plt.subplots(figsize=(8,12),dpi=300)
+    plt.subplots_adjust(left=0.15,right=0.8,top=0.9,bottom=0.1)
+
+    plt.xlabel('$\\phi$', size = 30)
+    plt.ylabel('$ r/r_{\\odot}$', size = 30)
+
+
+    plt.title(title,size=25,y=1.02)
+    if logscale ==1:
+      im=axes.pcolormesh(xgrid,ygrid,data,norm=LogNorm(vmin=minval,vmax=maxval),cmap=cmap)
+    else:
+      norm=mpl.colors.Normalize(vmin=minval, vmax=maxval)
+      im=axes.pcolormesh(xgrid,ygrid,data,norm=norm,cmap=cmap)   	
+
+    cbaxes = plots.add_axes([0.81,0.2,0.03,0.6])
+
+    cbar=plots.colorbar(im,cax=cbaxes,ticks=ctick)
+    cbar.set_label(clabel, size=30)
+    cbar.ax.tick_params(labelsize=25)
+    if xtick is not None:
+      axes.set_xticks(xtick)
+      axes.set_xticklabels(xticklabel)
+    if ytick is not None:
+      axes.set_yticks(ytick)
+      axes.set_yticklabels(yticklabel)    	
+    axes.yaxis.set_tick_params(labelsize=20)
+    axes.xaxis.set_tick_params(labelsize=20)
+    
+    axes.set_aspect('auto')
+    plt.savefig(outputname)
+    plt.close(plots)
+
 
 # Main function
-def main(n,input_base,quantities=None,leveln=None, phiplot=0,width=23.44,ywidth=120,vel=0,rphiwidth=3000):
+def main(n,input_base,rmax,quantities=None,leveln=None):
 
   # Go through list of files
     # Determine filenames
@@ -136,7 +170,7 @@ def main(n,input_base,quantities=None,leveln=None, phiplot=0,width=23.44,ywidth=
     vr=data['vel1']
     vphi=data['vel3']
     vtheta=data['vel2']
-
+    Er=data['Er']
 
     #plot rho, v and Er, B
     # make plots in r-theta plane and mid-plane
@@ -168,100 +202,39 @@ def main(n,input_base,quantities=None,leveln=None, phiplot=0,width=23.44,ywidth=
 
     # find the position corresponding to phiplot position
     thetapos=np.abs(x2v-0.5*np.pi).argmin()
-    radius=np.zeros((nx3,nx1))
-    phiangle=np.zeros((nx3,nx1))
-
-    for j in range(0,nx3):
-      for i in range(0,nx1):
-        radius[j,i]=x1v[i] # convert rs to rg
-        phiangle[j,i]=x3v[j]
+    rmaxpos=np.abs(x1v-rmax).argmin()
     
 
-    rhoslice=rho[:,thetapos,:]
+    rhoslice=rho[:,thetapos,:rmaxpos]
+    Erslice=Er[:,thetapos,:rmaxpos]
+    Erslice=Erslice**0.25
+    x1f=x1f[:rmaxpos+1]
 
-
-    r1D=radius.ravel()
-    t1D=phiangle.ravel()
-    
-    vrslice=vr[:,thetapos,:].copy()
-    vtslice=vphi[:,thetapos,:].copy()
-    
-
-    rho1D=rhoslice.ravel()
-    vr1D=vrslice.ravel()
-    vt1D=vtslice.ravel()
-
-    vx=vr1D*np.cos(t1D) - vt1D*np.sin(t1D)
-    vy=vr1D*np.sin(t1D) + vt1D*np.cos(t1D)
-
-
-    xcoord=r1D*np.cos(t1D)
-    ycoord=r1D*np.sin(t1D)
+    logr=np.log10(x1f)
+    xmesh,ymesh=np.meshgrid(x3f,logr)
 
 
 
 
-#create grid for plotting
-    nx=nx1*2
-    ny=nx
-    xmin=-rphiwidth
-# xmax=np.max(rcoord)
-    xmax=rphiwidth
-    ymin=0
-    ymax=rphiwidth
-    xgrid=np.linspace(xmin, xmax, nx)
-    ygrid=np.linspace(ymin, ymax, ny)
-
-    xmesh,ymesh=np.meshgrid(xgrid,ygrid)
-
-    rmesh=(xmesh**2.0+ymesh**2.0)**0.5
-
-    rindix=rmesh < 450
-    rindix2=rmesh > rphiwidth    
-
-    rho_cart=griddata(np.c_[xcoord,ycoord],rho1D,(xmesh,ymesh),method='nearest')
-#    Er_cart=griddata(np.c_[xcoord,ycoord],Er1D,(xmesh,ymesh),method='nearest')
-
-
-
-
-    rho_cart[rindix] = rhomin
-#    Er_cart[rindix] = Ermin
-
-    rho_cart[rindix2] = rhomin
-#    Er_cart[rindix2] = Ermin
-
-
-    vx_cart=griddata(np.c_[xcoord,ycoord],vx,(xmesh,ymesh),method='nearest')
-    vy_cart=griddata(np.c_[xcoord,ycoord],vy,(xmesh,ymesh),method='nearest')
-
-#    Bx_cart=griddata(np.c_[xcoord,ycoord],Bx,(xmesh,ymesh),method='nearest')
-#    By_cart=griddata(np.c_[xcoord,ycoord],By,(xmesh,ymesh),method='nearest')
-
-
-    vx_cart[rindix] = 0.0
-    vy_cart[rindix] = 0.0
-
-
-    vx_cart[rindix2] = 0.0
-    vy_cart[rindix2] = 0.0
-
-
-
-    outputname='disk.'+'{:05d}'.format(n)+'_rho_z.png'
+    outputname='star.'+'{:05d}'.format(n)+'_rho.png'
 
     labelname='$\\rho/\\rho_0$'
 
-    timelabel='${\\rm time}='+"%4.2f"%(time/time0)+'{\ t_0}$'
+    timelabel='${\\rm t}='+"%4.1f"%(time*time0)+'{\ {\\rm hours}}$'
 
-    label1='$\\rho/\\rho_0$'
-    label2='$v/c$'
+    xticks=[0,4*np.pi/180,8*np.pi/180]
+    xticklabels=['$0$','$4^{\circ}$','$8^{\circ}$']
+    yticks=[np.log10(11),np.log10(11.5),np.log10(12),np.log10(12.5),np.log10(13),np.log10(13.5)]
+    yticklabels=['$11$','$11.5$','$12$','$12.5$','$13$','$13.5$']
+    minval=1.e-7
+    maxval=1.e2
+    cticks=[minval,100*minval,1.e4*minval,1.e6*minval,1.e8*minval]
+    MakePolarPlot(np.transpose(rhoslice),xmesh,ymesh,minval,maxval,timelabel,labelname,outputname,cticks,xtick=xticks,xticklabel=xticklabels,ytick=yticks,yticklabel=yticklabels,logscale=1)
+    outputname2='star.'+'{:05d}'.format(n)+'_Er.png'
+    labelname='$T_r/T_0$'
+    cticks=[0,1,2,3,4]
+    MakePolarPlot(np.transpose(Erslice),xmesh,ymesh,0.1,4,timelabel,labelname,outputname2,cticks,xtick=xticks,xticklabel=xticklabels,ytick=yticks,yticklabel=yticklabels,logscale=0,cmap='inferno')
 
-    vlim1=1.0
-    vlim2=1.e4
-
-
-    MakeRhoVSlice(rho_cart, vx_cart, vy_cart, rhomin, rhomax, vlim1,vlim2, width, xmin, xmax, ymin, ymax,xgrid,ygrid,label1,label2,timelabel,outputname,vel,figtype=1)
 
 #    outputname='disk.'+'{:05d}'.format(n)+'_Er_z.png'
 
@@ -286,10 +259,10 @@ def main(n,input_base,quantities=None,leveln=None, phiplot=0,width=23.44,ywidth=
 # in order to calculate radiation viscosity
 # we need radiation energy density, vphi, vr, rho, kappa
 
-quantities=['rho','vel1','vel2','vel3']
+quantities=['rho','Er','vel1','vel2','vel3']
 
-ni=1500
-no=1500
+ni=4000
+no=4000
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -298,7 +271,7 @@ nprocs = comm.Get_size()
 for i in range(ni,no+1,nprocs*5):
   file_num=i+rank*5
 #  print file_num, rank
-  main(file_num,'./star.out1.',quantities,vel=0)
+  main(file_num,'./Data/star.out1.',14,quantities)
 
 
 

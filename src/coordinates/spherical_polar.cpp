@@ -539,9 +539,11 @@ void SphericalPolar::AddCoordTermsDivergence(int flag,
         // src_1 = < M_{theta theta} + M_{phi phi} ><1/r>
           Real m_ii = (2.0/3.0) * u_input(CRE,k,j,i);
           coord_src(CRF1,k,j,i) = pcr->vmax * coord_src1_i_(i)*m_ii;
+        // src_2 = < M_{phi phi} ><cot theta/r>
+          Real m_pp=(1.0/3.0) * u_input(CRE,k,j,i);
+          coord_src(CRF2,k,j,i) = pcr->vmax * coord_src1_i_(i)*coord_src1_j_(j)*m_pp;
           // set 0 for other components
           coord_src(CRE,k,j,i) = 0.0;
-          coord_src(CRF2,k,j,i) = 0.0;
           coord_src(CRF3,k,j,i) = 0.0;
 
         }
@@ -557,9 +559,10 @@ void SphericalPolar::AddCoordTermsDivergence(int flag,
         // src_1 = < M_{theta theta} + M_{phi phi} ><1/r>
           Real m_ii = 2.0 * u_input(TCT,k,j,i);
           coord_src(TCF1,k,j,i) = ptc->vmax * coord_src1_i_(i)*m_ii;
+          Real m_pp=u_input(TCT,k,j,i);
+          coord_src(TCF2,k,j,i) = ptc->vmax * coord_src1_i_(i)*coord_src1_j_(j)*m_pp;
           // set 0 for other components
           coord_src(TCE,k,j,i) = 0.0;
-          coord_src(TCF2,k,j,i) = 0.0;
           coord_src(TCF3,k,j,i) = 0.0;
 
         }
