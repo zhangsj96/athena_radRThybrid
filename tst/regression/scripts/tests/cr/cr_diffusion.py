@@ -88,31 +88,31 @@ def analyze():
   # check absolute error and convergence of all three waves
   #regime1
   if data[0][8] > 8e-5:
-    print "error in static diffusion along x: ", data[0][8]
+    print("error in static diffusion along x: ", data[0][8])
     return False
 
     #regime2
   if data[1][8] > 7e-5:
-    print "error in dynamic diffusion along x: ", data[1][8]
+    print("error in dynamic diffusion along x: ", data[1][8])
     return False
 
   if data[2][8] > 8e-5:
-    print "error in static diffusion along y: ", data[2][8]
+    print("error in static diffusion along y: ", data[2][8])
     return False
 
     #regime2
   if data[3][8] > 7e-5:
-    print "error in dynamic diffusion along y: ", data[3][8]
+    print("error in dynamic diffusion along y: ", data[3][8])
     return False
 
 
   if data[4][8] > 8e-5:
-    print "error in static diffusion along z: ", data[4][8]
+    print("error in static diffusion along z: ", data[4][8])
     return False
 
     #regime2
   if data[5][8] > 7e-5:
-    print "error in dynamic diffusion along z: ", data[5][8]
+    print("error in dynamic diffusion along z: ", data[5][8])
     return False
 
   return True

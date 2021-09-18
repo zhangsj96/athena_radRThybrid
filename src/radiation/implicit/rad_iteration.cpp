@@ -46,7 +46,7 @@ void IMRadiation::Iteration(Mesh *pm,
    // perform Jacobi iteration including both source and flux terms
    // The iteration step is: calculate flux, calculate source term, 
    // update specific intensity, compute error
-  MeshBlock *pmb = pm->pblock;
+  MeshBlock *pmb = pm->my_blocks(0);
   std::stringstream msg;
 
   const Real wght = ptlist->stage_wghts[stage-1].beta*pm->dt;
@@ -61,7 +61,8 @@ void IMRadiation::Iteration(Mesh *pm,
      // this is always needed for the RHS
 
      // first save initial state
-    while(pmb != nullptr){
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
       Radiation *prad = pmb->prad;
       Hydro *ph = pmb->phydro;
       Field *pf = pmb->pfield;
@@ -99,23 +100,21 @@ void IMRadiation::Iteration(Mesh *pm,
 
       prad->ir_old = prad->ir;
 
-
-      pmb = pmb->next;
     }
 
 
 
     while(iteration){
        // initialize the pointer
-      pmb = pm->pblock;
+      pmb = pm->my_blocks(0);
 
 
       sum_full_ = 0.0;
       sum_diff_ = 0.0;
 
        // we need to go through all meshblocks for each iteration
-      while(pmb != nullptr){
-
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
         Hydro *ph = pmb->phydro;
         Radiation *prad = pmb->prad;
         if(ite_scheme == 0 || ite_scheme == 2)
@@ -144,49 +143,44 @@ void IMRadiation::Iteration(Mesh *pm,
 
         prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
 
-        pmb = pmb->next;
       }
 
-      pmb = pm->pblock;
-      while(pmb != nullptr){
-
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
         pmb->prad->rad_bvar.SendBoundaryBuffers();
-
-        pmb = pmb->next;
 
       }
 
       // set boundary condition
-      pmb = pm->pblock;
-      while(pmb != nullptr){
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
         Radiation *prad = pmb->prad;
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
 
         prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
-        pmb = pmb->next;
 
       }
 
       if(pm->multilevel){
         
-        pmb = pm->pblock;
-        while(pmb != nullptr){
-          Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
-          pmb->pbval->ProlongateBoundaries(t_end_stage, wght);
-          pmb = pmb->next;
+        for(int nb=0; nb<pm->nblocal; ++nb){
+          pmb = pm->my_blocks(nb);
+          Real t_end_stage = pmb->pmy_mesh->time + wght;
+          pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
+
         }
 
 
       }
 
 
-      pmb = pm->pblock;
-      while(pmb != nullptr){
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
         Radiation *prad = pmb->prad;
         // apply physical boundaries
         prad->rad_bvar.var_cc = &(prad->ir);
-        Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
-        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght);
+        Real t_end_stage = pmb->pmy_mesh->time + wght;
+        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
 
          // calculate residual
         CheckResidual(pmb,prad->ir_old,prad->ir);
@@ -199,7 +193,7 @@ void IMRadiation::Iteration(Mesh *pm,
         sum_full_ += prad->sum_full;
         sum_diff_ += prad->sum_diff;
 
-        pmb = pmb->next;  
+
       }// end while pmb
 
        // MPI sum across all the cores
@@ -233,62 +227,58 @@ void IMRadiation::Iteration(Mesh *pm,
 
     // After iteration,
     //update the hydro source term
-    pmb = pm->pblock;    
-    while(pmb != nullptr){
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
       if(pmb->prad->set_source_flag  > 0)
         pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
                                           pmb->prad->ir1, pmb->prad->ir);
       
-      pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::fluid);
-      pmb = pmb->next;
+      pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::all);
+
     }
 
 
      // update MPI boundary, do prolongation, set physical boundary
-    pmb = pm->pblock;
-    while(pmb != nullptr){
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
       // update MPI boundary for hydro
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
       pmb->phydro->hbvar.SendBoundaryBuffers();
      
-      pmb = pmb->next;
     }
 
-    pmb = pm->pblock;
-    while(pmb != nullptr){
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
       pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
-      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::fluid);
-      pmb = pmb->next;
+      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::all);
     }
 
     if(pm->multilevel){
         
-      pmb = pm->pblock;
-      while(pmb != nullptr){
-        Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
-        pmb->pbval->ProlongateBoundaries(t_end_stage, wght);
-        pmb = pmb->next;
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
+        Real t_end_stage = pmb->pmy_mesh->time + wght;
+        pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
       }
 
     }
 
     // conservative to primitive, and then apply physical boundary
-    pmb = pm->pblock;
-    while(pmb != nullptr){
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
        // Apply physical boundaries
       pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
-      Real t_end_stage = pmb->pmy_mesh->time + pmb->stage_abscissae[stage][0];
+      Real t_end_stage = pmb->pmy_mesh->time + wght;
 
        // convert conservative to primitive variables
       // update physical boundary for hydro
       ptlist->Primitives(pmb,stage);
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
-      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght);
+      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
 
       // update opacity     
       pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
 
-      pmb = pmb->next;
     }
 
   }// end stage

@@ -58,7 +58,7 @@
 //  \brief Writes a history file
 
 void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
-  MeshBlock *pmb = pm->pblock;
+  MeshBlock *pmb = pm->my_blocks(0);
   Real real_max = std::numeric_limits<Real>::max();
   Real real_min = std::numeric_limits<Real>::min();
   AthenaArray<Real> vol(pmb->ncells1);
@@ -82,7 +82,8 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   }
 
   // Loop over MeshBlocks
-  while (pmb != nullptr) {
+  for (int b=0; b<pm->nblocal; ++b) {
+    pmb = pm->my_blocks(b);
     Hydro *phyd = pmb->phydro;
     Field *pfld = pmb->pfield;
     PassiveScalars *psclr = pmb->pscalars;
@@ -185,7 +186,6 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
         }
       }
     }
-    pmb = pmb->next;
   }  // end loop over MeshBlocks
 
 #ifdef MPI_PARALLEL

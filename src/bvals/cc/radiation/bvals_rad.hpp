@@ -34,14 +34,13 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
 // functions unique implementation to radiation class
   void SendFluxCorrection() override;
   bool ReceiveFluxCorrection() override;
-  int LoadBoundaryBufferSameLevel(Real *buf, const NeighborBlock& nb) override;
-  int LoadBoundaryBufferToCoarser(Real *buf, const NeighborBlock& nb) override;
-  int LoadBoundaryBufferToFiner(Real *buf, const NeighborBlock& nb) override;
+
   void SetBoundaries() override;
-  void SetBoundarySameLevel(Real *buf, const NeighborBlock& nb) override;
-  void SetBoundaryFromCoarser(Real *buf, const NeighborBlock& nb) override;
-  void SetBoundaryFromFiner(Real *buf, const NeighborBlock& nb) override;
-  void PolarBoundarySingleAzimuthalBlock() override;
+
+
+
+
+
 
   // BoundaryPhysics: need to rotate the intensity
   void ReflectInnerX1(Real time, Real dt,
@@ -112,6 +111,26 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
 
 private:
   AthenaArray<Real>  azimuthal_shift_rad_;
+
+  // override function for flux correction
+  void SetFluxBoundaryFromFiner(Real *buf, const NeighborBlock& nb);
+  void SetFluxBoundarySameLevel(Real *buf, const NeighborBlock& nb);
+
+  int LoadFluxBoundaryBufferToCoarser(Real *buf, const NeighborBlock& nb);  
+  int LoadFluxBoundaryBufferSameLevel(Real *buf, const NeighborBlock& nb) override;  
+
+  void SetBoundaryFromCoarser(Real *buf, const NeighborBlock& nb) override;
+  void SetBoundaryFromFiner(Real *buf, const NeighborBlock& nb) override;
+
+  int LoadBoundaryBufferSameLevel(Real *buf, const NeighborBlock& nb) override;
+  int LoadBoundaryBufferToCoarser(Real *buf, const NeighborBlock& nb) override;
+  int LoadBoundaryBufferToFiner(Real *buf, const NeighborBlock& nb) override;
+
+  void SetBoundarySameLevel(Real *buf, const NeighborBlock& nb) override;
+
+  void PolarBoundarySingleAzimuthalBlock() override;
+
+  AthenaArray<Real> shear_rad_var_flx_[2];
 
 
 };

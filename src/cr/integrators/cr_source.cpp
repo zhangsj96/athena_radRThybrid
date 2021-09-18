@@ -227,7 +227,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
 
   // Add user defined source term for cosmic rays
   if(pcr->cr_source_defined)
-    pcr->UserSourceTerm_(pmb, pmb->pmy_mesh->time, dt, w,bcc, u_cr);
+    pcr->UserSourceTerm_(pmb, pmb->pmy_mesh->time, dt, w,pmb->pfield->b, u_cr);
       
 }
 

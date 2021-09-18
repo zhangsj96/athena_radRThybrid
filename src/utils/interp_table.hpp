@@ -6,8 +6,8 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file interp_table.hpp
-//  \brief defines class InterpTable2D
-//  Contains functions that implement an intpolated lookup table
+//! \brief defines class InterpTable2D
+//!   Contains functions that implement an intpolated lookup table
 
 // C headers
 
@@ -54,8 +54,6 @@ class EosTable {
   Real rhoUnit, eUnit, hUnit;
   int nRho, nEgas, nVar;
   AthenaArray<Real> EosRatios;
-
-  Real GetEosData(int kOut, Real var, Real rho);
 };
 
 #endif //UTILS_INTERP_TABLE_HPP_

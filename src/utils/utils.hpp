@@ -6,7 +6,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file utils.hpp
-//  \brief prototypes of functions and class definitions for utils/*.cpp files
+//! \brief prototypes of functions and class definitions for utils/*.cpp files
 
 // C headers
 
@@ -21,6 +21,9 @@
 void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
 void ShowConfig();
+double MarkTime();
+void OutputLoopTime(const int ncycle, double dt_array[], std::string basename);
+
 void InverseMatrix(int n, AthenaArray<Real> &a, AthenaArray<Real> &b);
 int FouthPolyRoot(const Real coef4, const Real tconst, Real &root);
 void MatrixMult(int m, int n, AthenaArray<Real> &a,
@@ -41,9 +44,10 @@ void InvRotateVec(const Real sint, const Real cost,
                  const Real sinp, const Real cosp, 
                  Real &v1, Real &v2, Real &v3);
 
+
 //----------------------------------------------------------------------------------------
-//! SignalHandler
-//  \brief static data and functions that implement a simple signal handling system
+//! \namespace SignalHandler
+//! \brief static data and functions that implement a simple signal handling system
 
 namespace SignalHandler {
 const int nsignal = 3;

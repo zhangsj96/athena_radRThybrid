@@ -86,11 +86,11 @@ void Outflow_X2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceF
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void Outflow_rad_X2(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b,  AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 //provide density and temperature, returns the opacity
@@ -101,8 +101,8 @@ void DiskOpacity(MeshBlock *pmb, AthenaArray<Real> &prim);
 
 
 void PseudoNewtonian( MeshBlock *pmb, const Real time, const Real dt,
-  const AthenaArray<Real> &prim,
-  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons);
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons, AthenaArray<Real> &cons_scalar);
 
 void Tequilibrium(Real temperature, Real coef1, Real coef2, Real coef3,
                   Real coef4, Real *fval, Real *dfval);
@@ -965,7 +965,7 @@ void Outflow_X2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceF
 }
 
 void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {
 
@@ -998,7 +998,7 @@ void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 
 
 void Outflow_rad_X2(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {
 
@@ -1029,9 +1029,9 @@ void Outflow_rad_X2(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
   
 
 
-void PseudoNewtonian(MeshBlock *pmb, const Real time, const Real dt,
-  const AthenaArray<Real> &prim, 
-  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
+void PseudoNewtonian( MeshBlock *pmb, const Real time, const Real dt,
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons, AthenaArray<Real> &cons_scalar)
 {
 
   AthenaArray<Real> &x1flux=pmb->phydro->flux[X1DIR];

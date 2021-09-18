@@ -47,7 +47,7 @@ static int octnum;
  *====================================================================================*/
 
 void TwoBeams(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-            const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+            const AthenaArray<Real> &w, FaceField &b,
             AthenaArray<Real> &ir,
             Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
@@ -128,7 +128,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
 
 void TwoBeams(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-          const AthenaArray<Real> &w, const AthenaArray<Real> &bcc, 
+          const AthenaArray<Real> &w, FaceField &b, 
           AthenaArray<Real> &ir,
           Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {

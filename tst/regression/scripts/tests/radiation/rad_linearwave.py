@@ -124,66 +124,66 @@ def analyze():
   # check absolute error and convergence of all three waves
   #regime1
   if data[3][4] > 1.2e-9:
-    print "error in regime 1: ", data[3][4]
+    print("error in regime 1: ", data[3][4])
     return False
   if data[3][4]/data[2][4] > 0.55:
-    print "not converging for regime 1: ",data[3][4],data[2][4]
+    print("not converging for regime 1: ",data[3][4],data[2][4])
     return False
 
     #regime2
   if data[7][4] > 1.2e-9:
-    print "error in regime 2: ", data[7][4]
+    print("error in regime 2: ", data[7][4])
     return False
   if data[7][4]/data[6][4] > 0.55:
-    print "not converging for regime 2: ",data[7][4],data[6][4]
+    print("not converging for regime 2: ",data[7][4],data[6][4])
     return False
 
   #regime3
   if data[11][4] > 1.1e-9:
-    print "error in regime 3: ", data[11][4]
+    print("error in regime 3: ", data[11][4])
     return False
   if data[11][4]/data[10][4] > 0.55:
-    print "not converging for regime 3: ",data[11][4],data[10][4]
+    print("not converging for regime 3: ",data[11][4],data[10][4])
     return False
 
   #regime4
   if data[15][4] > 1.7e-9:
-    print "error in regime 4: ", data[15][4]
+    print("error in regime 4: ", data[15][4])
     return False
   if data[15][4]/data[14][4] > 0.55:
-    print "not converging for regime 4: ",data[15][4],data[14][4]
+    print("not converging for regime 4: ",data[15][4],data[14][4])
     return False
 
   #regime5
   if data[19][4] > 2.2e-9:
-    print "error in regime 5: ", data[19][4]
+    print("error in regime 5: ", data[19][4])
     return False
   if data[19][4]/data[18][4] > 0.55:
-    print "not converging for regime 5: ",data[19][4],data[18][4]
+    print("not converging for regime 5: ",data[19][4],data[18][4])
     return False
 
   #regime6
   if data[23][4] > 1.2e-9:
-    print "error in regime 6: ", data[23][4]
+    print("error in regime 6: ", data[23][4])
     return False
   if data[23][4]/data[22][4] > 0.55:
-    print "not converging for regime 6: ",data[23][4],data[22][4]
+    print("not converging for regime 6: ",data[23][4],data[22][4])
     return False
 
   #regime7
   if data[27][4] > 8.0e-10:
-    print "error in regime 7: ", data[27][4]
+    print("error in regime 7: ", data[27][4])
     return False
   if data[27][4]/data[26][4] > 0.55:
-    print "not converging for regime 7: ",data[27][4],data[26][4]
+    print("not converging for regime 7: ",data[27][4],data[26][4])
     return False
 
   #regime8
   if data[31][4] > 1.3e-9:
-    print "error in regime 8: ", data[31][4]
+    print("error in regime 8: ", data[31][4])
     return False
   if data[31][4]/data[30][4] > 0.55:
-    print "not converging for regime 8: ",data[31][4],data[30][4]
+    print("not converging for regime 8: ",data[31][4],data[30][4])
     return False
 
   return True

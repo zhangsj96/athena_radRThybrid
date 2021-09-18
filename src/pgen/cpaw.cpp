@@ -3,17 +3,17 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file cpaw.c
-//  \brief Circularly polarized Alfven wave (CPAW) for 1D/2D/3D problems
-//
-// In 1D, the problem is setup along one of the three coordinate axes (specified by
-// setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
-// automatically sets the wavevector along the domain diagonal.
-//
-// Can be used for [standing/traveling] waves [(problem/v_par=1.0)/(problem/v_par=0.0)]
-//
-// REFERENCE: G. Toth,  "The div(B)=0 constraint in shock capturing MHD codes", JCP,
-//   161, 605 (2000)
+//! \file cpaw.cpp
+//! \brief Circularly polarized Alfven wave (CPAW) for 1D/2D/3D problems
+//!
+//! In 1D, the problem is setup along one of the three coordinate axes (specified by
+//! setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
+//! automatically sets the wavevector along the domain diagonal.
+//!
+//! Can be used for [standing/traveling] waves [(problem/v_par=1.0)/(problem/v_par=0.0)]
+//!
+//! REFERENCE: G. Toth,  "The div(B)=0 constraint in shock capturing MHD codes", JCP,
+//!   161, 605 (2000)
 
 // C headers
 
@@ -116,7 +116,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 //========================================================================================
 //! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
-//  \brief Compute L1 error in CPAW and output to file
+//! \brief Compute L1 error in CPAW and output to file
 //========================================================================================
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
@@ -126,8 +126,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   Real err[NHYDRO+NFIELD];
   for (int i=0; i<(NHYDRO+NFIELD); ++i) err[i]=0.0;
 
-  MeshBlock *pmb = pblock;
-  while (pmb != nullptr) {
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
     //  Compute errors
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
@@ -137,7 +137,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
           Real sn = std::sin(k_par*x);
           Real cs = fac*std::cos(k_par*x);
 
-          err[IDN] += std::fabs(den - pmb->phydro->u(IDN,k,j,i));
+          err[IDN] += std::abs(den - pmb->phydro->u(IDN,k,j,i));
 
           Real mx = den*v_par;
           Real my = -fac*den*v_perp*sn;
@@ -145,9 +145,9 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
           Real m1 = mx*cos_a2*cos_a3 - my*sin_a3 - mz*sin_a2*cos_a3;
           Real m2 = mx*cos_a2*sin_a3 + my*cos_a3 - mz*sin_a2*sin_a3;
           Real m3 = mx*sin_a2                    + mz*cos_a2;
-          err[IM1] += std::fabs(m1 - pmb->phydro->u(IM1,k,j,i));
-          err[IM2] += std::fabs(m2 - pmb->phydro->u(IM2,k,j,i));
-          err[IM3] += std::fabs(m3 - pmb->phydro->u(IM3,k,j,i));
+          err[IM1] += std::abs(m1 - pmb->phydro->u(IM1,k,j,i));
+          err[IM2] += std::abs(m2 - pmb->phydro->u(IM2,k,j,i));
+          err[IM3] += std::abs(m3 - pmb->phydro->u(IM3,k,j,i));
 
           Real bx = b_par;
           Real by = b_perp*sn;
@@ -155,19 +155,18 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
           Real b1 = bx*cos_a2*cos_a3 - by*sin_a3 - bz*sin_a2*cos_a3;
           Real b2 = bx*cos_a2*sin_a3 + by*cos_a3 - bz*sin_a2*sin_a3;
           Real b3 = bx*sin_a2                    + bz*cos_a2;
-          err[NHYDRO + IB1] += std::fabs(b1 - pmb->pfield->bcc(IB1,k,j,i));
-          err[NHYDRO + IB2] += std::fabs(b2 - pmb->pfield->bcc(IB2,k,j,i));
-          err[NHYDRO + IB3] += std::fabs(b3 - pmb->pfield->bcc(IB3,k,j,i));
+          err[NHYDRO + IB1] += std::abs(b1 - pmb->pfield->bcc(IB1,k,j,i));
+          err[NHYDRO + IB2] += std::abs(b2 - pmb->pfield->bcc(IB2,k,j,i));
+          err[NHYDRO + IB3] += std::abs(b3 - pmb->pfield->bcc(IB3,k,j,i));
 
           if (NON_BAROTROPIC_EOS) {
             Real e0 = pres/gm1 + 0.5*(m1*m1 + m2*m2 + m3*m3)/den
                       + 0.5*(b1*b1+b2*b2+b3*b3);
-            err[IEN] += std::fabs(e0 - pmb->phydro->u(IEN,k,j,i));
+            err[IEN] += std::abs(e0 - pmb->phydro->u(IEN,k,j,i));
           }
         }
       }
     }
-    pmb=pmb->next;
   }
 
   // normalize errors by number of cells, compute RMS
@@ -219,8 +218,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn ProblemGenerator
-//  \brief circularly polarized Alfven wave problem generator for 1D/2D/3D problems.
+//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
+//! \brief circularly polarized Alfven wave problem generator for 1D/2D/3D problems.
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
@@ -370,8 +369,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 namespace {
 //----------------------------------------------------------------------------------------
 //! \fn Real A1(const Real x1,const Real x2,const Real x3)
-//  \brief A1: 1-component of vector potential, using a gauge such that Ax = 0, and Ay,
-//  Az are functions of x and y alone.
+//! \brief A1: 1-component of vector potential, using a gauge such that Ax = 0, and Ay,
+//! Az are functions of x and y alone.
 
 Real A1(const Real x1, const Real x2, const Real x3) {
   Real x =  x1*cos_a2*cos_a3 + x2*cos_a2*sin_a3 + x3*sin_a2;
@@ -384,7 +383,7 @@ Real A1(const Real x1, const Real x2, const Real x3) {
 
 //----------------------------------------------------------------------------------------
 //! \fn Real A2(const Real x1,const Real x2,const Real x3)
-//  \brief A2: 2-component of vector potential
+//! \brief A2: 2-component of vector potential
 
 Real A2(const Real x1, const Real x2, const Real x3) {
   Real x =  x1*cos_a2*cos_a3 + x2*cos_a2*sin_a3 + x3*sin_a2;
@@ -397,7 +396,7 @@ Real A2(const Real x1, const Real x2, const Real x3) {
 
 //----------------------------------------------------------------------------------------
 //! \fn Real A3(const Real x1,const Real x2,const Real x3)
-//  \brief A3: 3-component of vector potential
+//! \brief A3: 3-component of vector potential
 
 Real A3(const Real x1, const Real x2, const Real x3) {
   Real x =  x1*cos_a2*cos_a3 + x2*cos_a2*sin_a3 + x3*sin_a2;

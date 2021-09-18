@@ -6,16 +6,16 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file defs.hpp.in
-//  \brief Template file for defs.hpp.  When the configure.py script is run, a new
-//  defs.hpp file will be created (overwriting the last) from this template.  This new
-//  file contains Athena++ specific cpp macros and definitions set by configure.
+//! \brief Template file for defs.hpp.  When the configure.py script is run, a new
+//! defs.hpp file will be created (overwriting the last) from this template.  This new
+//! file contains Athena++ specific cpp macros and definitions set by configure.
 
 //----------------------------------------------------------------------------------------
 // macros which define physics and algorithms
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "rad_linearwave"
+#define PROBLEM_GENERATOR "jeans"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
@@ -24,9 +24,6 @@
 #define RIEMANN_SOLVER "hllc"
 
 // configure.py dict(definitions) Boolean values:
-// enable shearing box? default=0 (false)
-#define SHEARING_BOX 0
-
 // Equation of state
 #define EQUATION_OF_STATE "adiabatic"
 
@@ -46,13 +43,12 @@
 #define STS_ENABLED 0
 
 // include self gravity? default=0 (false)
-#define SELF_GRAVITY_ENABLED 0
+#define SELF_GRAVITY_ENABLED 3
 
 // include radiative transfer? default=0 (false)
 #define RADIATION_ENABLED 0
 
-#define IM_RADIATION_ENABLED 1
-
+#define IM_RADIATION_ENABLED 0
 
 // include cosmic ray transport? default=0 (false)
 #define CR_ENABLED 0
@@ -79,7 +75,7 @@
 // configure.py dict(definitions) Boolean string macros:
 // (these options have the latter (false) option as defaults, unless noted otherwise)
 // make use of FFT? (FFT or NO_FFT)
-#define NO_FFT
+#define FFT
 
 // MPI parallelization (MPI_PARALLEL or NOT_MPI_PARALLEL)
 #define MPI_PARALLEL
@@ -94,6 +90,7 @@
 #define NOT_DEBUG
 
 #define ALI_LEN 32
+
 // try/throw/catch C++ exception handling (ENABLE_EXCEPTIONS or DISABLE_EXCEPTIONS)
 // (enabled by default)
 #define ENABLE_EXCEPTIONS
@@ -101,7 +98,7 @@
 // compiler options
 #define COMPILED_WITH "g++"
 #define COMPILER_COMMAND "mpicxx"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lfftw3 -lhdf5" // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)
@@ -111,9 +108,10 @@
 #define NWAVE 5
 #define NSCALARS 0
 #define NGHOST 2
+#define NGRAV 1
 #define NCR 4   // cosmic ray transport module variable
 #define NTC 4   // thermal conduction variable
-#define MAX_NSTAGE 5     // maximum number of stages per cycle for time-integrator
+#define MAX_NSTAGE 6     // maximum number of stages per cycle for time-integrator
 #define MAX_NREGISTER 3  // maximum number of (u, b) register pairs for time-integrator
 
 //----------------------------------------------------------------------------------------

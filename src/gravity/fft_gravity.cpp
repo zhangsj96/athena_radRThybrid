@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file fft_gravity.cpp
-//  \brief implementation of functions in class FFTGravity
+//! \brief implementation of functions in class FFTGravity
 
 // C headers
 
@@ -23,13 +23,14 @@
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../particles/particles.hpp"
 #include "../task_list/fft_grav_task_list.hpp"
 #include "fft_gravity.hpp"
 #include "gravity.hpp"
 
 //----------------------------------------------------------------------------------------
 //! \fn FFTGravityDriver::FFTGravityDriver(Mesh *pm, ParameterInput *pin)
-//  \brief FFTGravityDriver constructor
+//! \brief FFTGravityDriver constructor
 
 FFTGravityDriver::FFTGravityDriver(Mesh *pm, ParameterInput *pin)
     : FFTDriver(pm, pin) {
@@ -60,8 +61,8 @@ FFTGravityDriver::~FFTGravityDriver() {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn void GravityDriver::Solve(int stage)
-//  \brief load the data and solve
+//! \fn void FFTGravityDriver::Solve(int stage, int mode)
+//! \brief load the data and solve
 
 void FFTGravityDriver::Solve(int stage, int mode) {
   FFTBlock *pfb = pmy_fb;
@@ -69,10 +70,21 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   // Load the source
   int nbs = nslist_[Globals::my_rank];
   int nbe = nbs+nblist_[Globals::my_rank]-1;
-  for (int igid=nbs; igid<=nbe; igid++) {
-    MeshBlock *pmb = pmy_mesh_->FindMeshBlock(igid);
-    if (pmb != nullptr) {
-      in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+
+  for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
+    in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+    if (pmy_mesh_->particle_gravity) {
+      AthenaArray<Real> rhosum(in);
+      for (Particles *ppar : pmb->ppar_grav) {
+        AthenaArray<Real> rhop(ppar->GetMassDensity());
+        for (int k = pmb->ks; k <= pmb->ke; ++k)
+          for (int j = pmb->js; j <= pmb->je; ++j)
+            for (int i = pmb->is; i <= pmb->ie; ++i)
+              rhosum(k,j,i) += rhop(k,j,i);
+      }
+      pfb->LoadSource(rhosum, 0, NGHOST, pmb->loc, pmb->block_size);
+    } else {
       pfb->LoadSource(in, 0, NGHOST, pmb->loc, pmb->block_size);
     }
     //    else { // on another process
@@ -100,8 +112,8 @@ void FFTGravityDriver::Solve(int stage, int mode) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn void FFTGravity::ApplyKernel(const AthenaArray<Real> &src, int ns)
-//  \brief Apply kernel
+//! \fn void FFTGravity::ApplyKernel(int mode)
+//! \brief Apply kernel
 void FFTGravity::ApplyKernel(int mode) {
   Real pcoeff(0.0);
   Real dx1sq = SQR(TWO_PI/(kNx[0]*dkx[0]));

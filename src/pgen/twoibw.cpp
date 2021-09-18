@@ -3,11 +3,11 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file two_ibw.c
-//  \brief Problem generator for two interacting blast waves test.
-//
-// REFERENCE: P. Woodward & P. Colella, "The numerical simulation of two-dimensional
-//   fluid flow with strong shocks", JCP, 54, 115, sect. IVa
+//! \file twoibw.cpp
+//! \brief Problem generator for two interacting blast waves test.
+//!
+//! REFERENCE: P. Woodward & P. Colella, "The numerical simulation of two-dimensional
+//!   fluid flow with strong shocks", JCP, 54, 115, sect. IVa
 //========================================================================================
 
 // C headers

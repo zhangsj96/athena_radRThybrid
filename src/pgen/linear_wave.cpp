@@ -3,12 +3,12 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file linear_wave.c
-//  \brief Linear wave problem generator for 1D/2D/3D problems.
-//
-// In 1D, the problem is setup along one of the three coordinate axes (specified by
-// setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
-// automatically sets the wavevector along the domain diagonal.
+//! \file linear_wave.cpp
+//! \brief Linear wave problem generator for 1D/2D/3D problems.
+//!
+//! In 1D, the problem is setup along one of the three coordinate axes (specified by
+//! setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
+//! automatically sets the wavevector along the domain diagonal.
 //========================================================================================
 
 // C headers
@@ -168,7 +168,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   if (pin->GetOrAddBoolean("problem", "test", false) && ncycle==0) {
     // reinterpret tlim as the number of orbital periods
-    Real ntlim = lambda/std::fabs(ev[wave_flag])*tlim;
+    Real ntlim = lambda/std::abs(ev[wave_flag])*tlim;
     tlim = ntlim;
     pin->SetReal("time", "tlim", ntlim);
   }
@@ -193,8 +193,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   // Initialize errors to zero
   Real l1_err[NHYDRO+NFIELD]{}, max_err[NHYDRO+NFIELD]{};
 
-  MeshBlock *pmb = pblock;
-  while (pmb != nullptr) {
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
     BoundaryValues *pbval = pmb->pbval;
     int il = pmb->is, iu = pmb->ie, jl = pmb->js, ju = pmb->je,
         kl = pmb->ks, ku = pmb->ke;
@@ -298,28 +298,28 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
           // Weight l1 error by cell volume
           Real vol = pmb->pcoord->GetCellVolume(k, j, i);
 
-          l1_err[IDN] += std::fabs(d1 - pmb->phydro->u(IDN,k,j,i))*vol;
+          l1_err[IDN] += std::abs(d1 - pmb->phydro->u(IDN,k,j,i))*vol;
           max_err[IDN] = std::max(
-              static_cast<Real>(std::fabs(d1 - pmb->phydro->u(IDN,k,j,i))),
+              static_cast<Real>(std::abs(d1 - pmb->phydro->u(IDN,k,j,i))),
               max_err[IDN]);
-          l1_err[IM1] += std::fabs(m1 - pmb->phydro->u(IM1,k,j,i))*vol;
-          l1_err[IM2] += std::fabs(m2 - pmb->phydro->u(IM2,k,j,i))*vol;
-          l1_err[IM3] += std::fabs(m3 - pmb->phydro->u(IM3,k,j,i))*vol;
+          l1_err[IM1] += std::abs(m1 - pmb->phydro->u(IM1,k,j,i))*vol;
+          l1_err[IM2] += std::abs(m2 - pmb->phydro->u(IM2,k,j,i))*vol;
+          l1_err[IM3] += std::abs(m3 - pmb->phydro->u(IM3,k,j,i))*vol;
           max_err[IM1] = std::max(
-              static_cast<Real>(std::fabs(m1 - pmb->phydro->u(IM1,k,j,i))),
+              static_cast<Real>(std::abs(m1 - pmb->phydro->u(IM1,k,j,i))),
               max_err[IM1]);
           max_err[IM2] = std::max(
-              static_cast<Real>(std::fabs(m2 - pmb->phydro->u(IM2,k,j,i))),
+              static_cast<Real>(std::abs(m2 - pmb->phydro->u(IM2,k,j,i))),
               max_err[IM2]);
           max_err[IM3] = std::max(
-              static_cast<Real>(std::fabs(m3 - pmb->phydro->u(IM3,k,j,i))),
+              static_cast<Real>(std::abs(m3 - pmb->phydro->u(IM3,k,j,i))),
               max_err[IM3]);
 
           if (NON_BAROTROPIC_EOS) {
             Real e0 = cons_(IEN,k,j,i);
-            l1_err[IEN] += std::fabs(e0 - pmb->phydro->u(IEN,k,j,i))*vol;
+            l1_err[IEN] += std::abs(e0 - pmb->phydro->u(IEN,k,j,i))*vol;
             max_err[IEN] = std::max(
-                static_cast<Real>(std::fabs(e0-pmb->phydro->u(IEN,k,j,i))),
+                static_cast<Real>(std::abs(e0-pmb->phydro->u(IEN,k,j,i))),
                 max_err[IEN]);
           }
 
@@ -327,9 +327,9 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
             Real b1 = cons_(NHYDRO+IB1,k,j,i);
             Real b2 = cons_(NHYDRO+IB2,k,j,i);
             Real b3 = cons_(NHYDRO+IB3,k,j,i);
-            Real db1 = std::fabs(b1 - pmb->pfield->bcc(IB1,k,j,i));
-            Real db2 = std::fabs(b2 - pmb->pfield->bcc(IB2,k,j,i));
-            Real db3 = std::fabs(b3 - pmb->pfield->bcc(IB3,k,j,i));
+            Real db1 = std::abs(b1 - pmb->pfield->bcc(IB1,k,j,i));
+            Real db2 = std::abs(b2 - pmb->pfield->bcc(IB2,k,j,i));
+            Real db3 = std::abs(b3 - pmb->pfield->bcc(IB3,k,j,i));
 
             l1_err[NHYDRO + IB1] += db1*vol;
             l1_err[NHYDRO + IB2] += db2*vol;
@@ -341,7 +341,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
         }
       }
     }
-    pmb = pmb->next;
   }
   Real rms_err = 0.0, max_max_over_l1 = 0.0;
 

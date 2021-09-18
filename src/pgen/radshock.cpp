@@ -52,14 +52,14 @@ void Inject(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void InjectRad(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void InjectR(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void InjectRadR(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -286,7 +286,7 @@ void InjectR(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceFiel
 }
 
 void InjectRad(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {
 
@@ -321,7 +321,7 @@ void InjectRad(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 
 
 void InjectRadR(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir, 
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {
 

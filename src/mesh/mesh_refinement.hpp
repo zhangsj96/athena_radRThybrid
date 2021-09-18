@@ -6,7 +6,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file mesh_refinement.hpp
-//  \brief defines MeshRefinement class used for static/adaptive mesh refinement
+//! \brief defines MeshRefinement class used for static/adaptive mesh refinement
 
 // C headers
 
@@ -30,16 +30,19 @@ struct FaceField;
 class BoundaryValues;
 class FaceCenteredBoundaryVariable;
 class HydroBoundaryVariable;
+class OrbitalAdvection;
 
 //----------------------------------------------------------------------------------------
 //! \class MeshRefinement
-//  \brief
+//! \brief
 
 class MeshRefinement {
   // needs to access pcoarsec in ProlongateBoundaries() for passing to BoundaryFunc()
   friend class BoundaryValues;
   // needs to access refine_flag_ in Mesh::AdaptiveMeshRefinement(). Make var public?
   friend class Mesh;
+  // needs to access pcoarsec
+  friend class OrbitalAdvection;
 
  public:
   MeshRefinement(MeshBlock *pmb, ParameterInput *pin);
@@ -49,6 +52,7 @@ class MeshRefinement {
   void RestrictCellCenteredValues(const AthenaArray<Real> &fine,
                                   AthenaArray<Real> &coarse, int sn, int en,
                                   int csi, int cei, int csj, int cej, int csk, int cek);
+
   // over-write function for radiation variables
   void RestrictCellCenteredValues(
     const AthenaArray<Real> &fine, AthenaArray<Real> &coarse, int array_order, 
@@ -63,10 +67,11 @@ class MeshRefinement {
   void ProlongateCellCenteredValues(const AthenaArray<Real> &coarse,
                                     AthenaArray<Real> &fine, int sn, int en,
                                     int si, int ei, int sj, int ej, int sk, int ek);
-  // over-write function for radiation variables
+
   void ProlongateCellCenteredValues(const AthenaArray<Real> &coarse,
                      AthenaArray<Real> &fine, int array_order, 
                      int sn, int en, int si, int ei, int sj, int ej, int sk, int ek);
+  
   void ProlongateSharedFieldX1(const AthenaArray<Real> &coarse, AthenaArray<Real> &fine,
                                int si, int ei, int sj, int ej, int sk, int ek);
   void ProlongateSharedFieldX2(const AthenaArray<Real> &coarse, AthenaArray<Real> &fine,

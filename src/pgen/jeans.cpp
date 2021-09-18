@@ -3,12 +3,12 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file linear_wave.c
-//  \brief Linear wave problem generator for 1D/2D/3D problems.
-//
-// In 1D, the problem is setup along one of the three coordinate axes (specified by
-// setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
-// automatically sets the wavevector along the domain diagonal.
+//! \file jeans.cpp
+//! \brief Linear wave problem generator for 1D/2D/3D problems including self-gravity
+//!
+//! In 1D, the problem is setup along one of the three coordinate axes (specified by
+//! setting [ang_2,ang_3] = 0.0 or PI/2 in the input file).  In 2D/3D this routine
+//! automatically sets the wavevector along the domain diagonal.
 //========================================================================================
 
 // C headers
@@ -96,13 +96,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   kwave = TWO_PI/lambda;
   omega2 = SQR(kwave)*cs2*(1.0 - SQR(njeans));
-  omega = std::sqrt(std::fabs(omega2));
+  omega = std::sqrt(std::abs(omega2));
 
   if (SELF_GRAVITY_ENABLED) {
     SetGravitationalConstant(gconst);
     Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
     SetGravityThreshold(eps);
-    SetMeanDensity(d0);
   }
 
   if (Globals::my_rank==0) {
@@ -163,7 +162,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
     //    return;
   }
 
-  MeshBlock *pmb = pblock;
+  MeshBlock *pmb = my_blocks(0);
   // Initialize errors to zero
   Real l1_err[NHYDRO+NFIELD],max_err[NHYDRO+NFIELD];
   for (int i=0; i<(NHYDRO+NFIELD); ++i) {
@@ -171,15 +170,16 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
     max_err[i]=0.0;
   }
 
-  Hydro *phydro = pblock->phydro;
-  Coordinates *pcoord = pblock->pcoord;
+  Hydro *phydro = pmb->phydro;
+  Coordinates *pcoord = pmb->pcoord;
   Real sinkx, coskx, sinot, cosot;
-  int is=pblock->is, ie=pblock->ie;
-  int js=pblock->js, je=pblock->je;
-  int ks=pblock->ks, ke=pblock->ke;
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
 
   Real tlim = time;
-  while (pmb != nullptr) {
+  for (int b=0; b<nblocal; ++b) {
+    pmb = my_blocks(b);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
@@ -197,9 +197,9 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
             cosot = std::cos(omega*tlim);//time dependent factor of rho
           }
           Real den=d0*(1.0+amp*sinkx*cosot);
-          l1_err[IDN] += std::fabs(den - phydro->u(IDN,k,j,i));
+          l1_err[IDN] += std::abs(den - phydro->u(IDN,k,j,i));
           max_err[IDN] =
-              std::max(static_cast<Real>(std::fabs(den - phydro->u(IDN,k,j,i))),
+              std::max(static_cast<Real>(std::abs(den - phydro->u(IDN,k,j,i))),
                        max_err[IDN]);
 
           Real m = -den*(omega/kwave)*amp*coskx*sinot;
@@ -207,26 +207,25 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
           Real m2 = m*sin_a3*cos_a2;
           Real m3 = m*sin_a2;
 
-          l1_err[IM1] += std::fabs(m1-phydro->u(IM1,k,j,i));
-          l1_err[IM2] += std::fabs(m2-phydro->u(IM2,k,j,i));
-          l1_err[IM3] += std::fabs(m3-phydro->u(IM3,k,j,i));
-          max_err[IM1] = std::max(static_cast<Real>(std::fabs(m1-phydro->u(IM1,k,j,i))),
+          l1_err[IM1] += std::abs(m1-phydro->u(IM1,k,j,i));
+          l1_err[IM2] += std::abs(m2-phydro->u(IM2,k,j,i));
+          l1_err[IM3] += std::abs(m3-phydro->u(IM3,k,j,i));
+          max_err[IM1] = std::max(static_cast<Real>(std::abs(m1-phydro->u(IM1,k,j,i))),
                                   max_err[IM1]);
-          max_err[IM2] = std::max(static_cast<Real>(std::fabs(m2-phydro->u(IM2,k,j,i))),
+          max_err[IM2] = std::max(static_cast<Real>(std::abs(m2-phydro->u(IM2,k,j,i))),
                                   max_err[IM2]);
-          max_err[IM3] = std::max(static_cast<Real>(std::fabs(m3-phydro->u(IM3,k,j,i))),
+          max_err[IM3] = std::max(static_cast<Real>(std::abs(m3-phydro->u(IM3,k,j,i))),
                                   max_err[IM3]);
           if (NON_BAROTROPIC_EOS) {
             Real e0 = p0*(1 + gam*amp*sinkx*cosot);///gm1 + 0.5*m*m/den;
-            l1_err[IEN] += std::fabs(e0 - phydro->w(IEN,k,j,i));
+            l1_err[IEN] += std::abs(e0 - phydro->w(IEN,k,j,i));
             max_err[IEN] =
-                std::max(static_cast<Real>(std::fabs(e0 - phydro->w(IEN,k,j,i))),
+                std::max(static_cast<Real>(std::abs(e0 - phydro->w(IEN,k,j,i))),
                          max_err[IEN]);
           }
         }
       }
     }
-    pmb=pmb->next;
   }
 
   for (int i=0; i<(NHYDRO+NFIELD); ++i) {

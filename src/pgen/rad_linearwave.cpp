@@ -72,8 +72,11 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
   Real knum = 2.0 * PI;
 
 
-  MeshBlock *pmb = pblock;
-  while (pmb != NULL) {
+  MeshBlock *pmb = my_blocks(0);
+  for(int nb=0; nb<nblocal; ++nb){
+    pmb = my_blocks(nb);
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+      pmb->prad->CalculateMoment(pmb->prad->ir);
     //  Compute errors
     for (int k=pmb->ks; k<=pmb->ke; k++) {
     for (int j=pmb->js; j<=pmb->je; j++) {
@@ -111,7 +114,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
       }
       }
     }
-    pmb=pmb->next;
   }
 
   // normalize errors by number of cells

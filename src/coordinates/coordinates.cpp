@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file coordinates.cpp
-//  \brief implements functions for Coordinates abstract base class
+//! \brief implements functions for Coordinates abstract base class
 
 // C headers
 
@@ -22,7 +22,7 @@
 #include "coordinates.hpp"
 
 //----------------------------------------------------------------------------------------
-// Coordinates constructor: sets coordinates and coordinate spacing of cell FACES
+//! Coordinates constructor: sets coordinates and coordinate spacing of cell FACES
 
 Coordinates::Coordinates(MeshBlock *pmb, ParameterInput *pin, bool flag) :
     pmy_block(pmb), coarse_flag(flag), pm(pmb->pmy_mesh) {
@@ -740,7 +740,6 @@ void Coordinates::AddCoordTermsDivergence(
   return;
 }
 
-
 void Coordinates::AddCoordTermsDivergence(int flag,
                      const AthenaArray<Real> &u_cr1, AthenaArray<Real> &u_cr){
 
@@ -752,15 +751,11 @@ void Coordinates::AddCoordTermsDivergence(const AthenaArray<Real> &u_cr,
   
   return;
 }
-//----------------------------------------------------------------------------------------
-// Coordinate (Geometric) source term function
+
 void Coordinates::ConvertAngle(MeshBlock *pmb, const int nang, AthenaArray<Real> &mu) {
   return;
 }
 
-
-//----------------------------------------------------------------------------------------
-// Coordinate (Geometric) source term function
 void Coordinates::AxisDirection(int *axisx, int *axisy, int *axisz) {
   return;
 }
@@ -864,6 +859,14 @@ void Coordinates::GetGeometryPsi(Radiation *prad, const int k, const int j,
     g_psi(n) = 1.0;
   }
   
+}
+
+//----------------------------------------------------------------------------------------
+// Coordinate (Geometric) source term function for STS
+void Coordinates::AddCoordTermsDivergence_STS(
+    const Real dt, int stage, const AthenaArray<Real> *flux,
+    AthenaArray<Real> &u, AthenaArray<Real> &flux_div) {
+  return;
 }
 
 //----------------------------------------------------------------------------------------

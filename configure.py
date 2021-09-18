@@ -19,7 +19,6 @@
 #   -s                enable special relativity
 #   -g                enable general relativity
 #   -t                enable interface frame transformations for GR
-#   -shear            enable shearing periodic boundary conditions
 #   -debug            enable debug flags (-g -O0); override other compiler options
 #   -coverage         enable compiler-dependent code coverage flags
 #   -float            enable single precision (default is double)
@@ -30,7 +29,7 @@
 #   -fft              enable FFT (requires the FFTW library)
 #   --fftw_path=path  path to FFTW libraries (requires the FFTW library)
 #   --grav=xxx        use xxx as the self-gravity solver
-#   --cxx=xxx         use xxx as the C++ compiler
+#   --cxx=xxx         use xxx as the C++ compiler (works w/ or w/o -mpi)
 #   --ccmd=name       use name as the command to call the (non-MPI) C++ compiler
 #   --mpiccmd=name    use name as the command to call the MPI C++ compiler
 #   --gcovcmd=name    use name as the command to call the gcov utility
@@ -39,6 +38,7 @@
 #   --lib_path=path   use -Lpath when linking
 #   --lib=xxx         use -lxxx when linking
 #   -radiation        turn on radiation transport
+#   -implicit_radiation implicit radiation transport module
 #   -cr               enable cosmic ray transport
 #   -tc               enable explicit thermal conduction
 # ----------------------------------------------------------------------------------------
@@ -47,6 +47,7 @@
 import argparse
 import glob
 import re
+
 
 # Set template and output filenames
 makefile_input = 'Makefile.in'
@@ -101,7 +102,7 @@ parser.add_argument('--eos',
 # --flux=[name] argument
 parser.add_argument('--flux',
                     default='default',
-                    choices=['default', 'hlle', 'hllc', 'hlld', 'roe', 'llf'],
+                    choices=['default', 'hlle', 'hllc', 'lhllc', 'hlld', 'lhlld', 'roe', 'llf'], # noqa
                     help='select Riemann solver')
 
 # --nghost=[value] argument
@@ -144,36 +145,6 @@ parser.add_argument('-t',
                     default=False,
                     help='enable interface frame transformations for GR')
 
-# -shear argument
-parser.add_argument('-shear',
-                    action='store_true',
-                    default=False,
-                    help='enable shearing box')
-
-# -radiation argument
-parser.add_argument('-radiation',
-                    action='store_true',
-                    default=False,
-                    help='enable radiative transfer')
-
-# -radiation argument
-parser.add_argument('-implicit_radiation',
-                    action='store_true',
-                    default=False,
-                    help='enable radiative transfer')
-
-# -cosmic ray argument
-parser.add_argument('-cr',
-                    action='store_true',
-                    default=False,
-                    help='enable cosmic ray transport')
-                    
-# -thermal conduction argument
-parser.add_argument('-tc',
-                    action='store_true',
-                    default=False,
-                    help='enable thermal conduction')
-
 # -debug argument
 parser.add_argument('-debug',
                     action='store_true',
@@ -207,7 +178,7 @@ parser.add_argument('-omp',
 # --grav=[name] argument
 parser.add_argument('--grav',
                     default='none',
-                    choices=['none', 'fft', 'mg'],
+                    choices=['none', 'fft', 'mg', 'blockfft'],
                     help='select self-gravity solver')
 
 # -fft argument
@@ -243,6 +214,30 @@ parser.add_argument('--ali',
                     default='32',
                     help='set number of bytes in alignment')
 
+# -radiation argument
+parser.add_argument('-radiation',
+                    action='store_true',
+                    default=False,
+                    help='enable radiative transfer')
+
+# -radiation argument
+parser.add_argument('-implicit_radiation',
+                    action='store_true',
+                    default=False,
+                    help='enable radiative transfer')
+
+# -cosmic ray argument
+parser.add_argument('-cr',
+                    action='store_true',
+                    default=False,
+                    help='enable cosmic ray transport')
+                    
+# -thermal conduction argument
+parser.add_argument('-tc',
+                    action='store_true',
+                    default=False,
+                    help='enable thermal conduction')
+
 # The main choices for --cxx flag, using "ctype[-suffix]" formatting, where "ctype" is the
 # major family/suite/group of compilers and "suffix" may represent variants of the
 # compiler version and/or predefined sets of compiler options. The C++ compiler front ends
@@ -252,6 +247,7 @@ parser.add_argument('--ali',
 cxx_choices = [
     'g++',
     'g++-simd',
+    'icpx',
     'icpc',
     'icpc-debug',
     'icpc-phi',
@@ -266,6 +262,7 @@ cxx_choices = [
 def c_to_cpp(arg):
     arg = arg.replace('gcc', 'g++', 1)
     arg = arg.replace('icc', 'icpc', 1)
+    arg = arg.replace('icx', 'icpx', 1)
     if arg == 'bgxl' or arg == 'bgxlc':
         arg = 'bgxlc++'
 
@@ -282,7 +279,7 @@ parser.add_argument(
     default='g++',
     type=c_to_cpp,
     choices=cxx_choices,
-    help='select C++ compiler and default set of flags')
+    help='select C++ compiler and default set of flags (works w/ or w/o -mpi)')
 
 # --ccmd=[name] argument
 parser.add_argument('--ccmd',
@@ -348,8 +345,16 @@ if args['flux'] == 'hllc' and args['eos'] == 'isothermal':
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with isothermal EOS')
 if args['flux'] == 'hllc' and args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with MHD')
+if args['flux'] == 'lhllc' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhllc' and args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with MHD')
 if args['flux'] == 'hlld' and not args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLD flux can only be used with MHD')
+if args['flux'] == 'lhlld' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhlld' and not args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux can only be used with MHD')
 
 # Check relativity
 if args['s'] and args['g']:
@@ -374,9 +379,6 @@ if args['eos'][:8] == 'general/':
     if args['s'] or args['g']:
         raise SystemExit('### CONFIGURE ERROR: '
                          + 'General EOS is incompatible with relativity')
-    if args['b']:
-        raise SystemExit('### CONFIGURE ERROR: MHD compatability with General EOS'
-                         + ' has not yet been implemented')
     if args['flux'] not in ['hllc', 'hlld']:
         raise SystemExit('### CONFIGURE ERROR: '
                          + 'General EOS is incompatible with flux ' + args['flux'])
@@ -418,8 +420,6 @@ definitions['RSOLVER'] = makefile_options['RSOLVER_FILE'] = args['flux']
 
 # --nghost=[value] argument
 definitions['NUMBER_GHOST_CELLS'] = args['nghost']
-
-
 
 # --nscalars=[value] argument
 definitions['NUMBER_PASSIVE_SCALARS'] = args['nscalars']
@@ -481,6 +481,7 @@ if args['g']:
     if not args['t']:
         makefile_options['RSOLVER_FILE'] += '_no_transform'
 
+
 # -radiation argument
 if args['radiation']:
     definitions['RADIATION_ENABLED'] = '1'
@@ -503,12 +504,6 @@ if args['tc']:
     definitions['TC_ENABLED'] = '1'
 else:
     definitions['TC_ENABLED'] = '0'
-
-# -shear argument
-if args['shear']:
-    definitions['SHEARING_BOX'] = '1'
-else:
-    definitions['SHEARING_BOX'] = '0'
 
 # --cxx=[name] argument
 if args['cxx'] == 'g++':
@@ -533,6 +528,20 @@ if args['cxx'] == 'g++-simd':
         # -mprefer-avx128
         # -m64 (default)
     )
+    makefile_options['LINKER_FLAGS'] = ''
+    makefile_options['LIBRARY_FLAGS'] = ''
+if args['cxx'] == 'icpx':
+    # Next-gen LLVM-based Intel oneAPI DPC++/C++ Compiler
+    definitions['COMPILER_CHOICE'] = 'icpx'
+    definitions['COMPILER_COMMAND'] = makefile_options['COMPILER_COMMAND'] = 'icpx'
+    makefile_options['PREPROCESSOR_FLAGS'] = ''
+    # ICX drivers icx and icpx will accept ICC Classic Compiler options or Clang*/LLVM
+    # Compiler options
+    makefile_options['COMPILER_FLAGS'] = (
+      '-O3 -std=c++11 -ipo -xhost -qopenmp-simd '
+    )
+    # Currently unsupported, but "options to be supported" according to icpx
+    # -qnextgen-diag: '-inline-forceinline -qopt-prefetch=4 '
     makefile_options['LINKER_FLAGS'] = ''
     makefile_options['LIBRARY_FLAGS'] = ''
 if args['cxx'] == 'icpc':
@@ -571,7 +580,6 @@ if args['cxx'] == 'icpc-phi':
     )
     makefile_options['LINKER_FLAGS'] = ''
     makefile_options['LIBRARY_FLAGS'] = ''
-    definitions['ALI_LEN'] = '64'
 if args['cxx'] == 'cray':
     # Cray Compiling Environment 8.4 (2015-09-24) introduces C++11 feature completeness
     # (except "alignas"). v8.6 is C++14 feature-complete
@@ -639,6 +647,7 @@ if args['debug']:
     # Completely replace the --cxx= sets of default compiler flags, disable optimization,
     # and emit debug symbols in the compiled binaries
     if (args['cxx'] == 'g++' or args['cxx'] == 'g++-simd'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -664,6 +673,7 @@ if args['coverage']:
             ' -fno-inline -fno-exceptions -fno-elide-constructors'
             )
     if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-phi'):
         makefile_options['COMPILER_FLAGS'] += ' -O0 -prof-gen=srcpos'
     if (args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
@@ -695,6 +705,7 @@ else:
 if args['mpi']:
     definitions['MPI_OPTION'] = 'MPI_PARALLEL'
     if (args['cxx'] == 'g++' or args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-phi' or args['cxx'] == 'g++-simd'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -720,7 +731,8 @@ if args['omp']:
         # preprocessor. Must install LLVM's OpenMP runtime library libomp beforehand
         makefile_options['COMPILER_FLAGS'] += ' -Xpreprocessor -fopenmp'
         makefile_options['LIBRARY_FLAGS'] += ' -lomp'
-    if args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi':
+    if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
+            or args['cxx'] == 'icpx'):
         makefile_options['COMPILER_FLAGS'] += ' -qopenmp'
     if args['cxx'] == 'cray':
         makefile_options['COMPILER_FLAGS'] += ' -homp'
@@ -733,7 +745,8 @@ else:
     definitions['OPENMP_OPTION'] = 'NOT_OPENMP_PARALLEL'
     if args['cxx'] == 'cray':
         makefile_options['COMPILER_FLAGS'] += ' -hnoomp'
-    if args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi':
+    if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
+            or args['cxx'] == 'icpx'):
         # suppressed messages:
         #   3180: pragma omp not recognized
         makefile_options['COMPILER_FLAGS'] += ' -diag-disable 3180'
@@ -741,15 +754,23 @@ else:
 # --grav argument
 if args['grav'] == "none":
     definitions['SELF_GRAVITY_ENABLED'] = '0'
+    definitions['NGRAV_VARIABLES'] = '0'
 else:
     if args['grav'] == "fft":
         definitions['SELF_GRAVITY_ENABLED'] = '1'
         if not args['fft']:
             raise SystemExit(
                 '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
-
     if args['grav'] == "mg":
         definitions['SELF_GRAVITY_ENABLED'] = '2'
+
+    if args['grav'] == "blockfft":
+        definitions['SELF_GRAVITY_ENABLED'] = '3'
+        if not args['fft']:
+            raise SystemExit(
+                '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
+    definitions['NGRAV_VARIABLES'] = '1'
+
 
 # -fft argument
 makefile_options['MPIFFT_FILE'] = ' '
@@ -764,6 +785,7 @@ if args['fft']:
         makefile_options['LIBRARY_FLAGS'] += ' -lfftw3_omp'
     if args['mpi']:
         makefile_options['MPIFFT_FILE'] = ' $(wildcard src/fft/plimpton/*.cpp)'
+        makefile_options['MPIFFT_FILE'] += ' $(wildcard src/fft/fftmpi/*.cpp)'
     makefile_options['LIBRARY_FLAGS'] += ' -lfftw3'
 
 # -hdf5 argument
@@ -776,6 +798,7 @@ if args['hdf5']:
         makefile_options['LINKER_FLAGS'] += ' -L{0}/lib'.format(args['hdf5_path'])
     if (args['cxx'] == 'g++' or args['cxx'] == 'g++-simd'
             or args['cxx'] == 'cray' or args['cxx'] == 'icpc'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -853,7 +876,9 @@ self_grav_string = 'OFF'
 if args['grav'] == 'fft':
     self_grav_string = 'FFT'
 elif args['grav'] == 'mg':
-    self_grav_string = 'Multigrid'
+    self_grav_string = 'multigrid'
+elif args['grav'] == 'blockfft':
+    self_grav_string = 'FFT (using BlockFFTGravity)'
 
 print('Your Athena++ distribution has now been configured with the following options:')
 print('  Problem generator:          ' + args['prob'])
@@ -872,7 +897,6 @@ print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
 print('  Self-Gravity:               ' + self_grav_string)
 print('  Aligned Option:             ' + args['ali'])
 print('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF'))
-print('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF'))
 print('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF'))
 print('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF'))
 print('  Linker flags:               ' + makefile_options['LINKER_FLAGS'] + ' '
@@ -888,6 +912,8 @@ if args['hdf5']:
 print('  Compiler:                   ' + args['cxx'])
 print('  Compilation command:        ' + makefile_options['COMPILER_COMMAND'] + ' '
       + makefile_options['PREPROCESSOR_FLAGS'] + ' ' + makefile_options['COMPILER_FLAGS'])
+
+
 
 # write the configuration optitions into a log file
 flog=open('./configure.log', 'w')
@@ -908,7 +934,6 @@ flog.write('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF') + '
 flog.write('  Self-Gravity:               ' + self_grav_string + '\n')
 flog.write('  Aligned Option:             ' + args['ali'] + '\n')
 flog.write('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF') + '\n')
-flog.write('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF') + '\n')
 flog.write('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF') + '\n')
 flog.write('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF') + '\n')
 flog.write('  Linker flags:               ' + makefile_options['LINKER_FLAGS'] + ' '

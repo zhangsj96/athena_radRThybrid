@@ -2,10 +2,10 @@
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
-//======================================================================================
+//========================================================================================
 //! \file eos_table_class.cpp
-//  \brief Implements class EosTable for an EOS lookup table
-//======================================================================================
+//! \brief Implements class EosTable for an EOS lookup table
+//========================================================================================
 
 // C headers
 
@@ -28,12 +28,11 @@
 #include "interp_table.hpp"
 
 // Order of datafields for HDF5 EOS tables
-const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)",
-                           "asq*rho/h(h/rho,rho)"};
+const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)"};
 
 //----------------------------------------------------------------------------------------
 //! \fn void ReadBinaryTable(std::string fn, EosTable *peos_table)
-//  \brief Read data from binary EOS table and initialize interpolated table.
+//! \brief Read data from binary EOS table and initialize interpolated table.
 
 void ReadBinaryTable(std::string fn, EosTable *peos_table) {
   std::ifstream eos_file(fn.c_str(), std::ios::binary);
@@ -70,7 +69,7 @@ void ReadBinaryTable(std::string fn, EosTable *peos_table) {
 
 //----------------------------------------------------------------------------------------
 //! \fn void ReadBinaryTable(std::string fn, EosTable *peos_table, ParameterInput *pin)
-//  \brief Read data from HDF5 EOS table and initialize interpolated table.
+//! \brief Read data from HDF5 EOS table and initialize interpolated table.
 
 void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
 #ifndef HDF5OUTPUT
@@ -86,7 +85,7 @@ void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
       pin->GetOrAddString("hydro", "EOS_dens_lim_field", "LogDensLim");
   std::string espec_lim_field =
       pin->GetOrAddString("hydro", "EOS_espec_lim_field", "LogEspecLim");
-  HDF5TableLoader(fn.c_str(), &peos_table->table, 4, var_names,
+  HDF5TableLoader(fn.c_str(), &peos_table->table, 3, var_names,
                   espec_lim_field.c_str(), dens_lim_field.c_str());
   peos_table->table.GetSize(peos_table->nVar, peos_table->nEgas, peos_table->nRho);
   peos_table->table.GetX2lim(peos_table->logEgasMin, peos_table->logEgasMax);
@@ -112,7 +111,7 @@ void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
 
 //----------------------------------------------------------------------------------------
 //! \fn void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin)
-//  \brief Read data from HDF5 EOS table and initialize interpolated table.
+//! \brief Read data from HDF5 EOS table and initialize interpolated table.
 
 void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   bool read_ratios = pin->GetOrAddBoolean("hydro", "eos_read_ratios", true);
@@ -162,14 +161,4 @@ EosTable::EosTable(ParameterInput *pin) :
         << "Options are 'ascii', 'binary', and 'hdf5'." << std::endl;
     ATHENA_ERROR(msg);
   }
-}
-
-//----------------------------------------------------------------------------------------
-//! \fn Real EosTable::GetEosData(int kOut, Real var, Real rho)
-//  \brief Gets interpolated data from EOS table assuming 'var' has dimensions
-//         of energy per volume.
-Real EosTable::GetEosData(int kOut, Real var, Real rho) {
-  Real x1 = std::log10(rho * rhoUnit);
-  Real x2 = std::log10(var * EosRatios(kOut) * eUnit) - x1;
-  return std::pow((Real)10, table.interpolate(kOut, x2, x1));
 }

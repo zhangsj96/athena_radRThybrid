@@ -32,5 +32,5 @@ def run(**kwargs):
 # Analyze outputs
 def analyze():
 
-  print "Take a look at the hdf5 data!"
+  print("Take a look at the hdf5 data!")
   return True

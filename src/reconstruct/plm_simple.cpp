@@ -4,13 +4,13 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file plm_simple.cpp
-//  \brief  piecewise linear reconstruction for both uniform and non-uniform meshes
-//  Operates on the entire nx4 range of a single AthenaArray<Real> input (no MHD).
-//  No assumptions of hydrodynamic fluid variable input; no characteristic projection.
-
-// REFERENCES:
-// (Mignone) A. Mignone, "High-order conservative reconstruction schemes for finite volume
-// methods in cylindrical and spherical coordinates", JCP, 270, 784 (2014)
+//! \brief  piecewise linear reconstruction for both uniform and non-uniform meshes
+//! Operates on the entire nx4 range of a single AthenaArray<Real> input (no MHD).
+//! No assumptions of hydrodynamic fluid variable input; no characteristic projection.
+//!
+//! REFERENCES:
+//! - (Mignone) A. Mignone, "High-order conservative reconstruction schemes for finite
+//!   volume methods in cylindrical and spherical coordinates", JCP, 270, 784 (2014)
 //========================================================================================
 
 // C headers
@@ -26,8 +26,11 @@
 #include "../radiation/radiation.hpp"
 
 //----------------------------------------------------------------------------------------
-//! \fn Reconstruction::PiecewiseLinearX1()
-//  \brief
+//! \fn Reconstruction::PiecewiseLinearX1(const int k, const int j,
+//!                              const int il, const int iu,
+//!                              const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+//!                              AthenaArray<Real> &wl, AthenaArray<Real> &wr)
+//! \brief
 
 void Reconstruction::PiecewiseLinearX1(
     const int k, const int j, const int il, const int iu,
@@ -146,7 +149,7 @@ void Reconstruction::PiecewiseLinearX1(
     // coordinate with nonuniform mesh spacing or for any curvilinear coordinate spacing
     } else {
       for (int i=il; i<=iu; ++i) {
-      	  // variables independent n
+          // variables independent n
         // cf, cb -> 2 (uniform Cartesian mesh / original VL value) w/ vanishing curvature
         // (may not exactly hold for nonuniform meshes, but converges w/ smooth
         // nonuniformity)
@@ -195,9 +198,13 @@ void Reconstruction::PiecewiseLinearX1(
   return;
 }
 
+
 //----------------------------------------------------------------------------------------
-//! \fn Reconstruction::PiecewiseLinearX2()
-//  \brief
+//! \fn Reconstruction::PiecewiseLinearX2(const int k, const int j,
+//!                              const int il, const int iu,
+//!                              const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+//!                              AthenaArray<Real> &wl, AthenaArray<Real> &wr)
+//! \brief
 
 void Reconstruction::PiecewiseLinearX2(
     const int k, const int j, const int il, const int iu,
@@ -270,7 +277,6 @@ void Reconstruction::PiecewiseLinearX2(
     }
   }
 }
-
 
 
 void Reconstruction::PiecewiseLinearX2(
@@ -366,9 +372,13 @@ void Reconstruction::PiecewiseLinearX2(
   }// End array_order
 }
 
+
 //----------------------------------------------------------------------------------------
-//! \fn Reconstruction::PiecewiseLinearX3()
-//  \brief
+//! \fn Reconstruction::PiecewiseLinearX3(const int k, const int j,
+//!                              const int il, const int iu,
+//!                              const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+//!                              AthenaArray<Real> &wl, AthenaArray<Real> &wr)
+//! \brief
 
 void Reconstruction::PiecewiseLinearX3(
     const int k, const int j, const int il, const int iu,
@@ -426,7 +436,6 @@ void Reconstruction::PiecewiseLinearX3(
   // compute ql_(k+1/2) and qr_(k-1/2) using limited slopes
   Real dxp = (pco->x3f(k+1) - pco->x3v(k))/pco->dx3f(k);
   Real dxm = (pco->x3v(k  ) - pco->x3f(k))/pco->dx3f(k);
-
   for (int n=0; n<=nu; ++n) {
 #pragma omp simd simdlen(SIMD_WIDTH)
     for (int i=il; i<=iu; ++i) {
@@ -436,6 +445,8 @@ void Reconstruction::PiecewiseLinearX3(
   }
   return;
 }
+
+
 
 void Reconstruction::PiecewiseLinearX3(
     const int k, const int j, const int il, const int iu,
@@ -637,3 +648,4 @@ void Reconstruction::PiecewiseLinearPsi(
 
   return;
 }
+

@@ -64,12 +64,13 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 { 
   // calculate the anaysis solution and compare
   //find the time, going through all the mesh block
-  MeshBlock *pmb = pblock;
+  MeshBlock *pmb = my_blocks(0);
   Real vmax = pmb->pcr->vmax;
   Real sum_error=0.0;
   int num_cell=0;
   Real diff_coef=vmax/(3.0*sigma);
-  while(pmb != nullptr){
+  for(int nb=0; nb<nblocal; ++nb){  
+    pmb=my_blocks(nb);
     int ks=pmb->ks; int ke=pmb->ke; int js=pmb->js; int je=pmb->je;
     int is=pmb->is; int ie=pmb->ie;
     for(int k=ks; k<=ke; ++k){
@@ -91,7 +92,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
       }// end j
     }// end k
 
-    pmb=pmb->next;
+
     
   }
 

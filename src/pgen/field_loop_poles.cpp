@@ -3,12 +3,12 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file field_loop_poles.c
-//  \brief Advection of a field loop THROUGH the poles in spherical_polar coordinates.
-//
-//  Originally developed by ZZ.  Sets up constant uniform-density flow in x-direction
-//  through poles, and follows advection of loop.  Set xz>0 (xz<0) for loop through
-//  upper (lower) pole.  Works in 2D and 3D.
+//! \file field_loop_poles.cpp
+//! \brief Advection of a field loop THROUGH the poles in spherical_polar coordinates.
+//!
+//! Originally developed by ZZ.  Sets up constant uniform-density flow in x-direction
+//! through poles, and follows advection of loop.  Set xz>0 (xz<0) for loop through
+//! upper (lower) pole.  Works in 2D and 3D.
 //========================================================================================
 
 // C headers
@@ -65,9 +65,9 @@ int RefinementCondition(MeshBlock *pmb);
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
-//  \brief Function to initialize problem-specific data in mesh class.  Can also be used
-//  to initialize variables which are global to (and therefore can be passed to) other
-//  functions in this file.  Called in Mesh constructor.
+//! \brief Function to initialize problem-specific data in mesh class.  Can also be used
+//! to initialize variables which are global to (and therefore can be passed to) other
+//! functions in this file.  Called in Mesh constructor.
 //========================================================================================
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -112,7 +112,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 //========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//  \brief Initializes field loop advection through pole.
+//! \brief Initializes field loop advection through pole.
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
@@ -320,17 +320,17 @@ Real A3(const Real x1, const Real x2, const Real x3) {
 Real A2(const Real x1, const Real x2, const Real x3) {
   Real a2=0.0;
   Real az=0.0;
-  Real x=x1*std::fabs(std::sin(x2))*std::cos(x3);
-  Real y=x1*std::fabs(std::sin(x2))*std::sin(x3);
+  Real x=x1*std::abs(std::sin(x2))*std::cos(x3);
+  Real y=x1*std::abs(std::sin(x2))*std::sin(x3);
   if (x2<0.0||x2>PI) {
     x=-x;
     y=-y;
   }
   Real z=x1*std::cos(x2);
-  if (std::sqrt(SQR(x-xc)+SQR(y-yc))<=0.5 && std::fabs(z-zc)<0.2) {
+  if (std::sqrt(SQR(x-xc)+SQR(y-yc))<=0.5 && std::abs(z-zc)<0.2) {
     az=b0*(0.5-std::sqrt(SQR(x-xc)+SQR(y-yc)));
   }
-  a2=-az*std::fabs(std::sin(x2));
+  a2=-az*std::abs(std::sin(x2));
   return a2;
 }
 
@@ -340,14 +340,14 @@ Real A2(const Real x1, const Real x2, const Real x3) {
 Real A1(const Real x1, const Real x2, const Real x3) {
   Real a1=0.0;
   Real az=0.0;
-  Real x=x1*std::fabs(std::sin(x2))*std::cos(x3);
-  Real y=x1*std::fabs(std::sin(x2))*std::sin(x3);
+  Real x=x1*std::abs(std::sin(x2))*std::cos(x3);
+  Real y=x1*std::abs(std::sin(x2))*std::sin(x3);
   if (x2<0.0||x2>PI) {
     x=-x;
     y=-y;
   }
   Real z=x1*std::cos(x2);
-  if (std::sqrt(SQR(x-xc)+SQR(y-yc))<=0.5 && std::fabs(z-zc)<0.2) {
+  if (std::sqrt(SQR(x-xc)+SQR(y-yc))<=0.5 && std::abs(z-zc)<0.2) {
     az=b0*(0.5-std::sqrt(SQR(x-xc)+SQR(y-yc)));
   }
   a1=az*std::cos(x2);
@@ -356,7 +356,7 @@ Real A1(const Real x1, const Real x2, const Real x3) {
 } // namespace
 
 //----------------------------------------------------------------------------------------
-//!\f: User-defined boundary Conditions: LoopInnerX1
+//! \brief: User-defined boundary Conditions: LoopInnerX1
 
 void LoopInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                  Real time, Real dt,
@@ -408,7 +408,7 @@ void LoopInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceF
 }
 
 //----------------------------------------------------------------------------------------
-//!\f: User-defined boundary Conditions: LoopOuterX1
+//! \brief: User-defined boundary Conditions: LoopOuterX1
 
 void LoopOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                  Real time, Real dt,
@@ -460,7 +460,7 @@ void LoopOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceF
 }
 
 //----------------------------------------------------------------------------------------
-//!\f: User-defined boundary Conditions: LoopInnerX2
+//! \brief: User-defined boundary Conditions: LoopInnerX2
 
 void LoopInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                  Real time, Real dt,
@@ -512,7 +512,7 @@ void LoopInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceF
 }
 
 //----------------------------------------------------------------------------------------
-//!\f: User-defined boundary Conditions: LoopOuterX2
+//! \brief: User-defined boundary Conditions: LoopOuterX2
 
 void LoopOuterX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                  Real time, Real dt,

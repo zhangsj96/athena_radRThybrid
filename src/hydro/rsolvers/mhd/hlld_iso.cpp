@@ -4,11 +4,11 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file hlld_iso.cpp
-//  \brief HLLD Riemann solver for isothermal MHD.
-//
-// REFERENCES:
-// - A. Mignone, "A simple and accurate Riemann solver for isothermal MHD", JPC, 225,
-//   1427 (2007)
+//! \brief HLLD Riemann solver for isothermal MHD.
+//!
+//! REFERENCES:
+//! - A. Mignone, "A simple and accurate Riemann solver for isothermal MHD", JPC, 225,
+//!   1427 (2007)
 
 // C headers
 
@@ -31,7 +31,8 @@ struct Cons1D {
 #define SMALL_NUMBER 1.0e-8
 
 //----------------------------------------------------------------------------------------
-//! \fn
+//! \fn void Hydro::RiemannSolver
+//! \brief The HLLD Riemann solver for isothermal MHD
 
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, const AthenaArray<Real> &bx,
@@ -139,8 +140,8 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     Real mxhll = (spd[4]*ur.mx - spd[0]*ul.mx - fr.mx + fl.mx)*idspd;
 
     // S*_L and S*_R from Mignone eqn. (29)
-    spd[1] = ustar - std::fabs(bxi)/sqrtdhll;
-    spd[3] = ustar + std::fabs(bxi)/sqrtdhll;
+    spd[1] = ustar - std::abs(bxi)/sqrtdhll;
+    spd[3] = ustar + std::abs(bxi)/sqrtdhll;
 
     //--- Step 5. Compute intermediate states
 
@@ -149,7 +150,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     ulst.mx = mxhll; // eqn. (24) of Mignone
 
     Real tmp = (spd[0]-spd[1])*(spd[0]-spd[3]);
-    if (std::fabs(spd[0]-spd[1]) < (SMALL_NUMBER)*cs) {
+    if (std::abs(spd[0]-spd[1]) < (SMALL_NUMBER)*cs) {
       // degenerate case described below eqn. (39)
       ulst.my = ul.my;
       ulst.mz = ul.mz;
@@ -170,7 +171,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     urst.mx = mxhll; // eqn. (24) of Mignone
 
     tmp = (spd[4]-spd[1])*(spd[4]-spd[3]);
-    if (std::fabs(spd[4]-spd[3]) < (SMALL_NUMBER)*cs) {
+    if (std::abs(spd[4]-spd[3]) < (SMALL_NUMBER)*cs) {
       // degenerate case described below eqn. (39)
       urst.my = ur.my;
       urst.mz = ur.mz;
