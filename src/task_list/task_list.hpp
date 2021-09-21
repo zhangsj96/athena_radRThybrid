@@ -212,6 +212,12 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveRad(MeshBlock *pmb, int stage);
   TaskStatus SetBoundariesRad(MeshBlock *pmb, int stage);
   TaskStatus RadMomOpacity(MeshBlock *pmb, int stage);
+  // shearing box
+  TaskStatus SendRadFluxShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveRadFluxShear(MeshBlock *pmb, int stage);
+  TaskStatus SendRadShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveRadShear(MeshBlock *pmb, int stage);
+
 
   // Tasks functionc for cosmicr rays
   TaskStatus CalculateCRTCFlux(MeshBlock *pmb, int stage);
@@ -376,6 +382,11 @@ const TaskID CALC_FLDORB(67);
 
 const TaskID CRTC_OPACITY(69);
 const TaskID RAD_MOMOPACITY(70);
+
+const TaskID SEND_RADFLXSH(71);
+const TaskID RECV_RADFLXSH(72);
+const TaskID SEND_RADSH(73);
+const TaskID RECV_RADSH(74);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

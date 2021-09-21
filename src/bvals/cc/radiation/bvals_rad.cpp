@@ -18,6 +18,7 @@
 #include "../../../mesh/mesh.hpp"
 #include "../../../coordinates/coordinates.hpp"
 #include "../../../globals.hpp"
+#include "../../../radiation/radiation.hpp"
 #include "bvals_rad.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -34,6 +35,27 @@ RadBoundaryVariable::RadBoundaryVariable(MeshBlock *pmb,
     // radiation specific functions need to be defined here
 
     azimuthal_shift_rad_.NewAthenaArray(pmb->ke + NGHOST + 2,nu_+1);
+    ir_cm_.NewAthenaArray(pmb->prad->n_fre_ang);
+    if (pbval_->shearing_box != 0) {
+      int pnum = pmb->block_size.nx2+2*NGHOST+1;
+      pflux_.NewAthenaArray(pnum,pmb->prad->n_fre_ang);
+
+      int nc2 = pmb->ncells2;
+      int nc3 = pmb->ncells3;
+      int nx3 = pmb->block_size.nx3;
+      int &xgh = pbval_->xgh_;
+      for (int upper=0; upper<2; upper++) {
+        if (pbval_->is_shear[upper]) {
+          shear_cc_[upper].NewAthenaArray(nc3, NGHOST, nc2+2*xgh+1,nu_+1);
+          shear_var_flx_[upper].NewAthenaArray(nc3, nc2, nu_+1);
+          shear_map_flx_[upper].NewAthenaArray(nc3, 1, nc2+2*xgh+1, nu_+1);
+
+        } // end "if is a shearing boundary"
+
+
+      }
+
+    }// end if shearing
 
 }
 

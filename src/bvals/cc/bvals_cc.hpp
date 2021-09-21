@@ -79,7 +79,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
   //!@{
   //! BoundaryBuffer:
   void SendFluxCorrection() override;
-  bool ReceiveFluxCorrection() override;
+   bool ReceiveFluxCorrection() override;
   //!@}
 
   //!@{

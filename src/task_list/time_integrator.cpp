@@ -940,10 +940,16 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     if (radiation_flag) {
       AddTask(CALC_RADFLX,NONE);
-      if (pm->multilevel) { // SMR or AMR
+      if (pm->multilevel || SHEAR_PERIODIC) { // SMR or AMR or shear periodic 
         AddTask(SEND_RADFLX,CALC_RADFLX);
         AddTask(RECV_RADFLX,CALC_RADFLX);
-        AddTask(INT_RAD,RECV_RADFLX);
+        if(SHEAR_PERIODIC){
+          AddTask(SEND_RADFLXSH,RECV_RADFLX);
+          AddTask(RECV_RADFLXSH,(SEND_RADFLX|RECV_RADFLX));
+          AddTask(INT_RAD,RECV_RADFLXSH);
+        }else{
+          AddTask(INT_RAD,RECV_RADFLX);
+        }
       } else {
         AddTask(INT_RAD, CALC_RADFLX);
       }
@@ -997,7 +1003,16 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     if (SHEAR_PERIODIC) {
       AddTask(SEND_HYDSH,SETB_HYD);
       AddTask(RECV_HYDSH,SEND_HYDSH);
+
+      if(radiation_flag){
+        AddTask(SEND_RADSH,SETB_RAD);
+        // shearing periodic boundary of radiation requires 
+        // shearing velocity to be set first
+        AddTask(RECV_RADSH,SEND_RADSH|RECV_HYDSH);
+      }
+
     }
+ 
 
 
     if (NSCALARS > 0) {
@@ -1501,7 +1516,27 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::RadMomOpacity);
     task_list_[ntasks].lb_time = true;
-  } else if (id == CALC_CRTCFLX){
+  } else if (id == SEND_RADFLXSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SendRadFluxShear);
+    task_list_[ntasks].lb_time = true;
+  }else if (id == RECV_RADFLXSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::ReceiveRadFluxShear);
+    task_list_[ntasks].lb_time = false;
+  }else if (id == SEND_RADSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SendRadShear);
+    task_list_[ntasks].lb_time = true;
+  }else if (id == RECV_RADSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::ReceiveRadShear);
+    task_list_[ntasks].lb_time = false;
+  }else if (id == CALC_CRTCFLX){
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::CalculateCRTCFlux);
@@ -2774,6 +2809,67 @@ TaskStatus TimeIntegratorTaskList::RadMomOpacity(MeshBlock *pmb, int stage) {
   return TaskStatus::fail;
 }
 
+
+//----------------------------------------------------------------------------------------
+//! Functions to communicate Field variables between MeshBlocks with shear
+
+TaskStatus TimeIntegratorTaskList::SendRadFluxShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    if (stage_wghts[stage-1].main_stage ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+      pmb->prad->rad_bvar.SendFluxShearingBoxBoundaryBuffers();
+    }
+    return TaskStatus::success;
+  }
+  return TaskStatus::fail;
+}
+
+
+TaskStatus TimeIntegratorTaskList::ReceiveRadFluxShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    if (stage_wghts[stage-1].main_stage ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+      if (pmb->prad->rad_bvar.ReceiveFluxShearingBoxBoundaryBuffers()) {
+        pmb->prad->rad_bvar.SetFluxShearingBoxBoundaryBuffers();
+        return TaskStatus::success;
+      } else {
+        return TaskStatus::fail;
+      }
+    } else {
+      return TaskStatus::success;
+    }
+  }
+  return TaskStatus::fail;
+}
+
+
+TaskStatus TimeIntegratorTaskList::SendRadShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    pmb->prad->rad_bvar.SendShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  return TaskStatus::success;
+}
+
+
+TaskStatus TimeIntegratorTaskList::ReceiveRadShear(MeshBlock *pmb, int stage) {
+  bool ret;
+  ret = false;
+  if (stage <= nstages) {
+    ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  if (ret) {
+    pmb->prad->rad_bvar.SetShearingBoxBoundaryBuffers();
+    return TaskStatus::success;
+  } else {
+    return TaskStatus::fail;
+  }
+}
 
 //----------------------------------------------------------------------------------
 //function for cosmic ray transport

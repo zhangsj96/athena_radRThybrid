@@ -211,7 +211,7 @@ void RadBoundaryVariable::SetFluxBoundarySameLevel(Real *buf,
   MeshBlock *pmb = pmy_block_;
   int p = 0;
   int i;
-/*  
+  
   if (nb.fid == BoundaryFace::inner_x1) {
     i = pmb->is;
     for (int k=pmb->ks; k<=pmb->ke; k++) {
@@ -231,7 +231,7 @@ void RadBoundaryVariable::SetFluxBoundarySameLevel(Real *buf,
       }
     }
   }
-  */
+  
   return;
 }
 
@@ -290,52 +290,3 @@ void RadBoundaryVariable::SetFluxBoundaryFromFiner(Real *buf,
   return;
 }
 
-//----------------------------------------------------------------------------------------
-//! \fn bool CellCenteredBoundaryVariable::ReceiveFluxCorrection()
-//! \brief Receive surface flux buffers
-
-bool RadBoundaryVariable::ReceiveFluxCorrection() {
-  MeshBlock *pmb = pmy_block_;
-  bool flag=true;
-
-  for (int n=0; n<pbval_->nneighbor; n++) {
-    NeighborBlock& nb = pbval_->neighbor[n];
-    if (nb.ni.type != NeighborConnect::face) break;
-    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::completed) continue;
-    // receive data
-    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::waiting) {
-      if (nb.snb.rank == Globals::my_rank) {// on the same process
-        flag = false;
-        continue;
-      }
-#ifdef MPI_PARALLEL
-      else { // NOLINT
-        int test;
-        // probe MPI communications.  This is a bit of black magic that seems to promote
-        // communications to top of stack and gets them to complete more quickly
-        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
-                   MPI_STATUS_IGNORE);
-        MPI_Test(&(bd_var_flcor_.req_recv[nb.bufid]), &test, MPI_STATUS_IGNORE);
-        if (!static_cast<bool>(test)) {
-          flag = false;
-          continue;
-        }
-        bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::arrived;
-      }
-#endif
-    }
-    // set data
-    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::arrived) {
-      if (nb.snb.level==pmb->loc.level)      // from same level
-        SetFluxBoundarySameLevel(bd_var_flcor_.recv[nb.bufid],nb);
-      else if (nb.snb.level>pmb->loc.level)  // from finer
-        SetFluxBoundaryFromFiner(bd_var_flcor_.recv[nb.bufid],nb);
-      // else                                   // from coarser
-      //   nothing to do
-
-      bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::completed;
-    }
-  }
-
-  return flag;
-}

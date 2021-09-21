@@ -1564,6 +1564,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 
         if (shear_periodic && orbital_advection==0) {
           pmb->phydro->hbvar.AddHydroShearForInit();
+          if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+            pmb->prad->rad_bvar.AddRadShearForInit();
         }
         pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                    pbval->bvars_main_int);
@@ -2008,6 +2010,8 @@ void Mesh::CorrectMidpointInitialCondition() {
       pmb->ptc->tc_bvar.ReceiveAndSetBoundariesWithWait();    
     if (shear_periodic && orbital_advection==0) {
       pmb->phydro->hbvar.AddHydroShearForInit();
+    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+      pmb->prad->rad_bvar.AddRadShearForInit();
     }
     pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                pbval->bvars_main_int);

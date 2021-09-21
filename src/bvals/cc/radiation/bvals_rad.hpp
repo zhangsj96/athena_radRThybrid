@@ -33,14 +33,16 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
 
 // functions unique implementation to radiation class
   void SendFluxCorrection() override;
-  bool ReceiveFluxCorrection() override;
+
 
   void SetBoundaries() override;
 
 
-
-
-
+// function for shearing box
+  void AddRadShearForInit();
+  void ShearQuantities(AthenaArray<Real> &shear_cc_, bool upper) override;
+  void SetShearingBoxBoundaryBuffers();
+  void SetFluxShearingBoxBoundaryBuffers();
 
   // BoundaryPhysics: need to rotate the intensity
   void ReflectInnerX1(Real time, Real dt,
@@ -130,7 +132,24 @@ private:
 
   void PolarBoundarySingleAzimuthalBlock() override;
 
+  // shearing box functions
+  void LoadShearingBoxBoundarySameLevel(AthenaArray<Real> &src, Real *buf, int nb);
+  void SetShearingBoxBoundarySameLevel(AthenaArray<Real> &src,
+                                       Real *buf, const int nb);
+  void LoadFluxShearingBoxBoundarySameLevel(AthenaArray<Real> &src,
+                                            Real *buf, int nb);
+  void SetFluxShearingBoxBoundarySameLevel(AthenaArray<Real> &src,
+                                           Real *buf, const int nb);
+
+  // function for shearing box
+
+#ifdef MPI_PARALLEL
+  int rad_phys_id_, rad_flx_phys_id_;
+#endif
   AthenaArray<Real> shear_rad_var_flx_[2];
+  AthenaArray<Real> shear_var_flx_[2];
+  AthenaArray<Real> shear_map_flx_[2];
+  AthenaArray<Real> ir_cm_, pflux_; // co-moving frame specific inteisites 
 
 
 };
