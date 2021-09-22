@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "jeans"
+#define PROBLEM_GENERATOR "ssheet_rad"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
@@ -43,10 +43,10 @@
 #define STS_ENABLED 0
 
 // include self gravity? default=0 (false)
-#define SELF_GRAVITY_ENABLED 3
+#define SELF_GRAVITY_ENABLED 0
 
 // include radiative transfer? default=0 (false)
-#define RADIATION_ENABLED 0
+#define RADIATION_ENABLED 1
 
 #define IM_RADIATION_ENABLED 0
 
@@ -75,7 +75,7 @@
 // configure.py dict(definitions) Boolean string macros:
 // (these options have the latter (false) option as defaults, unless noted otherwise)
 // make use of FFT? (FFT or NO_FFT)
-#define FFT
+#define NO_FFT
 
 // MPI parallelization (MPI_PARALLEL or NOT_MPI_PARALLEL)
 #define MPI_PARALLEL
@@ -98,7 +98,7 @@
 // compiler options
 #define COMPILED_WITH "g++"
 #define COMPILER_COMMAND "mpicxx"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lfftw3 -lhdf5" // NOLINT
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)
@@ -108,7 +108,7 @@
 #define NWAVE 5
 #define NSCALARS 0
 #define NGHOST 2
-#define NGRAV 1
+#define NGRAV 0
 #define NCR 4   // cosmic ray transport module variable
 #define NTC 4   // thermal conduction variable
 #define MAX_NSTAGE 6     // maximum number of stages per cycle for time-integrator

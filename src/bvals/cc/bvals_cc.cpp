@@ -158,12 +158,55 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
   // cc_phys_id_ = pbval_->ReserveTagVariableIDs(1);
   cc_phys_id_ = pbval_->bvars_next_phys_id_;
 #endif
-  if (pmy_mesh_->multilevel) { // SMR or AMR
+  if ((pmy_mesh_->multilevel)
+      || (pbval_->shearing_box != 0)) { // SMR or AMR or SHEARING_BOX
     InitBoundaryData(bd_var_flcor_, BoundaryQuantity::cc_flcor);
 #ifdef MPI_PARALLEL
     cc_flx_phys_id_ = cc_phys_id_ + 1;
 #endif
   }
+
+
+  if (pbval_->shearing_box != 0) {
+#ifdef MPI_PARALLEL
+    shear_cc_phys_id_ = cc_phys_id_ + 2;
+    shear_flx_phys_id_ = shear_cc_phys_id_ + 1;
+#endif
+    int nc2 = pmb->ncells2;
+    int nc3 = pmb->ncells3;
+    int nx3 = pmb->block_size.nx3;
+    int &xgh = pbval_->xgh_;
+    for (int upper=0; upper<2; upper++) {
+      if (pbval_->is_shear[upper]) {
+        shear_cc_[upper].NewAthenaArray(nc3, NGHOST, nc2+2*xgh+1,nu_+1);
+        shear_var_flx_[upper].NewAthenaArray(nc3, nc2,nu_+1);
+        shear_map_flx_[upper].NewAthenaArray(nc3, 1, nc2+2*xgh+1,nu_+1);
+
+        // TODO(KGF): the rest of this should be a part of InitBoundaryData()
+
+        int bsize = pmb->block_size.nx2*pbval_->ssize_*(nu_ + 1);
+        int fsize = pmb->block_size.nx2*nx3*(nu_ + 1);
+        for (int n=0; n<4; n++) {
+          shear_bd_var_[upper].send[n] = new Real[bsize];
+          shear_bd_var_[upper].recv[n] = new Real[bsize];
+          shear_bd_var_[upper].flag[n] = BoundaryStatus::waiting;
+#ifdef MPI_PARALLEL
+          shear_bd_var_[upper].req_send[n] = MPI_REQUEST_NULL;
+          shear_bd_var_[upper].req_recv[n] = MPI_REQUEST_NULL;
+#endif
+        }
+        for (int n=0; n<3; n++) {
+          shear_bd_flux_[upper].send[n] = new Real[fsize];
+          shear_bd_flux_[upper].recv[n] = new Real[fsize];
+          shear_bd_flux_[upper].flag[n] = BoundaryStatus::waiting;
+#ifdef MPI_PARALLEL
+          shear_bd_flux_[upper].req_send[n] = MPI_REQUEST_NULL;
+          shear_bd_flux_[upper].req_recv[n] = MPI_REQUEST_NULL;
+#endif
+        }
+      } // end "if is a shearing boundary"
+    }  // end loop over inner, outer shearing boundaries
+  } // end shearing box component  
 
 }
 

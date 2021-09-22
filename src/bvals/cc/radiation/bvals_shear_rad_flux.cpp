@@ -130,7 +130,7 @@ void RadBoundaryVariable::SetFluxShearingBoxBoundaryBuffers() {
   MeshBlock *pmb = pmy_block_;
   Mesh *pmesh = pmb->pmy_mesh;
   OrbitalAdvection *porb = pmb->porb;
-  AthenaArray<Real> &pflux = pbval_->pflux_;
+  AthenaArray<Real> &pflux = pflux_;
   int &xgh = pbval_->xgh_;
   int &xorder = pbval_->xorder_;
   int is = pmb->is, ie = pmb->ie;
@@ -163,3 +163,42 @@ void RadBoundaryVariable::SetFluxShearingBoxBoundaryBuffers() {
   }
   return;
 }
+
+
+bool RadBoundaryVariable::ReceiveFluxShearingBoxBoundaryBuffers() {
+  bool flag[2]{true, true};
+  int nb_offset[2]{0, 3};
+  for (int upper=0; upper<2; upper++) {
+    if (pbval_->is_shear[upper]) { // check inner boundaries
+      for (int n=0; n<3; n++) {
+        if (shear_bd_flux_[upper].flag[n] == BoundaryStatus::completed) continue;
+        if (shear_bd_flux_[upper].flag[n] == BoundaryStatus::waiting) {
+          // on the same process
+          if (pbval_->sb_flux_data_[upper].recv_neighbor[n].rank == Globals::my_rank) {
+            flag[upper] = false;
+            continue;
+          } else { // MPI boundary
+#ifdef MPI_PARALLEL
+            int test;
+            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
+                       MPI_STATUS_IGNORE);
+            MPI_Test(&shear_bd_flux_[upper].req_recv[n], &test, MPI_STATUS_IGNORE);
+            if (!static_cast<bool>(test)) {
+              flag[upper] = false;
+              continue;
+            }
+            shear_bd_flux_[upper].flag[n] = BoundaryStatus::arrived;
+#endif
+          }
+        }
+        // set var if boundary arrived
+        SetFluxShearingBoxBoundarySameLevel(shear_map_flx_[upper],
+                                            shear_bd_flux_[upper].recv[n],
+                                            n+nb_offset[upper]);
+        shear_bd_flux_[upper].flag[n] = BoundaryStatus::completed; // completed
+      }  // loop over recv[0] to recv[2]
+    }  // if boundary is shearing
+  }  // loop over inner/outer boundaries
+  return (flag[0] && flag[1]);
+}
+

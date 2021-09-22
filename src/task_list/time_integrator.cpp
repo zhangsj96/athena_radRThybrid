@@ -1095,8 +1095,11 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
           }
         }
 
-        if(radiation_flag)
+        if(radiation_flag){
           setb=(setb|SEND_RAD|SETB_RAD);
+          if(SHEAR_PERIODIC)
+            setb=(setb|RECV_RADSH);
+        }
 
         if(CR_ENABLED+TC_ENABLED)
           setb=(setb|SEND_CRTC|SETB_CRTC);
@@ -1139,8 +1142,11 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
           }
         }
 
-        if(radiation_flag)
+        if(radiation_flag){
           setb=(setb|SEND_RAD|SETB_RAD);
+          if(SHEAR_PERIODIC)
+            setb=(setb|RECV_RADSH);
+        }
 
         if(CR_ENABLED+TC_ENABLED)
           setb=(setb|SEND_CRTC|SETB_CRTC);
@@ -1170,6 +1176,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     TaskID before_userwork = PHY_BVAL;
     if(radiation_flag){
       before_bval = (before_bval|SETB_RAD|SEND_RAD);
+      if(SHEAR_PERIODIC)
+        before_bval = (before_bval|RECV_RADSH);
+      
       before_userwork = (before_userwork|RAD_MOMOPACITY);
     }
 
@@ -2815,9 +2824,7 @@ TaskStatus TimeIntegratorTaskList::RadMomOpacity(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::SendRadFluxShear(MeshBlock *pmb, int stage) {
   if (stage <= nstages) {
-    if (stage_wghts[stage-1].main_stage ||
-        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
-        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+    if (stage_wghts[stage-1].main_stage) {
       pmb->prad->rad_bvar.SendFluxShearingBoxBoundaryBuffers();
     }
     return TaskStatus::success;
@@ -2828,9 +2835,7 @@ TaskStatus TimeIntegratorTaskList::SendRadFluxShear(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::ReceiveRadFluxShear(MeshBlock *pmb, int stage) {
   if (stage <= nstages) {
-    if (stage_wghts[stage-1].main_stage ||
-        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
-        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+    if (stage_wghts[stage-1].main_stage){
       if (pmb->prad->rad_bvar.ReceiveFluxShearingBoxBoundaryBuffers()) {
         pmb->prad->rad_bvar.SetFluxShearingBoxBoundaryBuffers();
         return TaskStatus::success;

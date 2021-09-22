@@ -249,7 +249,7 @@ void RadBoundaryVariable::SetShearingBoxBoundaryBuffers() {
   Mesh *pmesh = pmb->pmy_mesh;
   OrbitalAdvection *porb = pmb->porb;
   AthenaArray<Real> &var = *var_cc;
-  AthenaArray<Real> &pflux = pbval_->pflux_;
+  AthenaArray<Real> &pflux = pflux_;
   int &xgh = pbval_->xgh_;
   int &xorder = pbval_->xorder_;
   int ib[2]{pmb->is - NGHOST, pmb->ie + 1};

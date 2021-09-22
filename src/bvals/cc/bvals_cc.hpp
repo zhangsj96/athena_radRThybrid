@@ -200,6 +200,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
 
 
   friend class ParticleMeshBoundaryVariable;
+  friend class RadBoundaryVariable;
 };
 
 #endif // BVALS_CC_BVALS_CC_HPP_

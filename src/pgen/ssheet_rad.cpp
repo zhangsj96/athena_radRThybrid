@@ -30,6 +30,8 @@
 #include "../eos/eos.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
+#include "../radiation/radiation.hpp"
+#include "../radiation/integrators/rad_integrators.hpp"
 #include "../mesh/mesh.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../outputs/outputs.hpp"
@@ -49,6 +51,8 @@ int ipert; // initial pattern
 Real qshear, Omega0;
 Real hst_dt, hst_next_time;
 bool error_output;
+
+Real sigma0 = 10.0;
 
 Real Historydvyc(MeshBlock *pmb, int iout);
 Real Historyvxs(MeshBlock *pmb, int iout);
@@ -167,6 +171,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ku = ke + NGHOST;
   }
 
+  AthenaArray<Real> ir_cm;
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+    ir_cm.NewAthenaArray(prad->n_fre_ang);
+
   if (gid == 0) {
     std::cout << "iso_cs = " << iso_cs << std::endl;
     std::cout << "d0 = " << d0 << std::endl;
@@ -241,9 +249,35 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
                                                SQR(phydro->u(IM3,k,j,i))
                                               ) / phydro->u(IDN,k,j,i);
         }
+
+        if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
+          Real gast = rp/rd;
+          Real vx = phydro->u(IM1,k,j,i)/rd;
+          Real vy = phydro->u(IM2,k,j,i)/rd;
+          Real vz = phydro->u(IM3,k,j,i)/rd;
+          for(int n=0; n<prad->n_fre_ang; ++n)
+            ir_cm(n) = gast * gast * gast * gast;
+
+          Real *ir_lab = &(prad->ir(k,j,i,0));
+          Real *mux = &(prad->mu(0,k,j,i,0));
+          Real *muy = &(prad->mu(1,k,j,i,0));
+          Real *muz = &(prad->mu(2,k,j,i,0));
+
+          prad->pradintegrator->ComToLab(vx,vy,vz,mux,muy,muz,ir_cm,ir_lab);;
+
+          prad->sigma_s(k,j,i,0) = 0.0;
+          prad->sigma_a(k,j,i,0) = sigma0;
+          prad->sigma_ae(k,j,i,0) = sigma0;
+
+        }
+
       }
     }
   }
+
+
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+    ir_cm.DeleteAthenaArray();
 
   return;
 }

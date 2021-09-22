@@ -43,6 +43,7 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
   void ShearQuantities(AthenaArray<Real> &shear_cc_, bool upper) override;
   void SetShearingBoxBoundaryBuffers();
   void SetFluxShearingBoxBoundaryBuffers();
+  bool ReceiveFluxShearingBoxBoundaryBuffers();
 
   // BoundaryPhysics: need to rotate the intensity
   void ReflectInnerX1(Real time, Real dt,
@@ -141,14 +142,11 @@ private:
   void SetFluxShearingBoxBoundarySameLevel(AthenaArray<Real> &src,
                                            Real *buf, const int nb);
 
+
+
+
   // function for shearing box
 
-#ifdef MPI_PARALLEL
-  int rad_phys_id_, rad_flx_phys_id_;
-#endif
-  AthenaArray<Real> shear_rad_var_flx_[2];
-  AthenaArray<Real> shear_var_flx_[2];
-  AthenaArray<Real> shear_map_flx_[2];
   AthenaArray<Real> ir_cm_, pflux_; // co-moving frame specific inteisites 
 
 
