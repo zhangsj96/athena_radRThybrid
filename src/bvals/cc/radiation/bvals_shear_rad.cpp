@@ -292,5 +292,74 @@ void RadBoundaryVariable::SetShearingBoxBoundaryBuffers() {
   return;
 }
 
+void RadBoundaryVariable::SendShearingBoxBoundaryBuffers() {
+  MeshBlock *pmb = pmy_block_;
+  Mesh *pmesh = pmb->pmy_mesh;
+  AthenaArray<Real> &var = *var_cc;
+  int ssize = nu_ + 1;
+  int offset[2]{0, 4};
+  for (int upper=0; upper<2; upper++) {
+    if (pbval_->is_shear[upper]) {
+      for (int n=0; n<4; n++) {
+        SimpleNeighborBlock& snb = pbval_->sb_data_[upper].send_neighbor[n];
+        if (snb.rank != -1) {
+          LoadShearingBoxBoundarySameLevel(var, shear_bd_var_[upper].send[n],
+                                       n+offset[upper]);
+          if (snb.rank == Globals::my_rank) {// on the same process
+            CopyShearBufferSameProcess(snb, shear_send_count_cc_[upper][n]*ssize, n,
+                                       upper);
+          } else { // MPI
+#ifdef MPI_PARALLEL
+            int tag = pbval_->CreateBvalsMPITag(snb.lid, n+offset[upper],
+                                                shear_cc_phys_id_);
+            MPI_Isend(shear_bd_var_[upper].send[n], shear_send_count_cc_[upper][n]*ssize,
+                      MPI_ATHENA_REAL, snb.rank, tag, MPI_COMM_WORLD,
+                      &shear_bd_var_[upper].req_send[n]);
+#endif
+          }
+        }
+      }  // loop over recv[0] to recv[3]
+    }  // if boundary is shearing
+  }  // loop over inner/outer boundaries
+  return;
+}
+
+bool RadBoundaryVariable::ReceiveShearingBoxBoundaryBuffers() {
+  bool flag[2]{true, true};
+  int nb_offset[2]{0, 4};
+
+  for (int upper=0; upper<2; upper++) {
+    if (pbval_->is_shear[upper]) { // check inner boundaries
+      for (int n=0; n<4; n++) {
+        if (shear_bd_var_[upper].flag[n] == BoundaryStatus::completed) continue;
+        if (shear_bd_var_[upper].flag[n] == BoundaryStatus::waiting) {
+          // on the same process
+          if (pbval_->sb_data_[upper].recv_neighbor[n].rank == Globals::my_rank) {
+            flag[upper] = false;
+            continue;
+          } else { // MPI boundary
+#ifdef MPI_PARALLEL
+            int test;
+            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
+                       MPI_STATUS_IGNORE);
+            MPI_Test(&shear_bd_var_[upper].req_recv[n], &test, MPI_STATUS_IGNORE);
+            if (!static_cast<bool>(test)) {
+              flag[upper] = false;
+              continue;
+            }
+            shear_bd_var_[upper].flag[n] = BoundaryStatus::arrived;
+#endif
+          }
+        }
+        // set var if boundary arrived
+        SetShearingBoxBoundarySameLevel(shear_cc_[upper], shear_bd_var_[upper].recv[n],
+                                        n+nb_offset[upper]);
+        shear_bd_var_[upper].flag[n] = BoundaryStatus::completed; // completed
+      }  // loop over recv[0] to recv[3]
+    }  // if boundary is shearing
+  }  // loop over inner/outer boundaries
+  return (flag[0] && flag[1]);
+}
+
 
 

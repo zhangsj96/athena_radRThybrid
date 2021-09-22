@@ -43,7 +43,11 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
   void ShearQuantities(AthenaArray<Real> &shear_cc_, bool upper) override;
   void SetShearingBoxBoundaryBuffers();
   void SetFluxShearingBoxBoundaryBuffers();
+  void SendFluxShearingBoxBoundaryBuffers();
   bool ReceiveFluxShearingBoxBoundaryBuffers();
+  bool ReceiveShearingBoxBoundaryBuffers();
+  void SendShearingBoxBoundaryBuffers();
+
 
   // BoundaryPhysics: need to rotate the intensity
   void ReflectInnerX1(Real time, Real dt,

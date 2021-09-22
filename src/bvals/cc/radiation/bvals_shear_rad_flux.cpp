@@ -165,6 +165,40 @@ void RadBoundaryVariable::SetFluxShearingBoxBoundaryBuffers() {
 }
 
 
+void RadBoundaryVariable::SendFluxShearingBoxBoundaryBuffers() {
+  MeshBlock *pmb = pmy_block_;
+  Mesh *pmesh = pmb->pmy_mesh;
+  int ssize = nu_ + 1;
+  int offset[2]{0, 3};
+  for (int upper=0; upper<2; upper++) {
+    if (pbval_->is_shear[upper]) {
+      for (int n=0; n<3; n++) {
+        SimpleNeighborBlock& snb = pbval_->sb_flux_data_[upper].send_neighbor[n];
+        if (snb.rank != -1) {
+          LoadFluxShearingBoxBoundarySameLevel(shear_var_flx_[upper],
+                                   shear_bd_flux_[upper].send[n], n+offset[upper]);
+          if (snb.rank == Globals::my_rank) {// on the same process
+            CopyShearFluxSameProcess(snb, shear_send_count_flx_[upper][n]*ssize, n,
+                                       upper);
+          } else { // MPI
+#ifdef MPI_PARALLEL
+            int tag = pbval_->CreateBvalsMPITag(snb.lid, n+offset[upper],
+                                                shear_flx_phys_id_);
+            MPI_Isend(shear_bd_flux_[upper].send[n],
+                      shear_send_count_flx_[upper][n]*ssize,
+                      MPI_ATHENA_REAL, snb.rank, tag, MPI_COMM_WORLD,
+                      &shear_bd_flux_[upper].req_send[n]);
+#endif
+          }
+        }
+      }  // loop over recv[0] to recv[3]
+    }  // if boundary is shearing
+  }  // loop over inner/outer boundaries
+  return;
+}
+
+
+
 bool RadBoundaryVariable::ReceiveFluxShearingBoxBoundaryBuffers() {
   bool flag[2]{true, true};
   int nb_offset[2]{0, 3};
