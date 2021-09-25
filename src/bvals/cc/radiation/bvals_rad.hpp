@@ -33,6 +33,7 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
 
 // functions unique implementation to radiation class
   void SendFluxCorrection() override;
+  bool ReceiveFluxCorrection() override;
 
 
   void SetBoundaries() override;
@@ -47,6 +48,7 @@ class RadBoundaryVariable : public CellCenteredBoundaryVariable {
   bool ReceiveFluxShearingBoxBoundaryBuffers();
   bool ReceiveShearingBoxBoundaryBuffers();
   void SendShearingBoxBoundaryBuffers();
+
 
 
   // BoundaryPhysics: need to rotate the intensity
@@ -135,6 +137,7 @@ private:
 
   void SetBoundarySameLevel(Real *buf, const NeighborBlock& nb) override;
 
+
   void PolarBoundarySingleAzimuthalBlock() override;
 
   // shearing box functions
@@ -151,7 +154,7 @@ private:
 
   // function for shearing box
 
-  AthenaArray<Real> ir_cm_, pflux_; // co-moving frame specific inteisites 
+  AthenaArray<Real> ir_cm_, ir_lab_, pflux_; // co-moving frame specific inteisites 
 
 
 };

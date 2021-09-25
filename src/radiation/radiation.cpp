@@ -73,7 +73,25 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);
   nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
-  tunit = pin->GetOrAddReal("radiation","Tunit",1.e7);
+  user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
+  tunit = pin->GetOrAddReal("radiation","T_unit",1.e7);
+  rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
+  lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
+  mol_weight = pin->GetOrAddReal("radiation","molecular_weight",0.6);
+
+  if(user_unit_ == 1){
+   // calculate prat and crat based on user provided unit
+    // https://physics.info/constants/
+    // arad = 4 * sigma/c
+    Real arad = 7.565733250033928e-15; 
+    Real r_ideal = 8.314462618e7/mol_weight;
+    Real c_speed = 2.99792458e10;
+    prat = arad * tunit * tunit * tunit/(rhounit * r_ideal);
+    Real cs_iso = std::sqrt(r_ideal * tunit);
+    crat = c_speed/cs_iso;
+
+  }
+
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
   Mesh *pm = pmb->pmy_mesh;

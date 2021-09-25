@@ -67,6 +67,10 @@ public:
   Real reduced_c; // reduced speed of light
   Real tunit, telectron; // gas temperature cgs unit,
                          // effective electron scattering temperature
+  Real rhounit; // density unit
+  Real mol_weight; // mean molecular weight
+  Real lunit;  // length unit
+
   Real sum_diff;
   Real sum_full; // store 
   
@@ -117,7 +121,7 @@ public:
 
 private:
 
-
+  int user_unit_;
   friend class BoundaryValues;
   
 

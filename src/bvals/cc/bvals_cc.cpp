@@ -705,7 +705,8 @@ void CellCenteredBoundaryVariable::StartReceiving(BoundaryCommSubset phase) {
     NeighborBlock& nb = pbval_->neighbor[n];
     if (nb.snb.rank != Globals::my_rank) {
       MPI_Start(&(bd_var_.req_recv[nb.bufid]));
-      if (phase == BoundaryCommSubset::all && nb.ni.type == NeighborConnect::face) {
+      if ((phase == BoundaryCommSubset::all || phase == BoundaryCommSubset::radiation) 
+            && nb.ni.type == NeighborConnect::face) {
         if ((nb.shear&&(nb.fid == BoundaryFace::inner_x1
              || nb.fid == BoundaryFace::outer_x1)
             && pbval_->shearing_box==1) || nb.snb.level > mylevel) {
@@ -721,7 +722,7 @@ void CellCenteredBoundaryVariable::StartReceiving(BoundaryCommSubset phase) {
     int ssize = pbval_->ssize_;
     int nx3 = pmb->block_size.nx3;
     // TODO(KGF): clear sflag arrays
-    if (phase == BoundaryCommSubset::all) {
+    if ((phase == BoundaryCommSubset::all) || (phase == BoundaryCommSubset::radiation)) {
       for (int upper=0; upper<2; upper++) {
         if (pbval_->is_shear[upper]) {
           int *counts1 = pbval_->sb_flux_data_[upper].send_count;
@@ -791,7 +792,8 @@ void CellCenteredBoundaryVariable::ClearBoundary(BoundaryCommSubset phase) {
     if (nb.snb.rank != Globals::my_rank) {
       // Wait for Isend
       MPI_Wait(&(bd_var_.req_send[nb.bufid]), MPI_STATUS_IGNORE);
-      if (phase == BoundaryCommSubset::all && nb.ni.type == NeighborConnect::face) {
+      if ((phase == BoundaryCommSubset::all || phase == BoundaryCommSubset::radiation)  
+          && nb.ni.type == NeighborConnect::face) {
         if ((nb.shear && (nb.fid == BoundaryFace::inner_x1
                           || nb.fid == BoundaryFace::outer_x1)
             && pbval_->shearing_box==1) || nb.snb.level < mylevel) {
@@ -805,7 +807,7 @@ void CellCenteredBoundaryVariable::ClearBoundary(BoundaryCommSubset phase) {
   // clear shearing box boundary communications
   if (pbval_->shearing_box ==1) {
     // TODO(KGF): clear sflag arrays
-    if (phase == BoundaryCommSubset::all) {
+    if ((phase == BoundaryCommSubset::all || phase == BoundaryCommSubset::radiation)) {
       for (int upper=0; upper<2; upper++) {
         if (pbval_->is_shear[upper]) {
           for (int n=0; n<3; n++) {

@@ -27,6 +27,8 @@
 #include "../../../field/field.hpp"
 #include "../../../globals.hpp"
 #include "../../../hydro/hydro.hpp"
+#include "../../../radiation/radiation.hpp"
+#include "../../../radiation/integrators/rad_integrators.hpp"
 #include "../../../mesh/mesh.hpp"
 #include "../../../parameter_input.hpp"
 #include "../../../utils/buffer_utils.hpp"
@@ -46,6 +48,8 @@
 int RadBoundaryVariable::LoadFluxBoundaryBufferSameLevel(Real *buf,
                                                        const NeighborBlock& nb) {
   MeshBlock *pmb=pmy_block_;
+  Radiation *prad = pmb->prad;
+  Real qomL = pbval_->qomL_;
   int p = 0;
   if (pbval_->shearing_box == 1 && nb.shear
       && (nb.fid == BoundaryFace::inner_x1 || nb.fid == BoundaryFace::outer_x1)) {
@@ -61,8 +65,19 @@ int RadBoundaryVariable::LoadFluxBoundaryBufferSameLevel(Real *buf,
     // pack x1flux
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
+        // convert flux due to velocity difference 
+        Real vx = pmb->phydro->w(IVX,k,j,i);
+        Real vy = pmb->phydro->w(IVY,k,j,i);
+        Real vz = pmb->phydro->w(IVZ,k,j,i);
+        Real *mux = &(prad->mu(0,k,j,i,0));
+        Real *muy = &(prad->mu(1,k,j,i,0));
+        Real *muz = &(prad->mu(2,k,j,i,0));
+        Real *flux_lab = &(x1flux(k,j,i,0));        
+        prad->pradintegrator->LabToCom(vx,vy,vz,mux,muy,muz,flux_lab,ir_cm_);
+        flux_lab = &(ir_lab_(0));
+        prad->pradintegrator->ComToLab(vx,vy+sign*qomL,vz,mux,muy,muz,ir_cm_,flux_lab);
         for (int nn=nl_; nn<=nu_; nn++) {
-          buf[p++] = x1flux(k,j,i,nn);
+          buf[p++] = flux_lab[nn];
         }
       }
     }
@@ -289,4 +304,52 @@ void RadBoundaryVariable::SetFluxBoundaryFromFiner(Real *buf,
   }
   return;
 }
+
+
+bool RadBoundaryVariable::ReceiveFluxCorrection() {
+  MeshBlock *pmb = pmy_block_;
+  bool flag=true;
+
+  for (int n=0; n<pbval_->nneighbor; n++) {
+    NeighborBlock& nb = pbval_->neighbor[n];
+    if (nb.ni.type != NeighborConnect::face) break;
+    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::completed) continue;
+    // receive data
+    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::waiting) {
+      if (nb.snb.rank == Globals::my_rank) {// on the same process
+        flag = false;
+        continue;
+      }
+#ifdef MPI_PARALLEL
+      else { // NOLINT
+        int test;
+        // probe MPI communications.  This is a bit of black magic that seems to promote
+        // communications to top of stack and gets them to complete more quickly
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
+                   MPI_STATUS_IGNORE);
+        MPI_Test(&(bd_var_flcor_.req_recv[nb.bufid]), &test, MPI_STATUS_IGNORE);
+        if (!static_cast<bool>(test)) {
+          flag = false;
+          continue;
+        }
+        bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::arrived;
+      }
+#endif
+    }
+    // set data
+    if (bd_var_flcor_.flag[nb.bufid] == BoundaryStatus::arrived) {
+      if (nb.snb.level==pmb->loc.level)      // from same level
+        SetFluxBoundarySameLevel(bd_var_flcor_.recv[nb.bufid],nb);
+      else if (nb.snb.level>pmb->loc.level)  // from finer
+        SetFluxBoundaryFromFiner(bd_var_flcor_.recv[nb.bufid],nb);
+      // else                                   // from coarser
+      //   nothing to do
+
+      bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::completed;
+    }
+  }
+
+  return flag;
+}
+
 

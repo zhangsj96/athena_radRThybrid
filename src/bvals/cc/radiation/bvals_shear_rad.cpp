@@ -83,9 +83,9 @@ void RadBoundaryVariable::AddRadShearForInit() {
             int ii = ib[upper] + i;
             // get flow velocity in local cell
             // this requires that shearing periodic boundary has been applied to hydro
-            Real vx = phydro->u(IM1,k,j,ii)/phydro->u(IDN,k,j,ii);
-            Real vy = phydro->u(IM2,k,j,ii)/phydro->u(IDN,k,j,ii);
-            Real vz = phydro->u(IM3,k,j,ii)/phydro->u(IDN,k,j,ii);
+            Real vx = phydro->w(IVX,k,j,ii);
+            Real vy = phydro->w(IVY,k,j,ii);
+            Real vz = phydro->w(IVZ,k,j,ii);
             // the original velocity in the active zones of the other side is
             //vx, vy-sign[upper]*qomL, vz
             Real vy_ori = vy - sign[upper]*qomL;
@@ -129,9 +129,9 @@ void RadBoundaryVariable::ShearQuantities(AthenaArray<Real> &shear_cc_, bool upp
     for (int i=0; i<NGHOST; i++) {
       int ii = ib[upper]+i;
       for (int j=jl; j<=ju; j++) {
-        Real vx = phydro->u(IM1,k,j,ii)/phydro->u(IDN,k,j,ii);
-        Real vy = phydro->u(IM2,k,j,ii)/phydro->u(IDN,k,j,ii);
-        Real vz = phydro->u(IM3,k,j,ii)/phydro->u(IDN,k,j,ii);
+        Real vx = phydro->w(IVX,k,j,ii);
+        Real vy = phydro->w(IVY,k,j,ii);
+        Real vz = phydro->w(IVZ,k,j,ii);
         Real vy_ori = vy - sign[upper]*qomL;
 
         Real *mux = &(prad->mu(0,k,j,ii,0));

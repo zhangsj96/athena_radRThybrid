@@ -36,6 +36,7 @@ RadBoundaryVariable::RadBoundaryVariable(MeshBlock *pmb,
 
     azimuthal_shift_rad_.NewAthenaArray(pmb->ke + NGHOST + 2,nu_+1);
     ir_cm_.NewAthenaArray(pmb->nfre_ang);
+    ir_lab_.NewAthenaArray(pmb->nfre_ang);
     if (pbval_->shearing_box != 0) {
       int pnum = pmb->block_size.nx2+2*NGHOST+1;
       pflux_.NewAthenaArray(pnum,pmb->nfre_ang);

@@ -1521,8 +1521,12 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         }
         pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                     pbval->bvars_main_int);
-        if(IM_RADIATION_ENABLED)
+        if(IM_RADIATION_ENABLED){
           pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
+          if(shear_periodic){
+            pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
+          }
+        }
       }
 
       // send conserved variables
@@ -1970,6 +1974,14 @@ void Mesh::CorrectMidpointInitialCondition() {
     // no need to re-SetupPersistentMPI() the MPI requests for boundary values
     pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                 pbval->bvars_main_int);
+
+    if(IM_RADIATION_ENABLED){
+      pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
+      if(shear_periodic){
+        pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
+      }
+    }
+
   }
 
 #pragma omp for private(pmb,pbval)
@@ -2010,11 +2022,14 @@ void Mesh::CorrectMidpointInitialCondition() {
       pmb->ptc->tc_bvar.ReceiveAndSetBoundariesWithWait();    
     if (shear_periodic && orbital_advection==0) {
       pmb->phydro->hbvar.AddHydroShearForInit();
-    if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
-      pmb->prad->rad_bvar.AddRadShearForInit();
+      if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
+        pmb->prad->rad_bvar.AddRadShearForInit();
     }
     pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                pbval->bvars_main_int);
+    if(IM_RADIATION_ENABLED)
+      pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);   
+
   } // end second exchange of ghost cells
   return;
 }
