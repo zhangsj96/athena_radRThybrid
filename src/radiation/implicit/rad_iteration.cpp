@@ -142,13 +142,16 @@ void IMRadiation::Iteration(Mesh *pm,
 
 
         prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
+        if(pm->shear_periodic){
+          prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
+        }
+
 
       }
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);
         pmb->prad->rad_bvar.SendBoundaryBuffers();
-
       }
 
       // set boundary condition
@@ -157,10 +160,31 @@ void IMRadiation::Iteration(Mesh *pm,
         Radiation *prad = pmb->prad;
         prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
 
-        prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
-
       }
+      // finish normal boundary
+      // then shearing periodic part
+      if(pm->shear_periodic){
+        for(int nb=0; nb<pm->nblocal; ++nb){
+          pmb = pm->my_blocks(nb);
+          pmb->prad->rad_bvar.SendShearingBoxBoundaryBuffers();
+        }
+        for(int nb=0; nb<pm->nblocal; ++nb){
+          pmb = pm->my_blocks(nb);
+          bool ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers();  
+          while(!ret) 
+            ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers(); 
 
+          if(ret)
+            pmb->prad->rad_bvar.SetShearingBoxBoundaryBuffers();     
+
+        }
+      }// end shearing periodic 
+
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
+        pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
+      }
+ 
       if(pm->multilevel){
         
         for(int nb=0; nb<pm->nblocal; ++nb){
@@ -234,6 +258,8 @@ void IMRadiation::Iteration(Mesh *pm,
                                           pmb->prad->ir1, pmb->prad->ir);
       
       pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::all);
+      if(pm->shear_periodic)
+        pmb->phydro->hbvar.StartReceivingShear(BoundaryCommSubset::all);
 
     }
 
@@ -244,12 +270,20 @@ void IMRadiation::Iteration(Mesh *pm,
       // update MPI boundary for hydro
       pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
       pmb->phydro->hbvar.SendBoundaryBuffers();
-     
+      if(pm->shear_periodic)
+        pmb->phydro->hbvar.SendShearingBoxBoundaryBuffers();
     }
 
     for(int nb=0; nb<pm->nblocal; ++nb){
       pmb = pm->my_blocks(nb);
       pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
+      if(pm->shear_periodic){
+        bool ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
+        while(!ret)
+          ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
+        if(ret)
+          pmb->phydro->hbvar.SetShearingBoxBoundaryBuffers();
+      }
       pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::all);
     }
 

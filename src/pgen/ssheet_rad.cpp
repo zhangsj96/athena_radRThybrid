@@ -81,7 +81,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   // read ipert parameter
   d0 = 1.0;
-  p0 = 1e-6;
+  p0 = 1e-1;
   if (NON_BAROTROPIC_EOS) {
     gm1 = (pin->GetReal("hydro","gamma") - 1.0);
     iso_cs = std::sqrt((gm1+1.0)*p0/d0);
