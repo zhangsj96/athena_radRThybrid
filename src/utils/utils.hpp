@@ -22,7 +22,6 @@ void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
 void ShowConfig();
 double MarkTime();
-void OutputLoopTime(const int ncycle, double dt_array[], std::string basename);
 
 void InverseMatrix(int n, AthenaArray<Real> &a, AthenaArray<Real> &b);
 int FouthPolyRoot(const Real coef4, const Real tconst, Real &root);

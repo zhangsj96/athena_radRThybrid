@@ -66,11 +66,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // total number of azimuthal angles covering 0 to pi
   npsi = pin->GetOrAddInteger("radiation","npsi",0); 
   angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
-  prat = pin->GetReal("radiation","Prat");
-  crat = pin->GetReal("radiation","Crat");
+  user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
+  if(user_unit_ == 0){  
+    prat = pin->GetReal("radiation","Prat");
+    crat = pin->GetReal("radiation","Crat");
+  }
   rotate_theta=pin->GetOrAddInteger("radiation","rotate_theta",0);
   rotate_phi=pin->GetOrAddInteger("radiation","rotate_phi",0);
-  reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);
   nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
   user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
@@ -91,6 +93,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     crat = c_speed/cs_iso;
 
   }
+
+  reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);  
 
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
