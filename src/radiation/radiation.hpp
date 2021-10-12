@@ -48,6 +48,7 @@ public:
   AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments
   AthenaArray<Real> rad_mom_cm; // co-moving frame Er, Frx, Fry, Frz
+  AthenaArray<Real> rad_mom_nu, rad_mom_nu_cm; // multi_group radiation moments
   AthenaArray<Real> sigma_s, sigma_a, sigma_ae; //   opacity
                        //sigma_a T and sigma_ae I
   AthenaArray<Real> sigma_planck; // absorption opacity to account for
@@ -55,7 +56,7 @@ public:
                                 // mean and Rosseland mean
   AthenaArray<Real> grey_sigma; // frequency integrated opacity
   AthenaArray<Real> mu, wmu; // angles and weight
-  AthenaArray<Real> wfreq; // weight in frequency space
+
   
   AthenaArray<Real> flux[3]; // store transport flux, also need for refinement
 
@@ -74,7 +75,7 @@ public:
   Real sum_diff;
   Real sum_full; // store 
   
-  int nang, nfreq, noct, n_fre_ang; // n_fre_ang=nang*nfreq
+  int nang, noct, n_fre_ang; // n_fre_ang=nang*nfreq
   int angle_flag;
   // variables related to the angular space transport
   int nzeta, npsi;
@@ -83,6 +84,11 @@ public:
   AthenaArray<Real> psi_v, psi_f, len_psi, psi_v_full, psi_f_full, 
                     dpsi_v, dpsi_f;
 
+  // The frequency grid
+  Real nu_min, nu_max; 
+  // mininum and maximum frequencies, and number of frequency bins
+  int nfreq, fre_log; // flag to indicate whether using log frequency bins or not
+  AthenaArray<Real> nu_grid, nu_cm_grid, wfreq;  // frequency grid, weight of each frequency bins
 
 //  int ir_output; // the number of specific intensity to dump
 //  AthenaArray<int> ir_index; // the array
@@ -96,6 +102,8 @@ public:
 
     // The function pointer for the opacity
   OpacityFunc UpdateOpacity;
+
+  FrequencyFunc UserFrequency; // us
   
   int rotate_theta; // flag to rotate the boundary
   int rotate_phi;  

@@ -73,7 +73,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   }
   rotate_theta=pin->GetOrAddInteger("radiation","rotate_theta",0);
   rotate_phi=pin->GetOrAddInteger("radiation","rotate_phi",0);
-  nfreq = pin->GetOrAddInteger("radiation","n_frequency",1);
+
   vmax = pin->GetOrAddReal("radiation","vmax",0.9);
   user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
   tunit = pin->GetOrAddReal("radiation","T_unit",1.e7);
@@ -94,7 +94,20 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   }
 
+  // equivalent temperature for electron
+  telectron = 5.94065e9;
+  telectron /= tunit;
+
   reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);  
+
+  // frequency grid
+  nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);   // the number of frequeny bins
+  nu_min = pin->GetOrAddReal("radiation","frequency_min",0);   // minimum frequency
+  nu_max = pin->GetOrAddReal("radiation","frequency_max",1);  // maximum frequency
+  fre_log= pin->GetOrAddInteger("radiation","log_frequency",0); // use log in frequency space
+  
+  nu_grid.NewAthenaArray(nfreq+1);
+  wfreq.NewAthenaArray(nfreq);
 
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
@@ -104,9 +117,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   set_source_flag = pin->GetOrAddInteger("radiation","source_flag",1);
 
-  // equivalent temperature for electron
-  telectron = 5.94065e9;
-  telectron /= tunit;
+
 
   // number of cells for three dimensions
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;  
@@ -167,6 +178,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   nang = n_ang * noct;
   
   n_fre_ang = nang * nfreq;
+ //co-moving frame frequency grid depends on angels
+  nu_cm_grid.NewAthenaArray(nfreq+1,nang);
 
 //  if(ir_output > n_fre_ang){
 
@@ -201,6 +214,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   rad_mom.NewAthenaArray(13,nc3,nc2,nc1);
   rad_mom_cm.NewAthenaArray(4,nc3,nc2,nc1);
+  // dump the moments in each frequency groups
+  rad_mom_nu.NewAthenaArray(nfreq,13,nc3,nc2,nc1);    
+  rad_mom_nu_cm.NewAthenaArray(nfreq,4,nc3,nc2,nc1);
+
   sigma_s.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_ae.NewAthenaArray(nc3,nc2,nc1,nfreq);
@@ -215,7 +232,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   mu.NewAthenaArray(3,nc3,nc2,nc1,nang);
   wmu.NewAthenaArray(nang);
 
-  wfreq.NewAthenaArray(nfreq);
+
 
 
   
@@ -303,6 +320,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 //  ir1.DeleteAthenaArray();
 //  rad_mom.DeleteAthenaArray();
 //  rad_mom_cm.DeleteAthenaArray();
+//  rad_mom_nu.DeleteAthenaArray();
+//  rad_mom_nu_cm.DeleteAthenaArray();
 //  sigma_s.DeleteAthenaArray();
 //  sigma_a.DeleteAthenaArray();
 //  sigma_ae.DeleteAthenaArray();

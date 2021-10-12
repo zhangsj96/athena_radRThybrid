@@ -85,26 +85,26 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int j=js; j<=je; ++j){
       pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
       for(int i=is; i<=ie+1; ++i){
-        Real taul = 0.0;
-        Real taur = 0.0;
         for(int ifr=0; ifr<nfreq; ++ifr){
+          // use the signal speed in each frequency group 
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          taul += prad->wfreq(ifr)*dxw1_(i-1) * sigmal;
-          taur += prad->wfreq(ifr)*dxw1_(i) * sigmar;
-        }// end ifr
-        Real f_l = 1.0;
-        Real f_r = 1.0;
-        taul *= taufact(k,j,i-1);
-        taur *= taufact(k,j,i);
-        GetTaufactor(taul+taur,f_r,1);
-        GetTaufactor(taul+taur,f_l,-1);
+          Real taul = prad->wfreq(ifr)*dxw1_(i-1) * sigmal;
+          Real taur = prad->wfreq(ifr)*dxw1_(i) * sigmar;
+
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k,j,i-1);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
         
-        Real *s1n = &(sfac1_x_(i,0));
-        Real *s2n = &(sfac2_x_(i,0));
-        Real *velxn = &(velx_(k,j,i,0));
-        Real adv = adv_vel(0,k,j,i);
-        SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
+          Real *s1n = &(sfac1_x_(i,ifr*nang));
+          Real *s2n = &(sfac2_x_(i,ifr*nang));
+          Real *velxn = &(velx_(k,j,i,ifr*nang));
+          Real adv = adv_vel(0,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
+        }// end ifr
       }// end i
       if (order == 1) {
         pmb->precon->DonorCellX1(k, j, is-1, ie+1, ir, -1, il_, ir_);
@@ -167,27 +167,25 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         pco->CenterWidth2(k,j-1,is,ie,dxw1_);
         pco->CenterWidth2(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real taul = 0.0;
-          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
-          }
-          Real f_l = 1.0;
-          Real f_r = 1.0;
-          taul *= taufact(k,j-1,i);
-          taur *= taufact(k,j,i);
-          GetTaufactor(taul+taur,f_r,1);
-          GetTaufactor(taul+taur,f_l,-1);
-        
-          Real *s1n = &(sfac1_y_(j,i,0));
-          Real *s2n = &(sfac2_y_(j,i,0));
-          Real *velyn = &(vely_(k,j,i,0));
-          Real adv = adv_vel(1,k,j,i);
-          SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
+            Real taul = prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            Real taur = prad->wfreq(ifr) * dxw2_(i) * sigmar;
 
+            Real f_l = 1.0;
+            Real f_r = 1.0;
+            taul *= taufact(k,j-1,i);
+            taur *= taufact(k,j,i);
+            GetTaufactor(taul+taur,f_r,1);
+            GetTaufactor(taul+taur,f_l,-1);
+        
+            Real *s1n = &(sfac1_y_(j,i,ifr*nang));
+            Real *s2n = &(sfac2_y_(j,i,ifr*nang));
+            Real *velyn = &(vely_(k,j,i,ifr*nang));
+            Real adv = adv_vel(1,k,j,i);
+            SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
+          }// end frequency   
         }// end i
       }// end j
 
@@ -264,26 +262,25 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         pco->CenterWidth3(k-1,j,is,ie,dxw1_);
         pco->CenterWidth3(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real taul = 0.0;
-          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
-          }
-          Real f_l = 1.0;
-          Real f_r = 1.0;
-          taul *= taufact(k-1,j,i);
-          taur *= taufact(k,j,i);
-          GetTaufactor(taul+taur,f_r,1);
-          GetTaufactor(taul+taur,f_l,-1);
+            Real taul = prad->wfreq(ifr) * dxw1_(i) * sigmal;
+            Real taur = prad->wfreq(ifr) * dxw2_(i) * sigmar;
+          
+            Real f_l = 1.0;
+            Real f_r = 1.0;
+            taul *= taufact(k-1,j,i);
+            taur *= taufact(k,j,i);
+            GetTaufactor(taul+taur,f_r,1);
+            GetTaufactor(taul+taur,f_l,-1);
         
-          Real *s1n = &(sfac1_z_(k,j,i,0));
-          Real *s2n = &(sfac2_z_(k,j,i,0));
-          Real *velzn = &(velz_(k,j,i,0));
-          Real adv = adv_vel(2,k,j,i);
-          SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
+            Real *s1n = &(sfac1_z_(k,j,i,ifr*nang));
+            Real *s2n = &(sfac2_z_(k,j,i,ifr*nang));
+            Real *velzn = &(velz_(k,j,i,ifr*nang));
+            Real adv = adv_vel(2,k,j,i);
+            SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
+        }// end frequency 
 
         }// end i
       }// end j
@@ -364,50 +361,55 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
-          int &nzeta = prad->nzeta;
-          int &npsi = prad->npsi;
-          int psi_limit=2*npsi;
-          if(npsi == 0) psi_limit=1;
+          // going through all frequency groups
+          for(int ifr=0; ifr<nfreq; ++ifr){
 
-          for(int m=0; m<psi_limit; ++m){
+            int &nzeta = prad->nzeta;
+            int &npsi = prad->npsi;
+            int psi_limit=2*npsi;
+            if(npsi == 0) psi_limit=1;
+
+            for(int m=0; m<psi_limit; ++m){
 #pragma omp simd
-            for(int n=0; n<nzeta*2; ++n){
-              int ang_num = n*psi_limit+m;
-              q_zeta_(n+NGHOST) = ir(k,j,i,ang_num);
-            }// end nzeta
-            // Add ghost zones
+              for(int n=0; n<nzeta*2; ++n){
+                int ang_num = ifr*nang + n*psi_limit+m;
+                q_zeta_(n+NGHOST) = ir(k,j,i,ang_num);
+              }// end nzeta
+              // Add ghost zones
 #pragma omp simd
-            for(int n=1; n<=NGHOST; ++n){
-              q_zeta_(NGHOST-n) = q_zeta_(NGHOST+n-1);
-            }      
+              for(int n=1; n<=NGHOST; ++n){
+                q_zeta_(NGHOST-n) = q_zeta_(NGHOST+n-1);
+              }      
 #pragma omp simd
-            for(int n=1; n<=NGHOST; ++n){
-              q_zeta_(2*nzeta+NGHOST+n-1) = q_zeta_(2*nzeta+NGHOST-n);
-            }  
-            int zl = NGHOST-1;
-            int zu = 2*nzeta+NGHOST;
-            if (order == 1) {
-              pmb->precon->DonorCellZeta(prad,zl,zu,q_zeta_,
+              for(int n=1; n<=NGHOST; ++n){
+                q_zeta_(2*nzeta+NGHOST+n-1) = q_zeta_(2*nzeta+NGHOST-n);
+              }  
+              int zl = NGHOST-1;
+              int zu = 2*nzeta+NGHOST;
+              if (order == 1) {
+                pmb->precon->DonorCellZeta(prad,zl,zu,q_zeta_,
                                           ql_zeta_,qr_zeta_);
-            } else {
-              pmb->precon->PiecewiseLinearZeta(prad,zl,zu,q_zeta_,
+              } else {
+                pmb->precon->PiecewiseLinearZeta(prad,zl,zu,q_zeta_,
                                           ql_zeta_,qr_zeta_);
-            } 
+              } 
   
             // zeta flux
-            pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
-            for(int n=0; n<nzeta*2+1; ++n){
-              int ang_num = n*psi_limit+m;
-              Real g_coef = g_zeta_(n);
-              if(g_coef > 0)
-                zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_zeta_(n+NGHOST) 
-                                        * g_zeta_(n); 
-              else if(g_coef < 0)
-                zeta_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_zeta_(n+NGHOST) 
-                                       * g_zeta_(n); 
+              pco->GetGeometryZeta(prad,k,j,i,g_zeta_);
+              for(int n=0; n<nzeta*2+1; ++n){
+                int ang_num = n*psi_limit+m;
+                Real g_coef = g_zeta_(n);
+                if(g_coef > 0)
+                  zeta_flux_(k,j,i,ifr,ang_num) =  -prad->reduced_c * qr_zeta_(n+NGHOST) 
+                                               * g_zeta_(n); 
+                else if(g_coef < 0)
+                  zeta_flux_(k,j,i,ifr,ang_num) =  -prad->reduced_c * ql_zeta_(n+NGHOST) 
+                                               * g_zeta_(n); 
 
-            }
-          }// end npsi
+              }// end zeta
+            }// end npsi
+
+          }// end frequency
         }
       }
     }
@@ -421,54 +423,58 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
-          int &nzeta = prad->nzeta;
-          int &npsi = prad->npsi;
-          int zeta_limit=2*nzeta;
-          if(nzeta == 0) zeta_limit=1;
+          for(int ifr=0; ifr<nang; ++ifr){
 
-          for(int n=0; n<zeta_limit; ++n){
-            Real *qpsi = &(q_psi_(NGHOST));
-            Real *irm = &(ir(k,j,i,n*2*npsi));
+            int &nzeta = prad->nzeta;
+            int &npsi = prad->npsi;
+            int zeta_limit=2*nzeta;
+            if(nzeta == 0) zeta_limit=1;
+
+            for(int n=0; n<zeta_limit; ++n){
+              Real *qpsi = &(q_psi_(NGHOST));
+              Real *irm = &(ir(k,j,i,ifr*nang+n*2*npsi));
 #pragma omp simd aligned(qpsi,irm:ALI_LEN)
-            for(int m=0; m<npsi*2; ++m){
-              qpsi[m] = irm[m];
-            }// end nzeta
+              for(int m=0; m<npsi*2; ++m){
+                qpsi[m] = irm[m];
+              }// end nzeta
             // Add ghost zones
             // phi is periodic
             // the first one qpsi[NGHOST]
             // The last one is qpsi[NGHOST+2*npsi-1]
-            for(int m=1; m<=NGHOST; ++m){
-              q_psi_(NGHOST-m) = q_psi_(2*npsi+NGHOST-m);
-            }      
-            for(int m=1; m<=NGHOST; ++m){
-              q_psi_(2*npsi+NGHOST+m-1) = q_psi_(NGHOST+m-1);
-            }  
-            int pl = NGHOST-1;
-            int pu = 2*npsi+NGHOST;
-            if (order == 1) {
-              pmb->precon->DonorCellPsi(prad,pl,pu,q_psi_,
+              for(int m=1; m<=NGHOST; ++m){
+                q_psi_(NGHOST-m) = q_psi_(2*npsi+NGHOST-m);
+              }      
+              for(int m=1; m<=NGHOST; ++m){
+                q_psi_(2*npsi+NGHOST+m-1) = q_psi_(NGHOST+m-1);
+              }  
+              int pl = NGHOST-1;
+              int pu = 2*npsi+NGHOST;
+              if (order == 1) {
+                pmb->precon->DonorCellPsi(prad,pl,pu,q_psi_,
                                           ql_psi_,qr_psi_);
-            } else {
-              pmb->precon->PiecewiseLinearPsi(prad,pl,pu,q_psi_,
+              } else {
+                pmb->precon->PiecewiseLinearPsi(prad,pl,pu,q_psi_,
                                           ql_psi_,qr_psi_);
-            } 
+              } 
  
-            // psi flux
-            if(nzeta > 0)
-              pco->GetGeometryPsi(prad,k,j,i,n,g_psi_);
-            else
-              pco->GetGeometryPsi(prad,k,j,i,g_psi_);
-            for(int m=0; m<npsi*2+1; ++m){
-              int ang_num = n*2*npsi+m;
-              Real g_coef = g_psi_(m);
-              if(g_coef > 0)
-                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * qr_psi_(m+NGHOST) 
+              // psi flux
+              if(nzeta > 0)
+                pco->GetGeometryPsi(prad,k,j,i,n,g_psi_);
+              else
+                pco->GetGeometryPsi(prad,k,j,i,g_psi_);
+              for(int m=0; m<npsi*2+1; ++m){
+                int ang_num = n*2*npsi+m;
+                Real g_coef = g_psi_(m);
+                if(g_coef > 0)
+                  psi_flux_(k,j,i,ifr,ang_num) =  -prad->reduced_c * qr_psi_(m+NGHOST) 
                                         * g_coef;
-              else if(g_coef < 0)
-                psi_flux_(k,j,i,ang_num) =  -prad->reduced_c * ql_psi_(m+NGHOST) 
+                else if(g_coef < 0)
+                  psi_flux_(k,j,i,ifr,ang_num) =  -prad->reduced_c * ql_psi_(m+NGHOST) 
                                         * g_coef;
-            }
-          }// end nzeta
+              }
+            }// end nzeta
+
+          }// end frequency
         }
       }
     }
@@ -732,6 +738,8 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
+  int nfreq=prad->nfreq;
+  int nang=prad->nang;
 
   AthenaArray<Real> &x1flux=prad->flux[X1DIR];
   AthenaArray<Real> &x2flux=prad->flux[X2DIR];
@@ -807,58 +815,59 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
       // add angular flux
       if(prad->angle_flag == 1){
         for(int i=is; i<=ie; ++i){
-          for(int n=0; n<prad->nang; ++n)
-            dflx_ang(n) = 0.0;
-          if(nzeta * npsi > 0){
-            for(int m=0; m<2*npsi; ++m){
-#pragma omp simd 
-              for(int n=0; n<2*nzeta; ++n){
-                int ang_num = n*2*npsi + m;
-                int ang_num1 = (n+1)*2*npsi+m;
-                dflx_ang(ang_num) += (area_zeta(m,n+1) * zeta_flux_(k,j,i,ang_num1)
-                                     - area_zeta(m,n) * zeta_flux_(k,j,i,ang_num));
-              }// end zeta angle
-            }// end psi angles
-            // now psi flux
-            for(int n=0; n<2*nzeta; ++n){
-              Real *flxn = &(dflx_ang(n*2*npsi));
-              Real *areapsi = &(area_psi(n,0));
-              Real *psiflx = &(psi_flux_(k,j,i,n*2*npsi));
-#pragma omp simd aligned(flxn,areapsi,psiflx:ALI_LEN)
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            for(int n=0; n<prad->nang; ++n)
+              dflx_ang(n) = 0.0;
+            if(nzeta * npsi > 0){
               for(int m=0; m<2*npsi; ++m){
-                flxn[m] += (areapsi[m+1] * psiflx[m+1]
-                          - areapsi[m] * psiflx[m]);                
+#pragma omp simd 
+                for(int n=0; n<2*nzeta; ++n){
+                  int ang_num = n*2*npsi + m;
+                  int ang_num1 = (n+1)*2*npsi+m;
+                  dflx_ang(ang_num) += (area_zeta(m,n+1) * zeta_flux_(k,j,i,ifr,ang_num1)
+                                       - area_zeta(m,n) * zeta_flux_(k,j,i,ifr,ang_num));
+                }// end zeta angle
+              }// end psi angles
+            // now psi flux
+              for(int n=0; n<2*nzeta; ++n){
+                Real *flxn = &(dflx_ang(n*2*npsi));
+                Real *areapsi = &(area_psi(n,0));
+                Real *psiflx = &(psi_flux_(k,j,i,ifr,n*2*npsi));
+#pragma omp simd aligned(flxn,areapsi,psiflx:ALI_LEN)
+                for(int m=0; m<2*npsi; ++m){
+                  flxn[m] += (areapsi[m+1] * psiflx[m+1]
+                            - areapsi[m] * psiflx[m]);                
+                }
               }
-            }
-          }else if(nzeta >0){// end if nzeta*npsi > 0
-            Real *flxn = &(dflx_ang(0));
-            Real *areazeta = &(area_zeta(0));
-            Real *zetaflx = &(zeta_flux_(k,j,i,0));
+            }else if(nzeta >0){// end if nzeta*npsi > 0
+              Real *flxn = &(dflx_ang(0));
+              Real *areazeta = &(area_zeta(0));
+              Real *zetaflx = &(zeta_flux_(k,j,i,ifr,0));
 #pragma omp simd aligned(flxn,areazeta,zetaflx:ALI_LEN)
-            for(int n=0; n<2*nzeta; ++n){         
-              flxn[n] += (areazeta[n+1] * zetaflx[n+1]
-                        - areazeta[n] * zetaflx[n]);
-            }// end zeta angle
-          }else if(npsi > 0){
-            Real *flxn = &(dflx_ang(0));
-            Real *areapsi = &(area_psi(0));
-            Real *psiflx = &(psi_flux_(k,j,i,0));
+              for(int n=0; n<2*nzeta; ++n){         
+                flxn[n] += (areazeta[n+1] * zetaflx[n+1]
+                          - areazeta[n] * zetaflx[n]);
+              }// end zeta angle
+            }else if(npsi > 0){
+              Real *flxn = &(dflx_ang(0));
+              Real *areapsi = &(area_psi(0));
+              Real *psiflx = &(psi_flux_(k,j,i,ifr,0));
 #pragma omp simd aligned(flxn,areapsi,psiflx:ALI_LEN) 
-            for(int m=0; m<2*npsi; ++m){
-              flxn[m] += (areapsi[m+1] * psiflx[m+1] 
-                        - areapsi[m] * psiflx[m]);              
-            }           
-          }// end npsi > 0
+              for(int m=0; m<2*npsi; ++m){
+                flxn[m] += (areapsi[m+1] * psiflx[m+1] 
+                          - areapsi[m] * psiflx[m]);              
+              }           
+            }// end npsi > 0
           // apply the flux divergence back
           // We need ir_out, not ir_in, as ir_out is already partially updated
-          Real *iro = &(ir_out(k,j,i,0));
-          Real *flxn = &(dflx_ang(0));
-          Real *angv = &(ang_vol(0));
+            Real *iro = &(ir_out(k,j,i,ifr*nang));
+            Real *flxn = &(dflx_ang(0));
+            Real *angv = &(ang_vol(0));
 #pragma omp simd aligned(iro,flxn,angv:ALI_LEN)
-          for(int n=0; n<prad->nang; ++n){
-            iro[n] = std::max(iro[n]-wght*flxn[n]/angv[n], TINY_NUMBER);
-
-          }// end angle
+            for(int n=0; n<prad->nang; ++n){
+              iro[n] = std::max(iro[n]-wght*flxn[n]/angv[n], TINY_NUMBER);
+            }// end angle
+          }// end ifr
         }// end i
       }// end if angle_flag == 1
  

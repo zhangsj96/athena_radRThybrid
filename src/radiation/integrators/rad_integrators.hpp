@@ -90,6 +90,9 @@ public:
   void ComAngle(const Real vx, const Real vy, const Real vz,
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
+  void ComFrequency(const Real vx, const Real vy, const Real vz, 
+                                 const int k, const int j, const int i);
+
   
   void GetTaufactor(const Real tau, Real &factor1, int dir);
   void GetTaufactorAdv(const Real tau, Real &factor);

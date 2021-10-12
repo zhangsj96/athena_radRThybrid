@@ -202,11 +202,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       
 
       if(npsi > 0){
-        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,(2*nzeta+1)*2*npsi);
+        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,nfreq,(2*nzeta+1)*2*npsi);
         zeta_area_.NewAthenaArray(2*npsi,2*nzeta+1);
       }
       else{
-        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta+1);
+        zeta_flux_.NewAthenaArray(ncells3,ncells2,ncells1,nfreq,2*nzeta+1);
         zeta_area_.NewAthenaArray(2*nzeta+1);
       }
 
@@ -222,11 +222,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
 
       if(nzeta > 0){
-        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*nzeta*(2*npsi+1));
+        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,nfreq,2*nzeta*(2*npsi+1));
         psi_area_.NewAthenaArray(2*nzeta,2*npsi+1);
       }
       else{
-        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,2*npsi+1); 
+        psi_flux_.NewAthenaArray(ncells3,ncells2,ncells1,nfreq,2*npsi+1); 
         psi_area_.NewAthenaArray(2*npsi+1);
       }
 
@@ -671,7 +671,7 @@ void RadIntegrator::SignalSpeed(const Real adv, const Real f_l,
                  const Real f_r, Real *vel, Real *smax, Real *smin)
 {
 
-  for(int n=0; n<pmy_rad->n_fre_ang; ++n){
+  for(int n=0; n<pmy_rad->nang; ++n){
     if(vel[n] > 0.0){
       smax[n] = f_r * vel[n];
       smin[n] = -f_l * vel[n];
@@ -682,7 +682,7 @@ void RadIntegrator::SignalSpeed(const Real adv, const Real f_l,
 
   }
   if(adv_flag_ == 0){
-    for(int n=0; n<pmy_rad->n_fre_ang; ++n){
+    for(int n=0; n<pmy_rad->nang; ++n){
       smax[n] += std::fabs(adv);
       smin[n] -= std::fabs(adv);   
     }

@@ -26,9 +26,35 @@
 // \!fn void FrequencyGrid()
 
 // \brief function to create the frequency grid
+// specific intensities are still defined as frequency integrated over each
 
 void Radiation::FrequencyGrid()
 {
+  if(fre_log == 1){
+    //divide the frequency grid based on log space
+    Real nu_log_min = std::log10(nu_min);
+    Real nu_log_max = std::log10(nu_max);
+    Real dlog_nu = (nu_log_max - nu_log_min)/nfreq;
+    nu_grid(0) = nu_min;
+    
+    for(int n=1; n<nfreq; ++n)
+      nu_grid(n) = pow(10,nu_log_min + n*dlog_nu);
+    
+    nu_grid(nfreq) = nu_max;
+
+
+  }else{
+
+    Real dnu = (nu_max - nu_min)/nfreq;
+    nu_grid(0) = nu_min;
+
+    for(int n=1; n<nfreq; ++n)
+      nu_grid(n) = nu_min + n*dnu;
+
+    nu_grid(nfreq) = nu_max;
+  }
+  
+
   for(int i=0; i<nfreq; ++i)
     wfreq(i) = 1.0/nfreq;
   

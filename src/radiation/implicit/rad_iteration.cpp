@@ -147,7 +147,7 @@ void IMRadiation::Iteration(Mesh *pm,
         }
 
 
-      }
+      }// end nb
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);
@@ -256,62 +256,6 @@ void IMRadiation::Iteration(Mesh *pm,
       if(pmb->prad->set_source_flag  > 0)
         pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
                                           pmb->prad->ir1, pmb->prad->ir);
-      
-      pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::all);
-      if(pm->shear_periodic)
-        pmb->phydro->hbvar.StartReceivingShear(BoundaryCommSubset::all);
-
-    }
-
-
-     // update MPI boundary, do prolongation, set physical boundary
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      // update MPI boundary for hydro
-      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
-      pmb->phydro->hbvar.SendBoundaryBuffers();
-      if(pm->shear_periodic)
-        pmb->phydro->hbvar.SendShearingBoxBoundaryBuffers();
-    }
-
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
-      if(pm->shear_periodic){
-        bool ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
-        while(!ret)
-          ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
-        if(ret)
-          pmb->phydro->hbvar.SetShearingBoxBoundaryBuffers();
-      }
-      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::all);
-    }
-
-    if(pm->multilevel){
-        
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Real t_end_stage = pmb->pmy_mesh->time + wght;
-        pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-      }
-
-    }
-
-    // conservative to primitive, and then apply physical boundary
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-       // Apply physical boundaries
-      pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
-      Real t_end_stage = pmb->pmy_mesh->time + wght;
-
-       // convert conservative to primitive variables
-      // update physical boundary for hydro
-      ptlist->Primitives(pmb,stage);
-      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
-      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-      // update opacity     
-      pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
 
     }
 

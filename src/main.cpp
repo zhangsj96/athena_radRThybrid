@@ -45,6 +45,7 @@
 #include "parameter_input.hpp"
 #include "utils/utils.hpp"
 #include "radiation/implicit/radiation_implicit.hpp"
+#include "radiation/radiation.hpp"
 
 // MPI/OpenMP headers
 #ifdef MPI_PARALLEL
@@ -459,6 +460,9 @@ int main(int argc, char *argv[]) {
     if (pmesh->turb_flag > 1) pmesh->ptrbd->Driving(); // driven turbulence
 
     for (int stage=1; stage<=ptlist->nstages; ++stage) {
+      if(IM_RADIATION_ENABLED){
+        pmesh->pimrad->Iteration(pmesh,ptlist,stage);
+      }
       ptlist->DoTaskListOneStage(pmesh, stage);
       if (ptlist->CheckNextMainStage(stage)) {
         if (SELF_GRAVITY_ENABLED == 1) // fft (0: discrete kernel, 1: continuous kernel)
@@ -469,8 +473,12 @@ int main(int argc, char *argv[]) {
           pmesh->my_blocks(0)->pfft->Solve(stage);
       }
 
+      // update the opacity at the end
       if(IM_RADIATION_ENABLED){
-        pmesh->pimrad->Iteration(pmesh,ptlist,stage);
+        for(int nb=0; nb<pmesh->nblocal; ++nb){
+          MeshBlock *pmb = pmesh->my_blocks(nb);
+          pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);  
+        }
       }
 
     }

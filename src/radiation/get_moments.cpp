@@ -56,7 +56,6 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
         for(int i=0; i<n1z; ++i){
           i_mom[i] = 0.0;
         }}
-
   
   for(int k=0; k<n3z; ++k){
     for(int j=0; j<n2z; ++j){
@@ -83,6 +82,22 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
             prxz += irweight * cosx[n] * cosz[n];
             pryz += irweight * cosy[n] * cosz[n];
           }
+          // assign the moments for each frequency group
+          rad_mom_nu(ifr,IER,k,j,i) = er;
+          rad_mom_nu(ifr,IFR1,k,j,i) = frx;
+          rad_mom_nu(ifr,IFR2,k,j,i) = fry;
+          rad_mom_nu(ifr,IFR3,k,j,i) = frz;
+          rad_mom_nu(ifr,IPR11,k,j,i) = prxx;
+          rad_mom_nu(ifr,IPR22,k,j,i) = pryy;
+          rad_mom_nu(ifr,IPR33,k,j,i) = przz;
+          rad_mom_nu(ifr,IPR12,k,j,i) = prxy;
+          rad_mom_nu(ifr,IPR13,k,j,i) = prxz;
+          rad_mom_nu(ifr,IPR23,k,j,i) = pryz;
+          rad_mom_nu(ifr,IPR21,k,j,i) = prxy;
+          rad_mom_nu(ifr,IPR31,k,j,i) = prxz;
+          rad_mom_nu(ifr,IPR32,k,j,i) = pryz;
+
+
           //multiply the frequency weight
           er *= wfreq(ifr);
           frx *= wfreq(ifr);
