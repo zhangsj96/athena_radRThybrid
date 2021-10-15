@@ -407,7 +407,12 @@ void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
       //FindShearBlock(pmy_mesh_->time);
       break;
     case BoundaryCommSubset::radiation:
-      break;      
+      break;
+    case BoundaryCommSubset::radhydro:
+      for (auto bvar : bvars_main_int) {
+        bvar->StartReceivingShear(phase);
+      }
+      break;        
     case BoundaryCommSubset::all:
       // KGF: must pass "time" parameter from time_integrator.cpp
       //FindShearBlock(time);

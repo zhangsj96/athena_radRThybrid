@@ -66,11 +66,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // total number of azimuthal angles covering 0 to pi
   npsi = pin->GetOrAddInteger("radiation","npsi",0); 
   angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
-  user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
-  if(user_unit_ == 0){  
-    prat = pin->GetReal("radiation","Prat");
-    crat = pin->GetReal("radiation","Crat");
-  }
+
   rotate_theta=pin->GetOrAddInteger("radiation","rotate_theta",0);
   rotate_phi=pin->GetOrAddInteger("radiation","rotate_phi",0);
 
@@ -80,8 +76,11 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
   lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
   mol_weight = pin->GetOrAddReal("radiation","molecular_weight",0.6);
-
-  if(user_unit_ == 1){
+  
+  if(user_unit_ == 0){  
+    prat = pin->GetReal("radiation","Prat");
+    crat = pin->GetReal("radiation","Crat");
+  }else if(user_unit_ == 1){
    // calculate prat and crat based on user provided unit
     // https://physics.info/constants/
     // arad = 4 * sigma/c
@@ -134,6 +133,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     if(ndim == 1){
       noct = 2;
       n_ang = nzeta;
+      if(npsi > 1){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in radiation class" << std::endl
+        << "1D problem cannot have npsi > 1"   << std::endl;
+        ATHENA_ERROR(msg);
+      }
+
     }else if(ndim == 2){
       if(npsi <= 1){
         n_ang = nzeta;
@@ -231,7 +237,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   mu.NewAthenaArray(3,nc3,nc2,nc1,nang);
   wmu.NewAthenaArray(nang);
-
 
 
 

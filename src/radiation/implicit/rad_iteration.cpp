@@ -76,6 +76,7 @@ void IMRadiation::Iteration(Mesh *pm,
       // use the current stage velocity for advection
       prad->pradintegrator->GetTgasVel(pmb,wght,ph->u,ph->w,pf->bcc,ir_ini);
 
+
       // Calculate advection flux due to flow velocity explicitly
       // advection velocity uses the partially updated velocity and ir from half 
       // time step 
@@ -242,12 +243,11 @@ void IMRadiation::Iteration(Mesh *pm,
       if((niter > nlimit_) || tot_res < error_limit_)
         iteration = false;
 
-    }
+    }// end iteration
 
     if(Globals::my_rank == 0)
       std::cout << "Iteration stops at niter: " << niter
       << " relative error: " << sum_diff_/sum_full_ << std::endl;
-
 
     // After iteration,
     //update the hydro source term
@@ -256,8 +256,64 @@ void IMRadiation::Iteration(Mesh *pm,
       if(pmb->prad->set_source_flag  > 0)
         pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
                                           pmb->prad->ir1, pmb->prad->ir);
+      
+      pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::radhydro);
+      if(pm->shear_periodic)
+        pmb->phydro->hbvar.StartReceivingShear(BoundaryCommSubset::radhydro);
 
     }
+
+
+     // update MPI boundary, do prolongation, set physical boundary
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
+      // update MPI boundary for hydro
+      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
+      pmb->phydro->hbvar.SendBoundaryBuffers();
+      if(pm->shear_periodic)
+        pmb->phydro->hbvar.SendShearingBoxBoundaryBuffers();
+    }
+
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
+      pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
+      if(pm->shear_periodic){
+        bool ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
+        while(!ret)
+          ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
+        if(ret)
+          pmb->phydro->hbvar.SetShearingBoxBoundaryBuffers();
+      }
+      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::radhydro);
+    }
+
+    if(pm->multilevel){
+        
+      for(int nb=0; nb<pm->nblocal; ++nb){
+        pmb = pm->my_blocks(nb);
+        Real t_end_stage = pmb->pmy_mesh->time + wght;
+        pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
+      }
+
+    }
+
+    // conservative to primitive, and then apply physical boundary
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
+       // Apply physical boundaries
+      pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
+      Real t_end_stage = pmb->pmy_mesh->time + wght;
+
+       // convert conservative to primitive variables
+      // update physical boundary for hydro
+      ptlist->Primitives(pmb,stage);
+      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
+      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
+
+      // update opacity     
+      pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
+
+    }// end conserve to primitive
 
   }// end stage
 

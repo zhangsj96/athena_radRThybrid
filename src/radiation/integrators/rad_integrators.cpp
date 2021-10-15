@@ -157,6 +157,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
+
   }// end implicit
 
   implicit_coef_.NewAthenaArray(prad->n_fre_ang);

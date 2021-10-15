@@ -64,6 +64,8 @@ public:
 
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,  
        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
+  void AddIMSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
+       AthenaArray<Real> &rad_source);
 
   Real AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
@@ -110,6 +112,8 @@ public:
   int rad_xorder; 
   AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
   AthenaArray<Real> taufact;
+  AthenaArray<Real> rad_source; // store the radiation source terms
+
   
 private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;

@@ -984,6 +984,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     TaskID src_term = SRCTERM_HYD;
     if(radiation_flag)
       src_term = (src_term | SRCTERM_RAD);
+
     if(CR_ENABLED+TC_ENABLED)
       src_term = (src_term | SRCTERM_CRTC);
 
@@ -2742,8 +2743,6 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
   }
   return TaskStatus::fail;
 }
-
-
 
 
 //----------------------------------------------------------------------------------------

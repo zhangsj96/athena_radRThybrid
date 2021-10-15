@@ -14,3 +14,4 @@ tst/.DS_Store
 configure.log
 src/bvals/cc/radiation/.DS_Store
 src/mesh/.DS_Store
+src/task_list/.DS_Store
