@@ -137,87 +137,20 @@ void IMRadiation::Iteration(Mesh *pm,
         // the source term will combine everything together
         prad->pradintegrator->CalSourceTerms(pmb, wght, ph->u, prad->ir1, prad->ir);
 
-        // add the angular flux
-        // this is added separately with other terms
-        // but included in the iterative process
-
-
-        prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-        if(pm->shear_periodic){
-          prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
-        }
-
 
       }// end nb
 
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        pmb->prad->rad_bvar.SendBoundaryBuffers();
-      }
-
-      // set boundary condition
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Radiation *prad = pmb->prad;
-        prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
-
-      }
-      // finish normal boundary
-      // then shearing periodic part
-      if(pm->shear_periodic){
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          pmb->prad->rad_bvar.SendShearingBoxBoundaryBuffers();
-        }
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          bool ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers();  
-          while(!ret) 
-            ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers(); 
-
-          if(ret)
-            pmb->prad->rad_bvar.SetShearingBoxBoundaryBuffers();     
-
-        }
-      }// end shearing periodic 
-
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
-      }
- 
-      if(pm->multilevel){
-        
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          Real t_end_stage = pmb->pmy_mesh->time + wght;
-          pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-        }
-
-
-      }
-
+      // using TaskList to handle 
+      // apply boundary condition, prolongation, and check residual
+      pimradbdlist->DoTaskListOneStage(wght);
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);
         Radiation *prad = pmb->prad;
-        // apply physical boundaries
-        prad->rad_bvar.var_cc = &(prad->ir);
-        Real t_end_stage = pmb->pmy_mesh->time + wght;
-        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-         // calculate residual
-        CheckResidual(pmb,prad->ir_old,prad->ir);
-
-         // update boundary condition for ir_new
-
          // copy the solution over
         prad->ir_old = prad->ir;
-
         sum_full_ += prad->sum_full;
         sum_diff_ += prad->sum_diff;
-
 
       }// end while pmb
 
@@ -250,73 +183,12 @@ void IMRadiation::Iteration(Mesh *pm,
       << " relative error: " << sum_diff_/sum_full_ << std::endl;
 
     // After iteration,
-    //update the hydro source term
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      if(pmb->prad->set_source_flag  > 0)
-        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
-                                          pmb->prad->ir1, pmb->prad->ir);
-      
-      pmb->phydro->hbvar.StartReceiving(BoundaryCommSubset::radhydro);
-      if(pm->shear_periodic)
-        pmb->phydro->hbvar.StartReceivingShear(BoundaryCommSubset::radhydro);
-
-    }
-
-
-     // update MPI boundary, do prolongation, set physical boundary
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      // update MPI boundary for hydro
-      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->u, HydroBoundaryQuantity::cons);
-      pmb->phydro->hbvar.SendBoundaryBuffers();
-      if(pm->shear_periodic)
-        pmb->phydro->hbvar.SendShearingBoxBoundaryBuffers();
-    }
-
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      pmb->phydro->hbvar.ReceiveAndSetBoundariesWithWait();
-      if(pm->shear_periodic){
-        bool ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
-        while(!ret)
-          ret = pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
-        if(ret)
-          pmb->phydro->hbvar.SetShearingBoxBoundaryBuffers();
-      }
-      pmb->phydro->hbvar.ClearBoundary(BoundaryCommSubset::radhydro);
-    }
-
-    if(pm->multilevel){
-        
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Real t_end_stage = pmb->pmy_mesh->time + wght;
-        pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-      }
-
-    }
-
-    // conservative to primitive, and then apply physical boundary
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-       // Apply physical boundaries
-      pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
-      Real t_end_stage = pmb->pmy_mesh->time + wght;
-
-       // convert conservative to primitive variables
-      // update physical boundary for hydro
-      ptlist->Primitives(pmb,stage);
-      pmb->phydro->hbvar.SwapHydroQuantity(pmb->phydro->w, HydroBoundaryQuantity::prim);
-      pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-      // update opacity     
-      pmb->prad->UpdateOpacity(pmb,pmb->phydro->w);      
-
-    }// end conserve to primitive
+    // add radiation source term to hydro
+    // update hydro boundary
+    // update opacity
+    pimradhylist->DoTaskListOneStage(wght);
 
   }// end stage
-
 
 }// end func
 

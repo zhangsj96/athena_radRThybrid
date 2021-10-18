@@ -32,7 +32,7 @@ class TaskID;
 struct IMRadTask {
   TaskID task_id;      //!> encodes task using bit positions in IMRadTaskNames
   TaskID dependency;   //!> encodes dependencies to other tasks using IMRadTaskNames
-  TaskStatus (IMRadTaskList::*TaskFunc)(MeshBlock *, Real t_end, Real wght); //!> ptr to a task
+  TaskStatus (IMRadTaskList::*TaskFunc)(MeshBlock *); //!> ptr to a task
 };
 
 
@@ -42,45 +42,107 @@ struct IMRadTask {
 
 class IMRadTaskList {
  public:
-  IMRadTaskList(); // 2x direct + zero initialization
+  IMRadTaskList() : ntasks(0), task_list_{} {} // 2x direct + zero initialization
   // rule of five:
   virtual ~IMRadTaskList() = default;
 
+  Mesh *pmy_mesh;
   // data
   int ntasks;     //!> number of tasks in this list
+  Real time, dt;
 
   // functions
   TaskListStatus DoAllAvailableTasks(MeshBlock *pmb, TaskStates &ts);
-  void DoTaskListOneStage(MeshBlock *pmb);
-  void ClearTaskList() {ntasks=0;}
-
-  // functions
-  void StartupTaskList(MeshBlock *pmb, Real t_end, Real wght);
-  TaskStatus ClearRadBoundary(MeshBlock *pmb, Real t_end, Real wght);
-  TaskStatus SendRadBoundary(MeshBlock *pmb, Real t_end, Real wght);
-  TaskStatus ReceiveRadBoundary(MeshBlock *pmb, Real t_end, Real wght);
-  TaskStatus SetRadBoundary(MeshBlock *pmb, Real t_end, Real wght);
-  TaskStatus PhysicalBoundary(MeshBlock *pmb, Real t_end, Real wght);
+  void DoTaskListOneStage(Real wght);
+  TaskStatus PhysicalBoundary(MeshBlock *pmb);
+  TaskStatus ProlongateBoundary(MeshBlock *pmb);
 
 
+ protected:
+  IMRadTask task_list_[64*TaskID::kNField_];
 
  private:
 
-  IMRadTask task_list_[64*TaskID::kNField_];
+  virtual void AddTask(const TaskID& id, const TaskID& dep) = 0;
+  virtual void StartupTaskList(MeshBlock *pmb) = 0;
 
-  void AddTask(const TaskID& id, const TaskID& dep);
+
+};
+
+class IMRadBDTaskList : public IMRadTaskList {
+ public:
+  IMRadBDTaskList(Mesh *pm); 
+
+
+  // functions
+
+  TaskStatus ClearRadBoundary(MeshBlock *pmb);
+  TaskStatus SendRadBoundary(MeshBlock *pmb);
+  TaskStatus ReceiveRadBoundary(MeshBlock *pmb);
+  TaskStatus SetRadBoundary(MeshBlock *pmb);
+  TaskStatus SendRadBoundaryShear(MeshBlock *pmb);
+  TaskStatus ReceiveRadBoundaryShear(MeshBlock *pmb);
+  TaskStatus CheckResidual(MeshBlock *pmb);
+
+ private:
+  void StartupTaskList(MeshBlock *pmb) override;
+  void AddTask(const TaskID& id, const TaskID& dep) override;
+};
+
+//----------------------------------------------
+//! IMRadHydroTaskList
+//! Derived Class to handle Hydro boundary update 
+class IMRadHydroTaskList : public IMRadTaskList{
+  public:
+    IMRadHydroTaskList(Mesh *pm);
+
+  // functions
+
+    TaskStatus ClearHydroBoundary(MeshBlock *pmb);
+    TaskStatus SendHydroBoundary(MeshBlock *pmb);
+    TaskStatus ReceiveHydroBoundary(MeshBlock *pmb);
+    TaskStatus SetHydroBoundary(MeshBlock *pmb);
+    TaskStatus SendHydroBoundaryShear(MeshBlock *pmb);
+    TaskStatus ReceiveHydroBoundaryShear(MeshBlock *pmb);
+    TaskStatus UpdateOpacity(MeshBlock *pmb);  
+    TaskStatus AddRadSource(MeshBlock *pmb);  
+    TaskStatus Primitive(MeshBlock *pmb);
+
+  private:
+    void StartupTaskList(MeshBlock *pmb) override;
+    void AddTask(const TaskID& id, const TaskID& dep) override;
+
 };
 
 //----------------------------------------------------------------------------------------
 //! 64-bit integers with "1" in different bit positions used to ID each Multigrid task.
 
-namespace IMRadTaskNames {
+namespace IMRadBDTaskNames {
 const TaskID NONE(0);
-const TaskID CLEAR_RAD(1);
-const TaskID SEND_RAD_BND(2);
-const TaskID RECV_RAD_BND(3);
-const TaskID SETB_RAD_BND(4);
-const TaskID RAD_PHYS_BND(5);
+const TaskID CLEAR_RAD(1);     // clear radiation boundary
+const TaskID SEND_RAD_BND(2);  // send radiation boundary
+const TaskID RECV_RAD_BND(3); // receive radiation boundary
+const TaskID SETB_RAD_BND(4); // set radiation physical boundary
+const TaskID RAD_PHYS_BND(5);// radiation physical boundary
+const TaskID PRLN_RAD_BND(6); // prolongation 
+const TaskID SEND_RAD_SH(7); // send shearing box boundary
+const TaskID RECV_RAD_SH(8); // receive shearing box boundary
+const TaskID CHK_RAD_RES(9); // check residual
+} // namespace IMRadBDTaskNames
+
+namespace IMRadHydroTaskNames {
+const TaskID NONE(0);
+const TaskID CLEAR_HYD(1);    // clear radiation boundary
+const TaskID SEND_HYD_BND(2); // send radiation boundary
+const TaskID RECV_HYD_BND(3); // receive radiation boundary
+const TaskID SETB_HYD_BND(4); // set radiation physical boundary
+const TaskID HYD_PHYS_BND(5); // radiation physical boundary
+const TaskID PRLN_HYD_BND(6); // prolongation 
+const TaskID SEND_HYD_SH(7);  // send shearing box boundary
+const TaskID RECV_HYD_SH(8);  // receive shearing box boundary
+const TaskID UPD_OPA(9);      // check residual
+const TaskID ADD_RAD_SCR(10); // add radiation source term
+const TaskID CONS_TO_PRIM(11);// convert conservative to primitive variables
 } // namespace IMRadTaskNames
 
 #endif // TASK_LIST_MG_TASK_LIST_HPP_

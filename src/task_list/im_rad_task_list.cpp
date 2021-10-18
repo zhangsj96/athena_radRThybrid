@@ -3,106 +3,99 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file fft_grav_task_list.cpp
-//! \brief function implementation for FFTGravitySolverTaskList
+//! \file task_list.cpp
+//! \brief functions for TaskList base class
+
 
 // C headers
 
 // C++ headers
-#include <iostream>   // endl
-#include <sstream>    // sstream
-#include <stdexcept>  // runtime_error
-#include <string>     // c_str()
+//#include <vector> // formerly needed for vector of MeshBlock ptrs in DoTaskListOneStage
 
 // Athena++ headers
 #include "../athena.hpp"
+#include "../globals.hpp"
 #include "../mesh/mesh.hpp"
 #include "../radiation/radiation.hpp"
 #include "im_rad_task_list.hpp"
 
-//----------------------------------------------------------------------------------------
-//! IMRadTaskList constructor
-
-IMRadTaskList::IMRadTaskList(): ntasks(0),  task_list_{}  {
-  // Now assemble list of tasks for each stage of time integrator
-  {using namespace IMRadTaskNames; // NOLINT (build/namespace)
-    // compute hydro fluxes, integrate hydro variables
-    AddTask(SEND_RAD_BND,NONE);
-    AddTask(RECV_RAD_BND,NONE);
-    AddTask(SETB_RAD_BND,(RECV_RAD_BND|SEND_RAD_BND));
-    AddTask(RAD_PHYS_BND,SETB_RAD_BND);
-    AddTask(CLEAR_RAD, RAD_PHYS_BND);
-  } // end of using namespace block
-}
+#ifdef OPENMP_PARALLEL
+#include <omp.h>
+#endif
 
 //----------------------------------------------------------------------------------------
-//! \fn void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep)
-//! \brief Sets id and dependency for "ntask" member of task_list_ array, then iterates
-//! value of ntask.
+//! \fn TaskListStatus TaskList::DoAllAvailableTasks
+//! \brief do all tasks that can be done (are not waiting for a dependency to be
+//! cleared) in this TaskList, return status.
 
-void IMRadTaskList::AddTask(const TaskID& id, const TaskID& dep) {
-  task_list_[ntasks].task_id=id;
-  task_list_[ntasks].dependency=dep;
+TaskListStatus IMRadTaskList::DoAllAvailableTasks(MeshBlock *pmb, TaskStates &ts) {
+  int skip = 0;
+  TaskStatus ret;
+  if (ts.num_tasks_left == 0) return TaskListStatus::nothing_to_do;
 
-  using namespace IMRadTaskNames; // NOLINT (build/namespace)
-  if (id == CLEAR_RAD) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*,Real, Real)>
-        (&IMRadTaskList::ClearRadBoundary);
-  } else if (id == SEND_RAD_BND) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*,Real, Real)>
-        (&IMRadTaskList::SendRadBoundary);
-  } else if (id == RECV_RAD_BND) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*,Real, Real)>
-        (&IMRadTaskList::ReceiveRadBoundary);
-  } else if (id == SETB_RAD_BND) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*,Real,Real)>
-        (&IMRadTaskList::SetRadBoundary);
-  } else if (id == RAD_PHYS_BND) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*,Real,Real)>
-        (&IMRadTaskList::PhysicalBoundary);
-  } else {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in IMRadTaskList::AddTask" << std::endl
-        << "Invalid Task is specified" << std::endl;
-    ATHENA_ERROR(msg);
+  for (int i=ts.indx_first_task; i<ntasks; i++) {
+    IMRadTask &taski = task_list_[i];
+    if (ts.finished_tasks.IsUnfinished(taski.task_id)) { // task not done
+      // check if dependency clear
+      if (ts.finished_tasks.CheckDependencies(taski.dependency)) {
+        ret = (this->*task_list_[i].TaskFunc)(pmb);
+        if (ret != TaskStatus::fail) { // success
+          ts.num_tasks_left--;
+          ts.finished_tasks.SetFinished(taski.task_id);
+          if (skip == 0) ts.indx_first_task++;
+          if (ts.num_tasks_left == 0) return TaskListStatus::complete;
+          if (ret == TaskStatus::next) continue;
+          return TaskListStatus::running;
+        }
+      }
+      skip++; // increment number of tasks processed
+
+    } else if (skip == 0) { // this task is already done AND it is at the top of the list
+      ts.indx_first_task++;
+    }
   }
-  ntasks++;
+  // there are still tasks to do but nothing can be done now
+  return TaskListStatus::stuck;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage)
+//! \brief completes all tasks in this list, will not return until all are tasks done
+
+void IMRadTaskList::DoTaskListOneStage(Real wght) {
+  time = pmy_mesh->time + wght;
+  dt = wght;
+  int nmb = pmy_mesh->nblocal;
+  for (int i=0; i<nmb; ++i) {
+    pmy_mesh->my_blocks(i)->tasks.Reset(ntasks);
+    StartupTaskList(pmy_mesh->my_blocks(i));
+  }
+
+  int nmb_left = nmb;
+  // cycle through all MeshBlocks and perform all tasks possible
+  while (nmb_left > 0) {
+    //! \note
+    //! KNOWN ISSUE: Workaround for unknown OpenMP race condition. See #183 on GitHub.
+    for (int i=0; i<nmb; ++i) {
+      if (DoAllAvailableTasks(pmy_mesh->my_blocks(i), pmy_mesh->my_blocks(i)->tasks)
+          == TaskListStatus::complete) {
+        nmb_left--;
+      }
+    }
+  }
   return;
 }
 
-void IMRadTaskList::StartupTaskList(MeshBlock *pmb, Real t_end, Real wght) {
-  pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-  return;
-}
-
-TaskStatus IMRadTaskList::ClearRadBoundary(MeshBlock *pmb, Real t_end, Real wght) {
-  pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
+TaskStatus IMRadTaskList::PhysicalBoundary(MeshBlock *pmb) {
+  pmb->prad->rad_bvar.var_cc = &(pmb->prad->ir);
+  pmb->pbval->ApplyPhysicalBoundaries(time, dt, pmb->pbval->bvars_main_int);
   return TaskStatus::success;
 }
 
-TaskStatus IMRadTaskList::SendRadBoundary(MeshBlock *pmb, Real t_end, Real wght) {
-  pmb->prad->rad_bvar.SendBoundaryBuffers();
+
+TaskStatus IMRadTaskList::ProlongateBoundary(MeshBlock *pmb) {
+  pmb->pbval->ProlongateBoundaries(time, dt, pmb->pbval->bvars_main_int);
   return TaskStatus::success;
 }
 
-TaskStatus IMRadTaskList::ReceiveRadBoundary(MeshBlock *pmb, Real t_end, Real wght) {
-  bool ret = pmb->prad->rad_bvar.ReceiveBoundaryBuffers();
-  if (!ret)
-    return TaskStatus::fail;
-  return TaskStatus::success;
-}
 
-TaskStatus IMRadTaskList::SetRadBoundary(MeshBlock *pmb, Real t_end, Real wght) {
-  pmb->prad->rad_bvar.SetBoundaries();
-  return TaskStatus::success;
-}
-
-TaskStatus IMRadTaskList::PhysicalBoundary(MeshBlock *pmb, Real t_end, Real wght) {
-  pmb->pbval->ApplyPhysicalBoundaries(t_end, wght,pmb->pbval->bvars_main_int);
-  return TaskStatus::success;
-}

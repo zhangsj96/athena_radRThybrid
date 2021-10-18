@@ -55,6 +55,7 @@ class TaskID {  // POD but not aggregate (there is a user-provided ctor)
   friend class TaskList;
   friend class MultigridTaskList;
   friend class IMRadTaskList;
+  friend class IMRadHydroTaskList;
 };
 
 

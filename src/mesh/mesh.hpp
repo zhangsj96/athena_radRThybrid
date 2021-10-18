@@ -27,6 +27,7 @@
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
 #include "../task_list/task_list.hpp"
+#include "../task_list/im_rad_task_list.hpp"
 #include "../utils/interp_table.hpp"
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
@@ -40,6 +41,7 @@ class BoundaryValues;
 class CellCenteredBoundaryVariable;
 class FaceCenteredBoundaryVariable;
 class TaskList;
+class IMRadTaskList;
 struct TaskStates;
 class Coordinates;
 class Reconstruction;
@@ -75,6 +77,7 @@ class MeshBlock {
   friend class Mesh;
   friend class Hydro;
   friend class TaskList;
+  friend class IMRadTaskList;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
 #endif
