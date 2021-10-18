@@ -49,7 +49,7 @@ public:
 
   int ite_scheme;
 
-  IMRadBDTaskList *pimradbdlist;
+  IMRadITTaskList *pimraditlist;
   IMRadHydroTaskList *pimradhylist;
 
 private:

@@ -69,9 +69,9 @@ class IMRadTaskList {
 
 };
 
-class IMRadBDTaskList : public IMRadTaskList {
+class IMRadITTaskList : public IMRadTaskList {
  public:
-  IMRadBDTaskList(Mesh *pm); 
+  IMRadITTaskList(Mesh *pm); 
 
 
   // functions
@@ -83,6 +83,11 @@ class IMRadBDTaskList : public IMRadTaskList {
   TaskStatus SendRadBoundaryShear(MeshBlock *pmb);
   TaskStatus ReceiveRadBoundaryShear(MeshBlock *pmb);
   TaskStatus CheckResidual(MeshBlock *pmb);
+  TaskStatus AddFluxDivergence(MeshBlock *pmb);
+  TaskStatus AddAngularFlux(MeshBlock *pmb);
+  TaskStatus CalSourceTerms(MeshBlock *pmb);
+  
+
 
  private:
   void StartupTaskList(MeshBlock *pmb) override;
@@ -117,7 +122,7 @@ class IMRadHydroTaskList : public IMRadTaskList{
 //----------------------------------------------------------------------------------------
 //! 64-bit integers with "1" in different bit positions used to ID each Multigrid task.
 
-namespace IMRadBDTaskNames {
+namespace IMRadITTaskNames {
 const TaskID NONE(0);
 const TaskID CLEAR_RAD(1);     // clear radiation boundary
 const TaskID SEND_RAD_BND(2);  // send radiation boundary
@@ -128,7 +133,11 @@ const TaskID PRLN_RAD_BND(6); // prolongation
 const TaskID SEND_RAD_SH(7); // send shearing box boundary
 const TaskID RECV_RAD_SH(8); // receive shearing box boundary
 const TaskID CHK_RAD_RES(9); // check residual
-} // namespace IMRadBDTaskNames
+const TaskID ADD_FLX_DIV(10); // add flux divergence term
+const TaskID ADD_ANG_FLX(11);  // add angular flux if necessary
+const TaskID CAL_RAD_SCR(12);  // calculate the source term and all others together
+
+} // namespace IMRadITTaskNames
 
 namespace IMRadHydroTaskNames {
 const TaskID NONE(0);

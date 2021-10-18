@@ -113,36 +113,9 @@ void IMRadiation::Iteration(Mesh *pm,
       sum_full_ = 0.0;
       sum_diff_ = 0.0;
 
-       // we need to go through all meshblocks for each iteration
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Hydro *ph = pmb->phydro;
-        Radiation *prad = pmb->prad;
-        if(ite_scheme == 0 || ite_scheme == 2)
-          prad->pradintegrator->FirstOrderFluxDivergence(prad->ir);
-        else if(ite_scheme == 1)
-          prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
-        else{
-          msg << "### FATAL ERROR in function [Iteration]"
-          << std::endl << "ite_scheme_ '" << ite_scheme << "' not allowed!";
-          ATHENA_ERROR(msg);
-
-        }             
-        // calculate the coefficients and angular part before the source term
-        if(prad->angle_flag == 1){
-          prad->pradintegrator->ImplicitAngularFluxes(prad->ir);  
-        }
-
-     // the source term, ir1 is the ir_ini
-        // the source term will combine everything together
-        prad->pradintegrator->CalSourceTerms(pmb, wght, ph->u, prad->ir1, prad->ir);
-
-
-      }// end nb
-
       // using TaskList to handle 
-      // apply boundary condition, prolongation, and check residual
-      pimradbdlist->DoTaskListOneStage(wght);
+      // operations during each iteration
+      pimraditlist->DoTaskListOneStage(wght);
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);
