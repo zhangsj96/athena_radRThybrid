@@ -82,7 +82,7 @@ public:
   AthenaArray<Real> coszeta_v, zeta_v_full, zeta_f_full, dzeta_v, dzeta_f, 
                     coszeta_f, len_zeta;
   AthenaArray<Real> psi_v, psi_f, len_psi, psi_v_full, psi_f_full, 
-                    dpsi_v, dpsi_f;
+                    dpsi_v, dpsi_f, sin_psi_f, cot_theta;
 
   // The frequency grid
   Real nu_min, nu_max; 

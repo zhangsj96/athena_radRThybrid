@@ -40,13 +40,17 @@
 
 //void  LoadRadVariable(MeshBlock *pmb);
 
-void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void RadConstantFluxInnerX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
-void RadConstantFluxOuterX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void RadConstantFluxOuterX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void HydroOuterX1(
     MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
@@ -181,9 +185,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 
-void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
+void RadConstantFluxInnerX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
 
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
@@ -220,9 +226,11 @@ void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 }
 
 
-void RadConstantFluxOuterX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
+void RadConstantFluxOuterX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
 
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {

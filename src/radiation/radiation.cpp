@@ -31,6 +31,7 @@
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
+#include "../coordinates/coordinates.hpp"
 #include "integrators/rad_integrators.hpp"
 #include "implicit/radiation_implicit.hpp"
 
@@ -241,8 +242,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
 
   
-  if(angle_flag == 1)
+  if(angle_flag == 1){
     AngularGrid(angle_flag, nzeta, npsi);
+    cot_theta.NewAthenaArray(nc2);
+    for(int i=0; i<nc2; ++i)
+      cot_theta(i) = cos(pmb->pcoord->x2v(i))/sin(pmb->pcoord->x2v(i));
+  }
   else
     AngularGrid(angle_flag, nmu);    
 

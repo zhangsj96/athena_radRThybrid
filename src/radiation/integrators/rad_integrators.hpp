@@ -92,9 +92,16 @@ public:
   void ComAngle(const Real vx, const Real vy, const Real vz,
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
+  // multi-group functions
+
   void ComFrequency(const Real vx, const Real vy, const Real vz, 
                                  const int k, const int j, const int i);
 
+  Real FitBlackBody(Real nu_t);
+
+  Real BlackBodySpec(Real nu_min, Real nu_max);
+  
+  //====================================
   
   void GetTaufactor(const Real tau, Real &factor1, int dir);
   void GetTaufactorAdv(const Real tau, Real &factor);
