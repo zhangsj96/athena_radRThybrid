@@ -182,6 +182,22 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   dxw1_.NewAthenaArray(ncells1);
   dxw2_.NewAthenaArray(ncells1);
 
+  //----------------------------------------------------
+  // array for multi-group 
+  if(nfreq > 1){
+    nu_flx_l_.NewAthenaArray(nfreq,nang);
+    nu_flx_r_.NewAthenaArray(nfreq,nang);
+    fre_flx_l_.NewAthenaArray(nang);
+    fre_flx_r_.NewAthenaArray(nang);
+    ir_shift_.NewAthenaArray(nfreq,nang);
+  }
+
+  sum_nu3_.NewAthenaArray(nfreq);
+  sum_nu2_.NewAthenaArray(nfreq);
+  sum_nu1_.NewAthenaArray(nfreq);
+
+  //----------------------------------------------------
+  // array for multi-group 
 
   // set the default taufact
   for(int k=0; k<ncells3; ++k)
@@ -473,8 +489,22 @@ RadIntegrator::~RadIntegrator()
     }
     dflx_ang_.DeleteAthenaArray();
     ang_vol_.DeleteAthenaArray();
-  }  
-  
+  }
+
+  // multi-group array
+
+  if(pmy_rad->nfreq > 1){
+    nu_flx_l_.DeleteAthenaArray();
+    nu_flx_r_.DeleteAthenaArray();
+    fre_flx_l_.DeleteAthenaArray();
+    fre_flx_r_.DeleteAthenaArray();
+    ir_shift_.DeleteAthenaArray();
+  }
+
+  sum_nu3_.DeleteAthenaArray();
+  sum_nu2_.DeleteAthenaArray();
+  sum_nu1_.DeleteAthenaArray();
+
 }
 
 
@@ -539,7 +569,6 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
            for(int n=0; n<nang; ++n){
              er_freq += weight[n] * irn[n];
            }
-           er_freq *= prad->wfreq(ifr);
            er += er_freq;
          }   
 
@@ -590,7 +619,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
           sigmal *= taufact(k,j,i-1);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
           sigmar *= taufact(k,j,i);
-          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
+          tau += (dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
         }// end ifr
 
         Real factor = 0.0;
@@ -617,7 +646,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
             sigmal *= taufact(k,j-1,i);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
             sigmar *= taufact(k,j,i);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            tau += (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
 
           Real factor = 0.0;
@@ -646,7 +675,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
             sigmal *= taufact(k-1,j,i);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
             sigmar *= taufact(k,j,i);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            tau += (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
 
           Real factor = 0.0;
@@ -840,16 +869,7 @@ void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i,
         pr23_f += irweight * cosy[n] * cosz[n];
         pr33_f += irweight * cosz[n] * cosz[n];
       }
-      er_f *= prad->wfreq(ifr);
-      fr1_f *= prad->wfreq(ifr);
-      fr2_f *= prad->wfreq(ifr);
-      fr3_f *= prad->wfreq(ifr);
-      pr11_f *= prad->wfreq(ifr);
-      pr12_f *= prad->wfreq(ifr);
-      pr13_f *= prad->wfreq(ifr);
-      pr22_f *= prad->wfreq(ifr);
-      pr23_f *= prad->wfreq(ifr);
-      pr33_f *= prad->wfreq(ifr);
+
 
       er   += er_f;
       fr1  += fr1_f;
@@ -868,8 +888,8 @@ void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i,
     Real grey_sigma_a = 0.0;
 
     for(int ifr=0; ifr<nfreq; ++ifr){
-      grey_sigma_s += prad->wfreq(ifr) * prad->sigma_s(k,j,i,ifr);
-      grey_sigma_a += prad->wfreq(ifr) * prad->sigma_a(k,j,i,ifr);
+      grey_sigma_s += prad->sigma_s(k,j,i,ifr);
+      grey_sigma_a += prad->sigma_a(k,j,i,ifr);
 
     }
   

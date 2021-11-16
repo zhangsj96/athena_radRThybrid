@@ -87,8 +87,10 @@ public:
   // The frequency grid
   Real nu_min, nu_max; 
   // mininum and maximum frequencies, and number of frequency bins
-  int nfreq, fre_log; // flag to indicate whether using log frequency bins or not
-  AthenaArray<Real> nu_grid, nu_cm_grid, wfreq;  // frequency grid, weight of each frequency bins
+  int nfreq; // number of frequency bins
+  Real fre_ratio; // ratio between neighboring frequency bins
+  AthenaArray<Real> nu_grid;  // frequency grid
+  AthenaArray<Real> emission_spec; //gas emission term in each frequency bin relative to a_rT^4
 
 //  int ir_output; // the number of specific intensity to dump
 //  AthenaArray<int> ir_index; // the array

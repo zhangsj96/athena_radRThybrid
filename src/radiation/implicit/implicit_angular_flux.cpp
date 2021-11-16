@@ -278,7 +278,7 @@ void RadIntegrator::ImplicitAngularFluxesCenter(const Real wght,
         Real tau_c= 0.0;
         for(int ifr=0; ifr<prad->nfreq; ++ifr){
           Real sigma = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          tau_c += prad->wfreq(ifr) * dxw1_(i) * sigma;
+          tau_c += dxw1_(i) * sigma;
         }
         tau_c *= taufact(k,j,i);
         Real f_l = 1.0;

@@ -60,6 +60,14 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
               AthenaArray<Real>::DataStatus::empty)),
     rad_bvar(pmb, &ir, &coarse_ir_, flux){
+
+  //universal constants we need
+  // https://physics.info/constants/
+  // arad = 4 * sigma/c
+  Real arad = 7.565733250033928e-15; 
+  Real c_speed = 2.99792458e10;  // speed of light
+  Real h_planck = 6.6260755e-27; // Planck constant
+  Real k_b = 1.380649e-16;   // Boltzman constant
   // read in the parameters
   int nmu = pin->GetInteger("radiation","nmu");
   // total number of polar angles covering 0 to pi/2
@@ -83,11 +91,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     crat = pin->GetReal("radiation","Crat");
   }else if(user_unit_ == 1){
    // calculate prat and crat based on user provided unit
-    // https://physics.info/constants/
-    // arad = 4 * sigma/c
-    Real arad = 7.565733250033928e-15; 
     Real r_ideal = 8.314462618e7/mol_weight;
-    Real c_speed = 2.99792458e10;
     prat = arad * tunit * tunit * tunit/(rhounit * r_ideal);
     Real cs_iso = std::sqrt(r_ideal * tunit);
     crat = c_speed/cs_iso;
@@ -100,15 +104,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);  
 
-  // frequency grid
-  nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);   // the number of frequeny bins
-  nu_min = pin->GetOrAddReal("radiation","frequency_min",0);   // minimum frequency
-  nu_max = pin->GetOrAddReal("radiation","frequency_max",1);  // maximum frequency
-  fre_log= pin->GetOrAddInteger("radiation","log_frequency",0); // use log in frequency space
-  
-  nu_grid.NewAthenaArray(nfreq+1);
-  wfreq.NewAthenaArray(nfreq);
-
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
   Mesh *pm = pmb->pmy_mesh;
@@ -116,8 +111,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 //  ir_output=pin->GetOrAddInteger("radiation","ir_output",0);
   
   set_source_flag = pin->GetOrAddInteger("radiation","source_flag",1);
-
-
 
   // number of cells for three dimensions
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;  
@@ -183,23 +176,79 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   }
   
   nang = n_ang * noct;
+
+
+  // frequency grid
+  //frequency grid covers -infty to infty, default nfreq=1, means gray 
+  // integrated over all frequency
+
+   // the number of frequeny bins
+  nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);  
+
+  // minimum frequency
+  nu_min = pin->GetOrAddReal("radiation","frequency_min",0);  
+
+  // maximum frequency 
+  nu_max = pin->GetOrAddReal("radiation","frequency_max",0);  
+
+  // log frequency space ratio
+  fre_ratio= pin->GetOrAddReal("radiation","frequency_ratio",1.0); 
+
+
+  // convert frequency to unit of kT_unit/h
+  nu_min = nu_min * h_planck/(k_b * tunit);
+  nu_max = nu_max * h_planck/(k_b * tunit);
+
+  if(fre_ratio > 1){
+
+    if(nu_min < TINY_NUMBER){
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Radiation Class" << std::endl
+          << "frequency_min needs to be larger than 0!";
+      throw std::runtime_error(msg.str().c_str());
+    }
+
+    if(nu_max <= nu_min){
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Radiation Class" << std::endl
+          << "frequency_max needs to be larger than frequency_min!";
+      throw std::runtime_error(msg.str().c_str());
+    }
+
+
+    if(nfreq > 1){
+      nu_max = nu_min * pow(fre_ratio,nfreq-1);
+    }else{
+      nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+1;
+    }// calculate nfreq if not given
+
+  }else{
+    if(nfreq > 1){
+      if(nu_max <= nu_min){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in Radiation Class" << std::endl
+            << "frequency_max needs to be larger than frequency_min!";
+        throw std::runtime_error(msg.str().c_str());
+      }
+
+      fre_ratio = log10(nu_max/nu_min)/(nfreq - 1);
+      fre_ratio = pow(10.0,fre_ratio);
+    }// end nfreq > 1
+  }
+
+  
+  if(nfreq > 1){
+    nu_grid.NewAthenaArray(nfreq);
+  }
+  emission_spec.NewAthenaArray(nfreq);
+
+
+//  wfreq.NewAthenaArray(nfreq);
+  //------------------------------------
+
   
   n_fre_ang = nang * nfreq;
  //co-moving frame frequency grid depends on angels
-  nu_cm_grid.NewAthenaArray(nfreq+1,nang);
-
-//  if(ir_output > n_fre_ang){
-
-//    std::stringstream msg;
-//    msg << "### FATAL ERROR in Radiation Class" << std::endl
-//        << "number of output specific intensity is too large!";
-//    throw std::runtime_error(msg.str().c_str());
-//  }
-  
-//  if(ir_output > 0){
-//    ir_index.NewAthenaArray(ir_output);
-//    dump_ir.NewAthenaArray(ir_output,nc3,nc2,nc1);
-//  }
   
   pmb->RegisterMeshBlockData(ir);
 
@@ -222,8 +271,11 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rad_mom.NewAthenaArray(13,nc3,nc2,nc1);
   rad_mom_cm.NewAthenaArray(4,nc3,nc2,nc1);
   // dump the moments in each frequency groups
-  rad_mom_nu.NewAthenaArray(nfreq,13,nc3,nc2,nc1);    
-  rad_mom_nu_cm.NewAthenaArray(nfreq,4,nc3,nc2,nc1);
+  if(nfreq > 1){
+    rad_mom_nu.NewAthenaArray(nfreq,13,nc3,nc2,nc1); 
+    rad_mom_nu_cm.NewAthenaArray(nfreq,4,nc3,nc2,nc1);   
+  }
+
 
   sigma_s.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
@@ -253,7 +305,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   
   // Initialize the frequency weight
-  FrequencyGrid();
+  if(nfreq > 1)
+    FrequencyGrid();
   
   // set a default opacity function
   UpdateOpacity = DefaultOpacity;
@@ -301,6 +354,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"npsi:         %d  \n",npsi);
     fprintf(pfile,"taucell:      %e  \n",taucell);
     fprintf(pfile,"source_flag:  %d  \n",set_source_flag);    
+    fprintf(pfile,"nfreq      :  %d  \n",nfreq);  
+    fprintf(pfile,"fre_ratio:    %e  \n",fre_ratio);  
+    fprintf(pfile,"nu_min:       %e  \n",nu_min);  
+    fprintf(pfile,"nu_max:       %e  \n",nu_max);  
     if(IM_RADIATION_ENABLED){
     fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme);
     fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);

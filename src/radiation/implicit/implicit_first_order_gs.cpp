@@ -79,8 +79,8 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         for(int ifr=0; ifr<nfreq; ++ifr){
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          taul += prad->wfreq(ifr) * dxw1_(i-1) * sigmal;
-          taur += prad->wfreq(ifr) * dxw1_(i) * sigmar;
+          taul += dxw1_(i-1) * sigmal;
+          taur += dxw1_(i) * sigmar;
         }// end ifr
         Real f_l = 1.0;
         Real f_r = 1.0;
@@ -188,8 +188,8 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
+            taul += dxw1_(i) * sigmal;
+            taur += dxw2_(i) * sigmar;
           }
 
           Real f_l = 1.0;
@@ -302,8 +302,8 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            taur += prad->wfreq(ifr) * dxw2_(i) * sigmar;
+            taul += dxw1_(i) * sigmal;
+            taur += dxw2_(i) * sigmar;
           }
 
           Real f_l = 1.0;

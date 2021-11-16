@@ -97,19 +97,7 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
           rad_mom_nu(ifr,IPR31,k,j,i) = prxz;
           rad_mom_nu(ifr,IPR32,k,j,i) = pryz;
 
-
-          //multiply the frequency weight
-          er *= wfreq(ifr);
-          frx *= wfreq(ifr);
-          fry *= wfreq(ifr);
-          frz *= wfreq(ifr);
-          prxx *= wfreq(ifr);
-          pryy *= wfreq(ifr);
-          przz *= wfreq(ifr);
-          prxy *= wfreq(ifr);
-          prxz *= wfreq(ifr);
-          pryz *= wfreq(ifr);
-          
+       
 
           
           //assign the moments
@@ -233,10 +221,10 @@ void Radiation::CalculateComMoment()
           // normalize weight
           numsum = 1.0/numsum;
           //multiply the frequency weight
-          er *= wfreq(ifr) * numsum;
-          frx *= wfreq(ifr) * numsum;
-          fry *= wfreq(ifr) * numsum;
-          frz *= wfreq(ifr) * numsum;
+          er *= numsum;
+          frx *= numsum;
+          fry *= numsum;
+          frz *= numsum;
           
           i_mom(IER,k,j,i) += er;
           i_mom(IFR1,k,j,i) += frx;
@@ -251,9 +239,9 @@ void Radiation::CalculateComMoment()
         Real *sigmaa=&(sigma_a(k,j,i,0));
         Real *sigmap=&(sigma_planck(k,j,i,0));
         for(int ifr=0; ifr<nfreq; ++ifr){
-          sum_sigma_s += sigmas[ifr] * wfreq(ifr);
-          sum_sigma_a += sigmaa[ifr] * wfreq(ifr);
-          sum_planck  += sigmap[ifr] * wfreq(ifr);
+          sum_sigma_s += sigmas[ifr];
+          sum_sigma_a += sigmaa[ifr];
+          sum_planck  += sigmap[ifr];
         }
         grey_sigma(OPAS,k,j,i) = sum_sigma_s;
         grey_sigma(OPAA,k,j,i) = sum_sigma_a;

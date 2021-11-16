@@ -17,6 +17,9 @@
 //  \brief  Add absorption source terms
 //======================================================================================
 
+#include <stdexcept>  // runtime_error
+#include <sstream>  // msg
+
 // Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
@@ -140,32 +143,27 @@ void RadIntegrator::ComAngle(const Real vx, const Real vy, const Real vz,
 }
 
 // get the co-moving frame frequencies based on lab-frame frequency and 
-// flow velocity , the transformation is
-// nu_0 = nu \gamma (1- n\dot v/c)
-// This updates the boundary of frequency grid in the co-moving frame
-void RadIntegrator::ComFrequency(const Real vx, const Real vy, const Real vz, 
-                                 const int k, const int j, const int i)
+// check the frequency shift factor is smaller than spacing in frequency grid
+void RadIntegrator::CheckFrequencyShift(AthenaArray<Real> &tran_coef)
 {
 
-  Real invcrat = 1.0/pmy_rad->crat;
-  
-  
-  // square of Lorentz factor
-  Real lorz = 1.0/(1.0 - (vx * vx + vy * vy + vz * vz) * invcrat * invcrat);
-  lorz = sqrt(lorz);
+  for(int n=0; n<pmy_rad->nang; ++n){
+    if(tran_coef(n) > pmy_rad->fre_ratio){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in function [CheckFrequencyShift]"
+            << std::endl << "tran_coef '" << tran_coef(n) << 
+            "' larger than fre_ratio " << pmy_rad->fre_ratio;
+        ATHENA_ERROR(msg);
+    }else if(tran_coef(n) * pmy_rad->fre_ratio < 1.0){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in function [CheckFrequencyShift]"
+            << std::endl << "tran_coef '" << tran_coef(n) << 
+            "' smaller than 1/fre_ratio " << 1/pmy_rad->fre_ratio;
+        ATHENA_ERROR(msg);
+    }
 
-  for(int ifr=0; ifr<=pmy_rad->nfreq; ++ifr){
-    Real &nu_lab = pmy_rad->nu_grid(ifr);
-    Real *mux = &(pmy_rad->mu(0,k,j,i,0));
-    Real *muy = &(pmy_rad->mu(1,k,j,i,0));
-    Real *muz = &(pmy_rad->mu(2,k,j,i,0));
-    Real *cm_nu = &(pmy_rad->nu_cm_grid(ifr,0));
-    for(int n=0; n<pmy_rad->nang; ++n){
-        cm_nu[n] = nu_lab * lorz * 
-                   (1.0 - (mux[n] * vx + muy[n] * vy + muz[n] * vz) * invcrat);
+  }// end angles
 
-    }// end angles
-  }// end frequency  
 
   return;
 }

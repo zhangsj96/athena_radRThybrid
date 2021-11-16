@@ -15,10 +15,10 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "homogeneous_sphere"
+#define PROBLEM_GENERATOR "rad_linearwave"
 
 // coordinate system
-#define COORDINATE_SYSTEM "spherical_polar"
+#define COORDINATE_SYSTEM "cartesian"
 
 // Riemann solver
 #define RIEMANN_SOLVER "hllc"

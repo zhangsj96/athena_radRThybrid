@@ -3,8 +3,8 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = homogeneous_sphere.cpp
-COORDINATES_FILE = spherical_polar.cpp
+PROBLEM_FILE = rad_linearwave.cpp
+COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
 RSOLVER_FILE = hllc.cpp

@@ -92,14 +92,33 @@ public:
   void ComAngle(const Real vx, const Real vy, const Real vz,
           Real mux, Real muy, Real muz, Real *mux0, Real *muy0, Real *muz0);
 
+  //====================================
   // multi-group functions
 
-  void ComFrequency(const Real vx, const Real vy, const Real vz, 
-                                 const int k, const int j, const int i);
+  void CheckFrequencyShift(AthenaArray<Real> &tran_coef);
 
   Real FitBlackBody(Real nu_t);
 
   Real BlackBodySpec(Real nu_min, Real nu_max);
+  Real EffectiveBlackBody(Real intensity, Real nu);
+
+  void FrequencyShiftCoef(AthenaArray<Real> &tran_coef, 
+          AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r);
+  void FrequencyInvShiftCoef(AthenaArray<Real> &tran_coef, 
+          AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r);
+
+  void MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
+                                     AthenaArray<Real> &ir_shift);
+
+  void InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_shift, 
+                                     AthenaArray<Real> &ir_cm);
+
+
+
+  Real MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
+          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
+          AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm);
   
   //====================================
   
@@ -121,6 +140,8 @@ public:
   AthenaArray<Real> taufact;
   AthenaArray<Real> rad_source; // store the radiation source terms
 
+
+
   
 private:
   AthenaArray<Real> vel_, velx_,vely_,velz_;
@@ -133,6 +154,8 @@ private:
   AthenaArray<Real> dflx_ang_, ang_vol_;
   AthenaArray<Real> tgas_, vel_source_, tgas_new_; // array to store gas temperature, 
                                         // velocity for source term
+  // these are temporary arrays for multi-group source terms
+  AthenaArray<Real> sum_nu3_, sum_nu2_, sum_nu1_; 
 
                                     
  // temporary 1D array with size of nang
@@ -165,6 +188,15 @@ private:
   AthenaArray<Real> sm_diff1_, sm_diff2_;
   AthenaArray<Real> vel_ex_l_, vel_im_l_, vel_ex_r_, vel_im_r_;
   AthenaArray<Real> dxw1_, dxw2_;
+
+  //----------------------------------------------------
+  // array for multi-group 
+  // This is the coefficient in front I when calculate frequency flux
+  AthenaArray<Real> nu_flx_l_, nu_flx_r_; 
+  // This is the actual flux in frequency space
+  AthenaArray<Real> fre_flx_l_, fre_flx_r_;
+  AthenaArray<Real> ir_shift_;
+
 
 
 };

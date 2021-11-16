@@ -304,10 +304,10 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
               frz_fr += ir_weight * prad->mu(2,k,j,i,n);
             }
           }
-          er0 += er_fr*prad->wfreq(ifr);
-          frx0 += frx_fr*prad->wfreq(ifr);
-          fry0 += fry_fr*prad->wfreq(ifr);
-          frz0 += frz_fr*prad->wfreq(ifr);
+          er0 += er_fr;
+          frx0 += frx_fr;
+          fry0 += fry_fr;
+          frz0 += frz_fr;
         }
 
         Real er = 0.0;
@@ -329,10 +329,10 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
             fry_fr += ir_weight * prad->mu(1,k,j,i,n);
             frz_fr += ir_weight * prad->mu(2,k,j,i,n);
           }
-          er += er_fr*prad->wfreq(ifr);
-          frx += frx_fr*prad->wfreq(ifr);
-          fry += fry_fr*prad->wfreq(ifr);
-          frz += frz_fr*prad->wfreq(ifr);
+          er += er_fr;
+          frx += frx_fr;
+          fry += fry_fr;
+          frz += frz_fr;
         }// end ifr
 
         
