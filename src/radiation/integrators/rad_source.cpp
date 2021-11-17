@@ -174,14 +174,32 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         }// End frequency
         
         Real jr_new = 0.0;
+        if(nfreq == 1){
 
          // Add absorption and scattering opacity source
-        tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
+          tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
                               sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
         
          // Add compton scattering
-         if(compton_flag_ > 0)
-           Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_new_(k,j,i), ir_cm);
+          if(compton_flag_ > 0)
+            Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_new_(k,j,i), ir_cm);
+        }else{
+        
+         //prepare friency shift coefficient
+          FrequencyShiftCoef(tran_coef,nu_flx_l_,nu_flx_r_);
+
+         // shift intensity from shifted frequency bins
+          MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
+          // calculate the source term 
+          tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
+                              sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
+
+          // prepare coefficient for inverse transfer
+          FrequencyInvShiftCoef(tran_coef,nu_flx_l_,nu_flx_r_);
+          // inverseshift
+          InverseMapFrequency(tran_coef,ir_shift_,ir_cm);
+       
+        }
        
          //update specific intensity in the lab frame
          // do not modify ir_ini

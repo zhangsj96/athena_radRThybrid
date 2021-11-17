@@ -91,6 +91,10 @@ public:
   Real fre_ratio; // ratio between neighboring frequency bins
   AthenaArray<Real> nu_grid;  // frequency grid
   AthenaArray<Real> emission_spec; //gas emission term in each frequency bin relative to a_rT^4
+  FrequencyFunc UserFrequency; // user defined frequency grid
+  void EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction);
+  EmissionFunc UserEmissionSpec; 
+  void EnrollEmissionFunction(EmissionFunc MyEmissionSpec);
 
 //  int ir_output; // the number of specific intensity to dump
 //  AthenaArray<int> ir_index; // the array
@@ -105,7 +109,7 @@ public:
     // The function pointer for the opacity
   OpacityFunc UpdateOpacity;
 
-  FrequencyFunc UserFrequency; // us
+
   
   int rotate_theta; // flag to rotate the boundary
   int rotate_phi;  

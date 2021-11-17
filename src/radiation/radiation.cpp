@@ -39,10 +39,32 @@
 
 // The default opacity function.
 // Do nothing. Keep the opacity as the initial value
+inline void DefaultFrequency(Radiation *prad)
+{
+  return;
+}
+
+// The default opacity function.
+// Do nothing. Keep the opacity as the initial value
+inline void DefaultEmission(Radiation *prad)
+{
+  for(int ifr=0; ifr<prad->nfreq-1; ++ifr)
+    prad->emission_spec(ifr) = 
+         prad->pradintegrator->BlackBodySpec(prad->nu_grid(ifr), prad->nu_grid(ifr+1));
+
+  prad->emission_spec(prad->nfreq-1) = 1.0 - 
+                      prad->pradintegrator->FitBlackBody(prad->nu_grid(prad->nfreq-1));
+  return;
+}
+
+
+// The default opacity function.
+// Do nothing. Keep the opacity as the initial value
 inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &prim)
 {
-  
+  return;
 }
+
 
 
 Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
@@ -242,6 +264,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   }
   emission_spec.NewAthenaArray(nfreq);
 
+  UserFrequency = DefaultFrequency;
+  UserEmissionSpec = DefaultEmission;
 
 //  wfreq.NewAthenaArray(nfreq);
   //------------------------------------
@@ -422,5 +446,17 @@ void Radiation::EnrollOpacityFunction(OpacityFunc MyOpacityFunction)
 }
 
 
+void Radiation::EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction)
+{
+  UserFrequency = MyFrequencyFunction;
+  
+}
+
+
+void Radiation::EnrollEmissionFunction(EmissionFunc MyEmissionSpec)
+{
+  UserEmissionSpec = MyEmissionSpec;
+  
+}
 
 
