@@ -594,191 +594,354 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // The following radiation/cosmic ray/thermal conduction are all 
   // cell centered variable
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
-    // (lab-frame) radiation energy density
-    if (output_params.variable.compare("Er") == 0 || 
-      output_params.variable.compare("cons") == 0 ||
-      output_params.variable.compare("prim") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Er";
-      pod->data.InitWithShallowSlice(prad->rad_mom,4,IER,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }
+    if(prad->nfreq == 1){
 
-   // comoving frame fram radiation flux vector
-    if (output_params.variable.compare("Fr") == 0 || 
+    // (lab-frame) radiation energy density
+      if (output_params.variable.compare("Er") == 0 || 
         output_params.variable.compare("cons") == 0 ||
         output_params.variable.compare("prim") == 0) {
-      pod = new OutputData;
-      pod->type = "VECTORS";
-      pod->name = "Fr";
-      pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR1,3);
-      AppendOutputDataNode(pod);
-      num_vars_+=3;
-      if(output_params.cartesian_vector) {
-        AthenaArray<Real> src;
-        src.InitWithShallowSlice(prad->rad_mom,4,IFR1,3);
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Er";
+        pod->data.InitWithShallowSlice(prad->rad_mom,4,IER,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }
+
+   // comoving frame fram radiation flux vector
+      if (output_params.variable.compare("Fr") == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
         pod = new OutputData;
         pod->type = "VECTORS";
-        pod->name = "Fr_xyz";
-        pod->data.NewAthenaArray(3,prad->rad_mom.GetDim3(),prad->rad_mom.GetDim2(),
-                                    prad->rad_mom.GetDim1());
-        CalculateCartesianVector(src, pod->data, pmb->pcoord);
+        pod->name = "Fr";
+        pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR1,3);
         AppendOutputDataNode(pod);
         num_vars_+=3;
+        if(output_params.cartesian_vector) {
+          AthenaArray<Real> src;
+          src.InitWithShallowSlice(prad->rad_mom,4,IFR1,3);
+          pod = new OutputData;
+          pod->type = "VECTORS";
+          pod->name = "Fr_xyz";
+          pod->data.NewAthenaArray(3,prad->rad_mom.GetDim3(),prad->rad_mom.GetDim2(),
+                                    prad->rad_mom.GetDim1());
+          CalculateCartesianVector(src, pod->data, pmb->pcoord);
+          AppendOutputDataNode(pod);
+          num_vars_+=3;
+        }
       }
-    }
 
 
   // each component of radiation flux
-    if (output_params.variable.compare("Frx") == 0 || 
-        output_params.variable.compare("Fr1") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr1";
-      pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR1,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }   
+      if (output_params.variable.compare("Frx") == 0 || 
+          output_params.variable.compare("Fr1") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr1";
+        pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR1,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }   
 
-    if (output_params.variable.compare("Fry") == 0 || 
-        output_params.variable.compare("Fr2") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr2";
-      pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR2,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    } 
+      if (output_params.variable.compare("Fry") == 0 || 
+          output_params.variable.compare("Fr2") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr2";
+        pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR2,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      } 
 
-    if (output_params.variable.compare("Frz") == 0 || 
-        output_params.variable.compare("Fr3") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr3";
-      pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR3,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }
+      if (output_params.variable.compare("Frz") == 0 || 
+          output_params.variable.compare("Fr3") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr3";
+        pod->data.InitWithShallowSlice(prad->rad_mom,4,IFR3,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }
 
     // lab frame radiation pressure
-    if (output_params.variable.compare("Pr") == 0 ||
-          output_params.variable.compare("prim") == 0 ||
-          output_params.variable.compare("cons") == 0) {
-        pod = new OutputData;
-        pod->type = "TENSORS";
-        pod->name = "Pr";
-        pod->data.InitWithShallowSlice(prad->rad_mom,4,IPR11,9);
-        AppendOutputDataNode(pod);
-        num_vars_ += 9;
-      }
+      if (output_params.variable.compare("Pr") == 0 ||
+            output_params.variable.compare("prim") == 0 ||
+            output_params.variable.compare("cons") == 0) {
+          pod = new OutputData;
+          pod->type = "TENSORS";
+          pod->name = "Pr";
+          pod->data.InitWithShallowSlice(prad->rad_mom,4,IPR11,9);
+          AppendOutputDataNode(pod);
+          num_vars_ += 9;
+        }
 
 
 
     // (comoving-frame) radiation energy density
-    if (output_params.variable.compare("Er0") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Er0";
-      pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IER,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }
+      if (output_params.variable.compare("Er0") == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Er0";
+        pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IER,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }
       
 
 
     // comoving frame fram radiation flux vector
-    if (output_params.variable.compare("Fr0") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
-      pod = new OutputData;
-      pod->type = "VECTORS";
-      pod->name = "Fr0";
-      pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,3);
-      AppendOutputDataNode(pod);
-      num_vars_+=3;
-      if(output_params.cartesian_vector) {
-        AthenaArray<Real> src;
-        src.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,3);
+      if (output_params.variable.compare("Fr0") == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
         pod = new OutputData;
         pod->type = "VECTORS";
-        pod->name = "Fr0_xyz";
-        pod->data.NewAthenaArray(3,prad->rad_mom_cm.GetDim3(),prad->rad_mom_cm.GetDim2(),
-                                    prad->rad_mom_cm.GetDim1());
-        CalculateCartesianVector(src, pod->data, pmb->pcoord);
+        pod->name = "Fr0";
+        pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,3);
         AppendOutputDataNode(pod);
         num_vars_+=3;
+        if(output_params.cartesian_vector) {
+          AthenaArray<Real> src;
+          src.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,3);
+          pod = new OutputData;
+          pod->type = "VECTORS";
+          pod->name = "Fr0_xyz";
+          pod->data.NewAthenaArray(3,prad->rad_mom_cm.GetDim3(),prad->rad_mom_cm.GetDim2(),
+                                    prad->rad_mom_cm.GetDim1());
+          CalculateCartesianVector(src, pod->data, pmb->pcoord);
+          AppendOutputDataNode(pod);
+          num_vars_+=3;
+        }
       }
-    }
 
-    if (output_params.variable.compare("Fr0x") == 0 || 
-        output_params.variable.compare("Fr01") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr01";
-      pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }   
+      if (output_params.variable.compare("Fr0x") == 0 || 
+          output_params.variable.compare("Fr01") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr01";
+        pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR1,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }   
 
-    if (output_params.variable.compare("Fr0y") == 0 || 
-        output_params.variable.compare("Fr02") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr02";
-      pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR2,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    } 
+      if (output_params.variable.compare("Fr0y") == 0 || 
+          output_params.variable.compare("Fr02") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr02";
+        pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR2,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      } 
 
-    if (output_params.variable.compare("Fr0z") == 0 || 
-        output_params.variable.compare("Fr03") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Fr03";
-      pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR3,1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }  
+      if (output_params.variable.compare("Fr0z") == 0 || 
+          output_params.variable.compare("Fr03") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "Fr03";
+        pod->data.InitWithShallowSlice(prad->rad_mom_cm,4,IFR3,1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }  
+    }else{
+    //--------/--------/--------/--------/--------/--------/--------  
+      for(int ifr=0; ifr<prad->nfreq; ++ifr){
+
+        std::string er_ifr = "Er_" + std::to_string(ifr);
+        std::string fr_ifr = "Fr_" + std::to_string(ifr);        
+        std::string frxyz_ifr = "Frxyz_" + std::to_string(ifr); 
+        std::string frx_ifr = "Frx_" + std::to_string(ifr);
+        std::string fry_ifr = "Fry_" + std::to_string(ifr);
+        std::string frz_ifr = "Frz_" + std::to_string(ifr);
+        std::string pr_ifr = "Pr_" + std::to_string(ifr);
+        std::string er0_ifr = "Er0_" + std::to_string(ifr);
+        std::string fr0_ifr = "Fr0_" + std::to_string(ifr);
+        std::string fr0xyz_ifr = "Fr0xyz_" + std::to_string(ifr);  
+        std::string fr0x_ifr = "Fr0x_" + std::to_string(ifr);
+        std::string fr0y_ifr = "Fr0y_" + std::to_string(ifr);
+        std::string fr0z_ifr = "Fr0z_" + std::to_string(ifr);
+
+        if (output_params.variable.compare(er_ifr) == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = er_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IER,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+   // comoving frame fram radiation flux vector
+        if (output_params.variable.compare(fr_ifr) == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+          pod = new OutputData;
+          pod->type = "VECTORS";
+          pod->name = fr_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IFR1,3);
+          AppendOutputDataNode(pod);
+          num_vars_+=3;
+          if(output_params.cartesian_vector) {
+            AthenaArray<Real> src;
+            src.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IFR1,3);
+            pod = new OutputData;
+            pod->type = "VECTORS";
+            pod->name = frxyz_ifr;
+            pod->data.NewAthenaArray(3,prad->rad_mom_nu.GetDim3(),prad->rad_mom_nu.GetDim2(),
+                                    prad->rad_mom_nu.GetDim1());
+            CalculateCartesianVector(src, pod->data, pmb->pcoord);
+            AppendOutputDataNode(pod);
+            num_vars_+=3;
+          }
+        }
 
 
-  
-    if (output_params.variable.compare("Sigma_s") == 0 ||
-        output_params.variable.compare("prim") == 0 ||
-        output_params.variable.compare("cons") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Sigma_s";
-      pod->data.InitWithShallowSlice(prad->grey_sigma,4,OPAS,1);
-      AppendOutputDataNode(pod);
-      num_vars_ += 1;
-    }
+        if (output_params.variable.compare(frx_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = frx_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IFR1,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
 
-    if (output_params.variable.compare("Sigma_a") == 0 ||
-        output_params.variable.compare("prim") == 0 ||
-        output_params.variable.compare("cons") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Sigma_a";
-      pod->data.InitWithShallowSlice(prad->grey_sigma,4,OPAA,1);
-      AppendOutputDataNode(pod);      
-      num_vars_ += 1;
-    }
+        if (output_params.variable.compare(fry_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = fry_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IFR2,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(frz_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = frz_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IFR3,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(pr_ifr) == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+          pod = new OutputData;
+          pod->type = "TENSORS";
+          pod->name = pr_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_nu,4,ifr*13+IPR11,9);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(er0_ifr) == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = er0_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IER,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(fr0_ifr) == 0 || 
+          output_params.variable.compare("cons") == 0 ||
+          output_params.variable.compare("prim") == 0) {
+          pod = new OutputData;
+          pod->type = "VECTORS";
+          pod->name = fr0_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IFR1,3);
+          AppendOutputDataNode(pod);
+          num_vars_+=3;
+          if(output_params.cartesian_vector) {
+            AthenaArray<Real> src;
+            src.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IFR1,3);
+            pod = new OutputData;
+            pod->type = "VECTORS";
+            pod->name = fr0xyz_ifr;
+            pod->data.NewAthenaArray(3,prad->rad_mom_cm_nu.GetDim3(),prad->rad_mom_cm_nu.GetDim2(),
+                                    prad->rad_mom_cm_nu.GetDim1());
+            CalculateCartesianVector(src, pod->data, pmb->pcoord);
+            AppendOutputDataNode(pod);
+            num_vars_+=3;
+          }
+        }
+
+
+        if (output_params.variable.compare(fr0x_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = fr0x_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IFR1,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(fr0y_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = fr0y_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IFR2,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+        if (output_params.variable.compare(fr0z_ifr) == 0) {
+          pod = new OutputData;
+          pod->type = "SCALARS";
+          pod->name = fr0z_ifr;
+          pod->data.InitWithShallowSlice(prad->rad_mom_cm_nu,4,ifr*4+IFR3,1);
+          AppendOutputDataNode(pod);
+          num_vars_++;
+        }
+
+      }// end loop over frequency
+
+    }// end multi-group output
+    //-------------------------------------------------------
+
+    for(int ifr=0; ifr<prad->nfreq; ++ifr){
+      std::string sigmaa_ifr = "Sigma_a_" + std::to_string(ifr);
+      std::string sigmas_ifr = "Sigma_s_" + std::to_string(ifr);        
+      std::string sigmap_ifr = "Sigma_p_" + std::to_string(ifr); 
+
+      if (output_params.variable.compare(sigmas_ifr) == 0 ||
+          output_params.variable.compare("prim") == 0 ||
+          output_params.variable.compare("cons") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = sigmas_ifr;
+        pod->data.InitWithShallowSlice(prad->output_sigma,4,3*ifr+OPAS,1);
+        AppendOutputDataNode(pod);
+        num_vars_ += 1;
+      }
+
+      if (output_params.variable.compare(sigmaa_ifr) == 0 ||
+          output_params.variable.compare("prim") == 0 ||
+          output_params.variable.compare("cons") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = sigmaa_ifr;
+        pod->data.InitWithShallowSlice(prad->output_sigma,4,3*ifr+OPAA,1);
+        AppendOutputDataNode(pod);      
+        num_vars_ += 1;
+      }
     
-    if (output_params.variable.compare("Sigma_p") == 0 ||
-        output_params.variable.compare("prim") == 0 ||
-        output_params.variable.compare("cons") == 0) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "Sigma_p";
-      pod->data.InitWithShallowSlice(prad->grey_sigma,4,OPAP,1);
-      AppendOutputDataNode(pod); 
-      num_vars_ += 1;
-    }
-
+      if (output_params.variable.compare(sigmap_ifr) == 0 ||
+          output_params.variable.compare("prim") == 0 ||
+          output_params.variable.compare("cons") == 0) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = sigmap_ifr;
+        pod->data.InitWithShallowSlice(prad->output_sigma,4,3*ifr+OPAP,1);
+        AppendOutputDataNode(pod); 
+        num_vars_ += 1;
+      }
+    }// end ifr loop 
   }// End (RADIATION_ENABLED)
 
 

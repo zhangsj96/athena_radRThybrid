@@ -55,7 +55,8 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
 #pragma omp simd aligned(i_mom:ALI_LEN)
         for(int i=0; i<n1z; ++i){
           i_mom[i] = 0.0;
-        }}
+        }
+      }
   
   for(int k=0; k<n3z; ++k){
     for(int j=0; j<n2z; ++j){
@@ -83,20 +84,22 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
             pryz += irweight * cosy[n] * cosz[n];
           }
           // assign the moments for each frequency group
-          rad_mom_nu(ifr,IER,k,j,i) = er;
-          rad_mom_nu(ifr,IFR1,k,j,i) = frx;
-          rad_mom_nu(ifr,IFR2,k,j,i) = fry;
-          rad_mom_nu(ifr,IFR3,k,j,i) = frz;
-          rad_mom_nu(ifr,IPR11,k,j,i) = prxx;
-          rad_mom_nu(ifr,IPR22,k,j,i) = pryy;
-          rad_mom_nu(ifr,IPR33,k,j,i) = przz;
-          rad_mom_nu(ifr,IPR12,k,j,i) = prxy;
-          rad_mom_nu(ifr,IPR13,k,j,i) = prxz;
-          rad_mom_nu(ifr,IPR23,k,j,i) = pryz;
-          rad_mom_nu(ifr,IPR21,k,j,i) = prxy;
-          rad_mom_nu(ifr,IPR31,k,j,i) = prxz;
-          rad_mom_nu(ifr,IPR32,k,j,i) = pryz;
+          if(nfreq > 1){
+            rad_mom_nu(ifr*13+IER,k,j,i) = er;
+            rad_mom_nu(ifr*13+IFR1,k,j,i) = frx;
+            rad_mom_nu(ifr*13+IFR2,k,j,i) = fry;
+            rad_mom_nu(ifr*13+IFR3,k,j,i) = frz;
+            rad_mom_nu(ifr*13+IPR11,k,j,i) = prxx;
+            rad_mom_nu(ifr*13+IPR22,k,j,i) = pryy;
+            rad_mom_nu(ifr*13+IPR33,k,j,i) = przz;
+            rad_mom_nu(ifr*13+IPR12,k,j,i) = prxy;
+            rad_mom_nu(ifr*13+IPR13,k,j,i) = prxz;
+            rad_mom_nu(ifr*13+IPR23,k,j,i) = pryz;
+            rad_mom_nu(ifr*13+IPR21,k,j,i) = prxy;
+            rad_mom_nu(ifr*13+IPR31,k,j,i) = prxz;
+            rad_mom_nu(ifr*13+IPR32,k,j,i) = pryz;
 
+          }
        
 
           
@@ -225,7 +228,15 @@ void Radiation::CalculateComMoment()
           frx *= numsum;
           fry *= numsum;
           frz *= numsum;
-          
+
+          // assign the moments for each frequency group
+          if(nfreq > 1){
+            rad_mom_cm_nu(ifr*4+IER,k,j,i) = er;
+            rad_mom_cm_nu(ifr*4+IFR1,k,j,i) = frx;
+            rad_mom_cm_nu(ifr*4+IFR2,k,j,i) = fry;
+            rad_mom_cm_nu(ifr*4+IFR3,k,j,i) = frz;
+          }
+
           i_mom(IER,k,j,i) += er;
           i_mom(IFR1,k,j,i) += frx;
           i_mom(IFR2,k,j,i) += fry;
@@ -233,21 +244,13 @@ void Radiation::CalculateComMoment()
           
         }// End frequency loop
         
-        // Now calculate frequency inetgrated opacity
-        Real sum_sigma_s=0.0, sum_sigma_a = 0.0, sum_planck = 0.0;
-        Real *sigmas=&(sigma_s(k,j,i,0));
-        Real *sigmaa=&(sigma_a(k,j,i,0));
-        Real *sigmap=&(sigma_planck(k,j,i,0));
+        // prepare the opacity array for output
         for(int ifr=0; ifr<nfreq; ++ifr){
-          sum_sigma_s += sigmas[ifr];
-          sum_sigma_a += sigmaa[ifr];
-          sum_planck  += sigmap[ifr];
-        }
-        grey_sigma(OPAS,k,j,i) = sum_sigma_s;
-        grey_sigma(OPAA,k,j,i) = sum_sigma_a;
-        grey_sigma(OPAP,k,j,i) = sum_planck;
-
-      }
+          output_sigma(3*ifr+OPAS,k,j,i) = sigma_s(k,j,i,ifr);
+          output_sigma(3*ifr+OPAA,k,j,i) = sigma_a(k,j,i,ifr);
+          output_sigma(3*ifr+OPAP,k,j,i) = sigma_planck(k,j,i,ifr);
+        }// end frquency
+      }// end i
     }
   }
 

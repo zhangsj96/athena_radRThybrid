@@ -48,13 +48,13 @@ public:
   AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments
   AthenaArray<Real> rad_mom_cm; // co-moving frame Er, Frx, Fry, Frz
-  AthenaArray<Real> rad_mom_nu, rad_mom_nu_cm; // multi_group radiation moments
+  AthenaArray<Real> rad_mom_nu, rad_mom_cm_nu; // multi_group radiation moments
   AthenaArray<Real> sigma_s, sigma_a, sigma_ae; //   opacity
                        //sigma_a T and sigma_ae I
   AthenaArray<Real> sigma_planck; // absorption opacity to account for
                                  // the difference between Planck
                                 // mean and Rosseland mean
-  AthenaArray<Real> grey_sigma; // frequency integrated opacity
+  AthenaArray<Real> output_sigma; // frequency integrated opacity
   AthenaArray<Real> mu, wmu; // angles and weight
 
   

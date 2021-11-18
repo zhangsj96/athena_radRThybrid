@@ -135,7 +135,7 @@ void ATHDF5Output::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       num_variables[n_dataset] += 1;
 
     if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
-      num_variables[n_dataset] += 20;
+      num_variables[n_dataset] += 20 *pmb->prad->nfreq;
 
     if(CR_ENABLED)
       num_variables[n_dataset] += 13;

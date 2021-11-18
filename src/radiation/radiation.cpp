@@ -296,8 +296,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rad_mom_cm.NewAthenaArray(4,nc3,nc2,nc1);
   // dump the moments in each frequency groups
   if(nfreq > 1){
-    rad_mom_nu.NewAthenaArray(nfreq,13,nc3,nc2,nc1); 
-    rad_mom_nu_cm.NewAthenaArray(nfreq,4,nc3,nc2,nc1);   
+    // moments in different frequency bins
+    rad_mom_nu.NewAthenaArray(13*nfreq,nc3,nc2,nc1); 
+    rad_mom_cm_nu.NewAthenaArray(4*nfreq,nc3,nc2,nc1); 
   }
 
 
@@ -309,7 +310,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   t_floor_.NewAthenaArray(nc3,nc2,nc1);
   t_ceiling_.NewAthenaArray(nc3,nc2,nc1);
   
-  grey_sigma.NewAthenaArray(3,nc3,nc2,nc1);
+  output_sigma.NewAthenaArray(3*nfreq,nc3,nc2,nc1);
 
   
   mu.NewAthenaArray(3,nc3,nc2,nc1,nang);
