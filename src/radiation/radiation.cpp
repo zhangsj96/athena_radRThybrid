@@ -245,7 +245,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     }// calculate nfreq if not given
 
   }else{
-    if(nfreq > 1){
+    if(nfreq > 2){
       if(nu_max <= nu_min){
         std::stringstream msg;
         msg << "### FATAL ERROR in Radiation Class" << std::endl

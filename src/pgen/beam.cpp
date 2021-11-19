@@ -153,11 +153,21 @@ void TwoBeams(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
           Real slope2=prad->mu(1,k,js-j,i,0)/prad->mu(0,k,js-j,i,0);
           Real dis1=fabs(slope1*(x1-0.1)+(x2+2.0));
           Real dis2=fabs(slope2*(x1+0.1)+(x2+2.0));
-          if(((l==0)&&(n==0)&&(dis1<pco->dx1v(i))) ||
-               ((l==1)&&(n==0)&&(dis2<pco->dx1v(i)))){
-            ir(k,js-j,i,n_ang+ifr*nang) = 10.0;
-          }else{
-            ir(k,js-j,i,n_ang+ifr*nang) = 0.0;
+          if(ifr == 0){
+            if(((l==0)&&(n==0)&&(dis1<pco->dx1v(i))) ||
+                 ((l==1)&&(n==0)&&(dis2<pco->dx1v(i)))){
+              ir(k,js-j,i,n_ang+ifr*nang) = 10.0;
+            }else{
+              ir(k,js-j,i,n_ang+ifr*nang) = 0.0;
+            }
+          }// end ifr
+          else{
+            if(((l==0)&&(n==2)&&(dis1<pco->dx1v(i))) ||
+                 ((l==1)&&(n==2)&&(dis2<pco->dx1v(i)))){
+              ir(k,js-j,i,n_ang+ifr*nang) = 10.0;
+            }else{
+              ir(k,js-j,i,n_ang+ifr*nang) = 0.0;
+            }            
           }
         }
         }

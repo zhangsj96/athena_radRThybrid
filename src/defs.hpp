@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "rad_linearwave"
+#define PROBLEM_GENERATOR "beam"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"

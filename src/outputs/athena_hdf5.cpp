@@ -224,6 +224,8 @@ void ATHDF5Output::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
     pod = pod->pnext;
   }
 
+
+
   // Make sure C-strings are null-terminated
   for (int n = 0; n < num_datasets; ++n)
     dataset_names[n][max_name_length] = '\0';

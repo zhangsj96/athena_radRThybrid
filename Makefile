@@ -3,7 +3,7 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = rad_linearwave.cpp
+PROBLEM_FILE = beam.cpp
 COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
@@ -15,7 +15,7 @@ MPIFFT_FILE =
 
 CXX := mpicxx
 CPPFLAGS := 
-CXXFLAGS := -O3 -std=c++11
+CXXFLAGS := -O0 -g -std=c++11
 LDFLAGS := 
 LDLIBS :=  -lhdf5
 GCOV_CMD := gcov
