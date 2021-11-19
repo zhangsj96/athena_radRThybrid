@@ -749,14 +749,14 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     //--------/--------/--------/--------/--------/--------/--------  
       for(int ifr=0; ifr<prad->nfreq; ++ifr){
 
-        std::string er_ifr = "Er" + std::to_string(ifr)+"_";
+        std::string er_ifr = "Er_" + std::to_string(ifr);
         std::string fr_ifr = "Fr_" + std::to_string(ifr)+"_";        
         std::string frxyz_ifr = "Frxyz_" + std::to_string(ifr)+"_"; 
         std::string frx_ifr = "Frx_" + std::to_string(ifr)+"_";
         std::string fry_ifr = "Fry_" + std::to_string(ifr)+"_";
         std::string frz_ifr = "Frz_" + std::to_string(ifr)+"_";
         std::string pr_ifr = "Pr_" + std::to_string(ifr)+"_";
-        std::string er0_ifr = "Er0" + std::to_string(ifr)+"_";
+        std::string er0_ifr = "Er0_" + std::to_string(ifr);
         std::string fr0_ifr = "Fr0_" + std::to_string(ifr)+"_";
         std::string fr0xyz_ifr = "Fr0xyz_" + std::to_string(ifr)+"_";  
         std::string fr0x_ifr = "Fr0x_" + std::to_string(ifr)+"_";
