@@ -162,8 +162,8 @@ void TwoBeams(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
             }
           }// end ifr
           else{
-            if(((l==0)&&(n==2)&&(dis1<pco->dx1v(i))) ||
-                 ((l==1)&&(n==2)&&(dis2<pco->dx1v(i)))){
+            if(((l==0)&&(n==1)&&(dis1<pco->dx1v(i))) ||
+                 ((l==1)&&(n==1)&&(dis2<pco->dx1v(i)))){
               ir(k,js-j,i,n_ang+ifr*nang) = 10.0;
             }else{
               ir(k,js-j,i,n_ang+ifr*nang) = 0.0;

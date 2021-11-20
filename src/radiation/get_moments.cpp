@@ -171,7 +171,7 @@ void Radiation::CalculateComMoment()
     for(int j=0; j<n2z; ++j){
       for(int i=0; i<n1z; ++i){
 
-          Real *ir_lab = &(ir(k,j,i,0));
+
           Real *cosx = &(mu(0,k,j,i,0));
           Real *cosy = &(mu(1,k,j,i,0));
           Real *cosz = &(mu(2,k,j,i,0));
@@ -197,6 +197,7 @@ void Radiation::CalculateComMoment()
           Real lorz = sqrt(lorzsq);
  
         for(int ifr=0; ifr<nfreq; ++ifr){
+          ir_lab = &(ir(k,j,i,ifr*nang));
           er=0.0; frx=0.0; fry=0.0; frz=0.0;
           Real numsum = 0.0;
 #pragma omp simd aligned(cosx,cosy,cosz:ALI_LEN) reduction(+:numsum,er,frx,fry,frz)

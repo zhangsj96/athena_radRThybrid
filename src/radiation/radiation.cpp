@@ -218,8 +218,16 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
 
   // convert frequency to unit of kT_unit/h
-  nu_min = nu_min * h_planck/(k_b * tunit);
-  nu_max = nu_max * h_planck/(k_b * tunit);
+  if(nu_min < 0.0)
+    nu_min = -nu_min;
+  else
+    nu_min = nu_min * h_planck/(k_b * tunit);
+
+  if(nu_max < 0.0)
+    nu_max = -nu_max;
+  else
+    nu_max = nu_max * h_planck/(k_b * tunit);
+  
 
   if(fre_ratio > 1){
 
