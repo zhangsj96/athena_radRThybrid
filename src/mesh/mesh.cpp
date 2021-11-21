@@ -1717,7 +1717,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb = my_blocks(i); ph = pmb->phydro;
           Radiation *prad = pmb->prad;
           prad->UserFrequency(prad);
-          prad->UserEmissionSpec(prad);
           prad->CalculateMoment(prad->ir);
           prad->UpdateOpacity(pmb,ph->w);
 

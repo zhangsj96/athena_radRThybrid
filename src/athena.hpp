@@ -219,7 +219,7 @@ using RadBoundaryFunc = void (*)(
      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 using OpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &prim);
 using FrequencyFunc = void (*)(Radiation *prad);
-using EmissionFunc = void(*)(Radiation *prad);
+using EmissionFunc = void(*)(Radiation *prad, Real tgas);
 using CROpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
                       AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
 using CRBoundaryFunc = void (*)(

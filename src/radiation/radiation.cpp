@@ -46,14 +46,19 @@ inline void DefaultFrequency(Radiation *prad)
 
 // The default opacity function.
 // Do nothing. Keep the opacity as the initial value
-inline void DefaultEmission(Radiation *prad)
+inline void DefaultEmission(Radiation *prad, Real tgas)
 {
-  for(int ifr=0; ifr<prad->nfreq-1; ++ifr)
-    prad->emission_spec(ifr) = 
-         prad->pradintegrator->BlackBodySpec(prad->nu_grid(ifr), prad->nu_grid(ifr+1));
+  int &nfreq = prad->nfreq;
+  if(nfreq > 1){
+    for(int ifr=0; ifr<nfreq-1; ++ifr)
+      prad->emission_spec(ifr) =  
+            prad->BlackBodySpec(prad->nu_grid(ifr)/tgas, prad->nu_grid(ifr+1)/tgas);
 
-  prad->emission_spec(prad->nfreq-1) = 1.0 - 
-                      prad->pradintegrator->FitBlackBody(prad->nu_grid(prad->nfreq-1));
+      prad->emission_spec(nfreq-1) = 1.0 - prad->FitBlackBody(prad->nu_grid(nfreq-1)/tgas);
+  }
+
+  
+
   return;
 }
 
@@ -88,8 +93,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // arad = 4 * sigma/c
   Real arad = 7.565733250033928e-15; 
   Real c_speed = 2.99792458e10;  // speed of light
-  Real h_planck = 6.6260755e-27; // Planck constant
-  Real k_b = 1.380649e-16;   // Boltzman constant
+
   // read in the parameters
   int nmu = pin->GetInteger("radiation","nmu");
   // total number of polar angles covering 0 to pi/2
@@ -216,67 +220,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // log frequency space ratio
   fre_ratio= pin->GetOrAddReal("radiation","frequency_ratio",1.0); 
 
+  // setup the frequency grid
+  FrequencyGrid();  
 
-  // convert frequency to unit of kT_unit/h
-  if(nu_min < 0.0)
-    nu_min = -nu_min;
-  else
-    nu_min = nu_min * h_planck/(k_b * tunit);
-
-  if(nu_max < 0.0)
-    nu_max = -nu_max;
-  else
-    nu_max = nu_max * h_planck/(k_b * tunit);
-  
-
-  if(fre_ratio > 1){
-
-    if(nu_min < TINY_NUMBER){
-      std::stringstream msg;
-      msg << "### FATAL ERROR in Radiation Class" << std::endl
-          << "frequency_min needs to be larger than 0!";
-      throw std::runtime_error(msg.str().c_str());
-    }
-
-    if(nu_max <= nu_min){
-      std::stringstream msg;
-      msg << "### FATAL ERROR in Radiation Class" << std::endl
-          << "frequency_max needs to be larger than frequency_min!";
-      throw std::runtime_error(msg.str().c_str());
-    }
-
-
-    if(nfreq > 1){
-      nu_max = nu_min * pow(fre_ratio,nfreq-1);
-    }else{
-      nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+1;
-    }// calculate nfreq if not given
-
-  }else{
-    if(nfreq > 2){
-      if(nu_max <= nu_min){
-        std::stringstream msg;
-        msg << "### FATAL ERROR in Radiation Class" << std::endl
-            << "frequency_max needs to be larger than frequency_min!";
-        throw std::runtime_error(msg.str().c_str());
-      }
-
-      fre_ratio = log10(nu_max/nu_min)/(nfreq - 1);
-      fre_ratio = pow(10.0,fre_ratio);
-    }// end nfreq > 1
-  }
-
-  
-  if(nfreq > 1){
-    nu_grid.NewAthenaArray(nfreq);
-  }
-  emission_spec.NewAthenaArray(nfreq);
 
   UserFrequency = DefaultFrequency;
   UserEmissionSpec = DefaultEmission;
-
-//  wfreq.NewAthenaArray(nfreq);
-  //------------------------------------
 
   
   n_fre_ang = nang * nfreq;
@@ -336,10 +285,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   else
     AngularGrid(angle_flag, nmu);    
 
-  
-  // Initialize the frequency weight
-  if(nfreq > 1)
-    FrequencyGrid();
   
   // set a default opacity function
   UpdateOpacity = DefaultOpacity;
@@ -402,7 +347,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
       fprintf(pfile,"%2d   %e   %e   %e    %e\n",n,mu(0,0,0,0,n),mu(1,0,0,0,n),
              mu(2,0,0,0,n), wmu(n));
     }
-
+    if(nfreq > 1){
+      fprintf(pfile,"fre   spec\n");
+      for(int ifr=0; ifr<nfreq; ++ifr){
+        fprintf(pfile,"%e   %e\n",nu_grid(ifr),emission_spec(ifr)); 
+      }
+    }
     
     fclose(pfile);
   

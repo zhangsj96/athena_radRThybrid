@@ -185,6 +185,12 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
             Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_new_(k,j,i), ir_cm);
         }else{
         
+          // check the shift coefficient is not too large
+          CheckFrequencyShift(tran_coef);
+          // calculate the emission spectrum for each frequency bins scaled by T^4
+          pmy_rad->UserEmissionSpec(pmy_rad,tgas_(k,j,i));
+
+
          //prepare friency shift coefficient
           FrequencyShiftCoef(tran_coef,nu_flx_l_,nu_flx_r_);
 

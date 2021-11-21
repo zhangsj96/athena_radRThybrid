@@ -97,10 +97,7 @@ public:
 
   void CheckFrequencyShift(AthenaArray<Real> &tran_coef);
 
-  Real FitBlackBody(Real nu_t);
 
-  Real BlackBodySpec(Real nu_min, Real nu_max);
-  Real EffectiveBlackBody(Real intensity, Real nu);
 
   void FrequencyShiftCoef(AthenaArray<Real> &tran_coef, 
           AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r);

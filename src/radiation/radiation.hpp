@@ -131,6 +131,11 @@ public:
 
   void FrequencyGrid();
 
+  Real FitBlackBody(Real nu_t);
+
+  Real BlackBodySpec(Real nu_min, Real nu_max);
+  Real EffectiveBlackBody(Real intensity, Real nu);
+
   AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
 
 private:

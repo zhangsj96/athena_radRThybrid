@@ -30,62 +30,6 @@
 
 
 //--------------------------------------------------------------------------------------
-//! \fn RadIntegrator::ComToLab(const Real vx, const Real vy, const Real vz,
-//                          AthenaArray<Real> &ir, AthenaArray<Real> &ir_cm)
-//  \brief Return the integral of blackbody spectrum
-
-// return the integral (15/pi^4)\int_0^{nu/T} x^3 dx/(exp(x)-1)
-// frequency is scaled with kT_0/h
-// using fitting formula to return \int_0^nu_min and \int_0^nu_max
-
-Real RadIntegrator::FitBlackBody(Real nu_t)
-{
-
-// the integral at nu_t=1.5 is 0.6154949828394710
-  Real integral = 0.0;
-  Real nu_2 = nu_t * nu_t;
-  Real nu_3 = nu_t * nu_2; 
-  if(nu_t < 1.5){
-    integral = 0.051329911273422 * nu_3 -0.019248716727533 * nu_t * nu_3
-               + 0.002566495563671 * nu_2 * nu_3;
-  }else{
-    Real exp_nu = exp(-nu_t);
-    integral = -0.156915538762850 * exp_nu * (nu_3 + 2.69 * nu_2 + 6.714 * nu_t)
-               + 1.000009331428801*(1- exp_nu);
-  }
-
-  return integral;
-}
-
-
-Real RadIntegrator::BlackBodySpec(Real nu_min, Real nu_max)
-{
-  
-  return (FitBlackBody(nu_max) - FitBlackBody(nu_min));
-
-}
-
-// In the last frequency bin, [nu, infty]
-// we assume the spectrum is blackbody with effective temeprature Tr
-// so that intensity=T_r^4 (15/pi^4) int_{nu/T_r}^{infty} x^3dx/(exp(x)-1)
-// This is rearranged to intensity/nu^4=A=(1/y)^4(15/pi^4)\int_y^{infty} x^3dx/(exp(x)-1)
-// we use a fitting formula to get y
-Real RadIntegrator::EffectiveBlackBody(Real intensity, Real nu)
-{
-  
-  Real a_nu = intensity/(nu*nu*nu*nu); // I/nu^4
-  Real nu_tr = 1.0;
-  if(a_nu > 0.5){
-    nu_tr = pow((1.0/a_nu),0.25);
-  }else{
-    Real loganu = -log(a_nu);
-    nu_tr = -0.000525 * loganu * loganu * loganu + 0.03138 * loganu * loganu 
-            + 0.3223 * loganu + 0.8278;
-  }
-
-  return nu_tr;
-
-}
 
 //The function calculate the amount of shift for each I we need
 // The default frequency grid is nu_grid with nfreq frequency bins
@@ -194,8 +138,8 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
       }else{
         // ir_r is already shifted into the co-moving frame
         // nu_tr = cm_nu nu/ T_r
-        Real nu_tr = EffectiveBlackBody(ir_r[n], cm_nu[n] *pmy_rad->nu_grid(1));
-        Real ratio = (1.0-FitBlackBody(nu_tr/cm_nu[n]))/(1.0-FitBlackBody(nu_tr));
+        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *pmy_rad->nu_grid(1));
+        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         delta_i = ir_r[n] * (1.0 - ratio);
         ir_shift_l[n] = ir_l[n] + delta_i;
         ir_shift_r[n] = ir_r[n] - delta_i;
@@ -236,8 +180,8 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
 
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] < 1.0){
-        Real nu_tr = EffectiveBlackBody(ir_r[n], pmy_rad->nu_grid(nfreq-1)*cm_nu[n]);
-        Real ratio = (1.0-FitBlackBody(nu_tr/cm_nu[n]))/(1.0-FitBlackBody(nu_tr));
+        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], pmy_rad->nu_grid(nfreq-1)*cm_nu[n]);
+        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         fre_flx_r[n] = ir_r[n] * (ratio - 1.0);
       }else{
         Real delta_nu = pmy_rad->nu_grid(nfreq-1) - pmy_rad->nu_grid(nfreq-2);
@@ -286,8 +230,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
 
       }else{
         // nu_tr = cm_nu nu/ T_r
-        Real nu_tr = EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(1));
-        Real ratio = (1.0-FitBlackBody(nu_tr*cm_nu[n]))/(1.0-FitBlackBody(nu_tr));
+        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(1));
+        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr*cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         delta_i = ir_shift_r[n] * (1.0 - ratio);
 
         ir_l[n] = ir_shift_l[n] + delta_i;
@@ -329,8 +273,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
 
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
-        Real nu_tr = EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(nfreq-1));
-        Real ratio = (1.0-FitBlackBody(nu_tr*cm_nu[n]))/(1.0-FitBlackBody(nu_tr));
+        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(nfreq-1));
+        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr*cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         fre_flx_r[n] = ir_shift_r[n] * (ratio - 1.0);
       }else{
         Real delta_nu = pmy_rad->nu_grid(nfreq-1) - pmy_rad->nu_grid(nfreq-2);
