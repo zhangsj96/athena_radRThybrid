@@ -127,8 +127,8 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
 
     Real *ir_l = &(ir_cm(0));
     Real *ir_r = &(ir_cm(nang));
-    Real *ir_shift_l=&(ir_shift(0,0));
-    Real *ir_shift_r=&(ir_shift(1,0));
+    Real *ir_shift_l=&(ir_shift(0));
+    Real *ir_shift_r=&(ir_shift(nang));
     Real delta_i = 0.0;
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
@@ -162,7 +162,7 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
       Real *nuflxr = &(nu_flx_r_(ifr+1,0));
       Real *ir_l = &(ir_cm(ifr*nang));
       Real *ir_r = &(ir_cm((ifr+1)*nang));
-      Real *ir_s=&(ir_shift(ifr,0));
+      Real *ir_s=&(ir_shift(ifr*nang));
       // calculate flux at right hand side
       for(int n=0; n<nang; ++n)
         fre_flx_r[n] = nuflxl[n] * ir_l[n] + nuflxr[n] * ir_r[n];
@@ -190,8 +190,8 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
       }
     }
     for(int n=0; n<nang; ++n){
-      ir_shift(nfreq-2,n) = ir_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
-      ir_shift(nfreq-1,n) = ir_r[n] + fre_flx_r[n];
+      ir_shift((nfreq-2)*nang+n) = ir_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
+      ir_shift((nfreq-1)*nang+n) = ir_r[n] + fre_flx_r[n];
     }
 
   }// end nfreq > 2
@@ -218,8 +218,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
 
     Real *ir_l = &(ir_cm(0));
     Real *ir_r = &(ir_cm(nang));
-    Real *ir_shift_l=&(ir_shift(0,0));
-    Real *ir_shift_r=&(ir_shift(1,0));
+    Real *ir_shift_l=&(ir_shift(0));
+    Real *ir_shift_r=&(ir_shift(nang));
     Real delta_i = 0.0;
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] < 1.0){
@@ -253,8 +253,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
     for(int ifr=0; ifr<nfreq-2; ++ifr){
       Real *nuflxl = &(nu_flx_l_(ifr+1,0));
       Real *nuflxr = &(nu_flx_r_(ifr+1,0));
-      Real *ir_shift_l = &(ir_shift(ifr,0));
-      Real *ir_shift_r = &(ir_shift(ifr+1,0));
+      Real *ir_shift_l = &(ir_shift(ifr*nang));
+      Real *ir_shift_r = &(ir_shift((ifr+1)*nang));
       Real *ir_l = &(ir_cm(ifr*nang));
       // calculate flux at right hand side
       for(int n=0; n<nang; ++n)
@@ -268,8 +268,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
 
     }// end ifr from 0 to nfreq-2
     // now check the interface between last two frequency bins
-    Real *ir_shift_l = &(ir_shift(nfreq-2,0));
-    Real *ir_shift_r = &(ir_shift(nfreq-1,0));
+    Real *ir_shift_l = &(ir_shift((nfreq-2)*nang));
+    Real *ir_shift_r = &(ir_shift((nfreq-1)*nang));
 
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){

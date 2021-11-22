@@ -6,9 +6,9 @@ configure = --prob=beam
 <job>
 problem_id = thermal        # problem ID: basename of output filenames
 
-<output1>
-file_type  = hst       # History data dump
-dt         = 1.9      # time increment between outputs
+#<output1>
+#file_type  = hst       # History data dump
+#dt         = 1.9      # time increment between outputs
 
 
 #<output2>
@@ -20,10 +20,10 @@ dt         = 1.9      # time increment between outputs
 #file_type  = rst       # Binary data dump
 #dt         = 0.00001       # time increment between outputs
 
-#<output4>
-#file_type  = hdf5       # Binary data dump
-#dt         = 0.01       # time increment between outputs
-#variable   = prim
+<output4>
+file_type  = hdf5       # Binary data dump
+dt         = 0.1       # time increment between outputs
+variable   = prim
 
 
 <time>

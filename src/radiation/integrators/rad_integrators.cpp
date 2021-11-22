@@ -62,7 +62,10 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
 
-
+  // multi-group iteration
+  // iterations < iterative_tgas_
+  iteration_tgas_  = pin->GetOrAddInteger("radiation","iterative_tgas",5);
+  tgas_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
 
 
   int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
@@ -174,7 +177,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   
   vncsigma_.NewAthenaArray(nang);
-  vncsigma2_.NewAthenaArray(nang);
+  vncsigma2_.NewAthenaArray(prad->n_fre_ang);
   wmu_cm_.NewAthenaArray(nang);
   tran_coef_.NewAthenaArray(nang);
   cm_to_lab_.NewAthenaArray(nang);
@@ -189,7 +192,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     nu_flx_r_.NewAthenaArray(nfreq,nang);
     fre_flx_l_.NewAthenaArray(nang);
     fre_flx_r_.NewAthenaArray(nang);
-    ir_shift_.NewAthenaArray(nfreq,nang);
+    ir_shift_.NewAthenaArray(prad->n_fre_ang);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);

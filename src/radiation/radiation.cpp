@@ -210,6 +210,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
    // the number of frequeny bins
   nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);  
+  // when the emission spectrum depends on tgas, we perform 
 
   // minimum frequency
   nu_min = pin->GetOrAddReal("radiation","frequency_min",0);  

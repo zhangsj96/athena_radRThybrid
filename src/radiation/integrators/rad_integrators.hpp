@@ -193,6 +193,8 @@ private:
   // This is the actual flux in frequency space
   AthenaArray<Real> fre_flx_l_, fre_flx_r_;
   AthenaArray<Real> ir_shift_;
+  int iteration_tgas_;
+  Real tgas_error_;
 
 
 

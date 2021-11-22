@@ -187,8 +187,6 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         
           // check the shift coefficient is not too large
           CheckFrequencyShift(tran_coef);
-          // calculate the emission spectrum for each frequency bins scaled by T^4
-          pmy_rad->UserEmissionSpec(pmy_rad,tgas_(k,j,i));
 
 
          //prepare friency shift coefficient

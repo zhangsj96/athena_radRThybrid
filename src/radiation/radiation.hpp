@@ -141,6 +141,7 @@ public:
 private:
 
   int user_unit_;
+
   friend class BoundaryValues;
   
 

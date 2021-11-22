@@ -58,29 +58,31 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
   Real gamma = pmy_rad->pmy_block->peos->GetGamma();
   
   // Temporary array
-  AthenaArray<Real> &vncsigma = vncsigma_;
+
   AthenaArray<Real> &vncsigma2 = vncsigma2_;
 
-  int badcell=0;
+  bool badcell=false;
   
   
   Real coef[2];
-  for (int i=0; i<2; ++i)
-    coef[i] = 0.0;
+
 
   Real *suma1 = &(sum_nu1_(0));
   Real *suma2 = &(sum_nu2_(0));
   Real *suma3 = &(sum_nu3_(0));
   
   Real tgasnew = tgas;
-  
+  Real tgas_last = tgas;
+
+  int count_iteration = 0;
+
+  // first, calculate the coefficients that are independnet of emission_spec
+  coef[0] = 0.0;
   for(int ifr=0; ifr<nfreq; ++ifr){
-    
     suma1[ifr]=0.0;
     suma2[ifr]=0.0;
     suma3[ifr]=0.0;
-    Real jr_cm=0.0;
-    
+
     Real dtcsigmat = ct * sigma_a[ifr];
     Real dtcsigmae = ct * sigma_ae[ifr];
     Real dtcsigmas = ct * sigma_s[ifr];
@@ -95,53 +97,81 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       rdtcsigmap = redfactor * dtcsigmap;
     }
 
-    Real *ircm = &(ir_cm(ifr,0));
-    Real *vn = &(vncsigma(0));
-    Real *vn2 = &(vncsigma2(0));
+    Real *ircm = &(ir_cm(ifr*nang));
+    Real *vn2 = &(vncsigma2(ifr*nang));
     Real *tcoef = &(tran_coef(0));
     Real *wmu = &(wmu_cm(0));  
-    Real *imcoef = &(implicit_coef(0));   
+    Real *imcoef = &(implicit_coef(ifr*nang));   
 //#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       vn[n] = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
-       vn2[n] = tcoef[n] * vn[n];
+       Real vn = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
+       vn2[n] = tcoef[n] * vn;
        Real ir_weight = ircm[n] * wmu[n];
-       jr_cm += ir_weight;
        suma1[ifr] += (wmu[n] * vn2[n]);
-       suma2[ifr] += (ir_weight * vn[n]);
+       suma2[ifr] += (ir_weight * vn);
     }
     suma3[ifr] = suma1[ifr] * (rdtcsigmas - rdtcsigmap);
     suma1[ifr] *= (rdtcsigmat + rdtcsigmap);
     
-    // Now solve the equation
-    // rho dT/gamma-1=-Prat c(sigma T^4 - sigma(a1 T^4 + a2)/(1-a3))
-    // make sure jr_cm is positive
-    jr_cm = std::max(jr_cm, TINY_NUMBER);
-    
-    // No need to do this if already in thermal equilibrium
-    coef[1] += prat * (dtcsigmat + dtcsigmap 
-                   - (dtcsigmae + dtcsigmap) * suma1[ifr]/(1.0-suma3[ifr]))
-                   * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
     coef[0] += - (dtcsigmae + dtcsigmap) * prat * suma2[ifr] 
                * (gamma - 1.0)/(rho*(1.0-suma3[ifr]));
-  }// end frequency nfreq
+
+  }// end frequency groups
   coef[0] += -tgas;
+
+  Real tgas_diff = 1.0;
+
+  while((count_iteration <= iteration_tgas_) && (tgas_diff > tgas_error_)){
+
+    coef[1] = 0.0;
+
+    // update emission spectrum
+    pmy_rad->UserEmissionSpec(pmy_rad,tgasnew);
+  
+    for(int ifr=0; ifr<nfreq; ++ifr){
+      Real dtcsigmat = ct * sigma_a[ifr];
+      Real dtcsigmae = ct * sigma_ae[ifr];
+//      Real dtcsigmas = ct * sigma_s[ifr];
+      Real rdtcsigmat = redfactor * dtcsigmat;
+      Real rdtcsigmae = redfactor * dtcsigmae;
+//      Real rdtcsigmas = redfactor * dtcsigmas;
+      Real dtcsigmap = 0.0;
+      Real rdtcsigmap = 0.0;
+    
+      if(planck_flag_ > 0){
+        dtcsigmap = ct * sigma_p[ifr];
+        rdtcsigmap = redfactor * dtcsigmap;
+      }
+
+      // No need to do this if already in thermal equilibrium
+      coef[1] += prat * (dtcsigmat + dtcsigmap 
+                 - (dtcsigmae + dtcsigmap) * suma1[ifr]/(1.0-suma3[ifr]))
+                 * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
+
+    }// end frequency nfreq
+
 
   // The polynomial is
   // coef[1] * x^4 + x + coef[0] == 0
     
-  if(fabs(coef[1]) > TINY_NUMBER){
-    int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);
-    if(flag == -1 || tgasnew != tgasnew){
-      badcell = 1;
-      tgasnew = tgas;
+    if(fabs(coef[1]) > TINY_NUMBER){
+      int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);
+      if(flag == -1 || tgasnew != tgasnew){
+        badcell = true;
+        tgasnew = tgas;
+      }
+    }else{
+      tgasnew = -coef[0];
     }
-  }else{
-    tgasnew = -coef[0];
-  }
+
+    if(badcell) break;
+    tgas_diff = fabs(tgas_last - tgasnew)/tgas_last;
+    count_iteration++;    
+    tgas_last = tgasnew;
+
+  }// end iteration
     // even if tr=told, there can be change for intensity, making them isotropic
   if(!badcell){
-
 
     Real emission = tgasnew * tgasnew * tgasnew * tgasnew;
 
@@ -166,8 +196,8 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       Real jr_cm = (suma1[ifr] * emi_nu + suma2[ifr])/(1.0-suma3[ifr]);
 
     // Update the co-moving frame specific intensity
-      Real *irn = &(ir_cm(ifr,0));
-      Real *vn2 = &(vncsigma2(0));
+      Real *irn = &(ir_cm(ifr*nang));
+      Real *vn2 = &(vncsigma2(ifr*nang));
       Real *imcoef = &(implicit_coef(nang*ifr));
       Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
