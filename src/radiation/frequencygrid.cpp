@@ -64,10 +64,10 @@ void Radiation::FrequencyGrid()
     }
 
 
-    if(nfreq > 1){
-      nu_max = nu_min * pow(fre_ratio,nfreq-1);
+    if(nfreq > 2){
+      nu_max = nu_min * pow(fre_ratio,nfreq-2);
     }else{
-      nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+1;
+      nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+2;
     }// calculate nfreq if not given
 
   }else{
@@ -79,7 +79,7 @@ void Radiation::FrequencyGrid()
         throw std::runtime_error(msg.str().c_str());
       }
 
-      fre_ratio = log10(nu_max/nu_min)/(nfreq - 1);
+      fre_ratio = log10(nu_max/nu_min)/(nfreq - 2);
       fre_ratio = pow(10.0,fre_ratio);
     }// end nfreq > 1
   }
