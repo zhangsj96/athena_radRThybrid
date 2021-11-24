@@ -121,6 +121,10 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
   int &nang = pmy_rad->nang; 
   Real *cm_nu = &(tran_coef(0));
 
+  // first copy the data
+  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
+    ir_shift(n) = ir_cm(n);
+
 
   if(nfreq == 2){
     // the frequency grid is 0, nu, infty in this case
@@ -133,19 +137,17 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
         delta_i = ir_l[n] * (cm_nu[n] - 1.0) /cm_nu[n];
-        ir_shift_l[n] = ir_l[n] - delta_i;
-        ir_shift_r[n] = ir_r[n] + delta_i;
-      }else{
+        ir_shift_l[n] -= delta_i;
+        ir_shift_r[n] += delta_i;
+      }else if(cm_nu[n] < 1.0){
         // ir_r is already shifted into the co-moving frame
         // nu_tr = cm_nu nu/ T_r
         Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *pmy_rad->nu_grid(1));
         Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         delta_i = ir_r[n] * (1.0 - ratio);
-        ir_shift_l[n] = ir_l[n] + delta_i;
-        ir_shift_r[n] = ir_r[n] - delta_i;
-      }
-
-
+        ir_shift_l[n] += delta_i;
+        ir_shift_r[n] -= delta_i;
+      }// end cm_nu
     }// end all angles n
   }// end nfreq == 2
   else if(nfreq > 2){
@@ -168,7 +170,7 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
         fre_flx_r[n] = nuflxl[n] * ir_l[n] + nuflxr[n] * ir_r[n];
       // now apply flux divergence
       for(int n=0; n<nang; ++n)
-        ir_s[n] = ir_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
+        ir_s[n] -= (fre_flx_r[n] - fre_flx_l[n]);
 
       //save nu_flx_r to nu_flx_l
       fre_flx_l_.SwapAthenaArray(fre_flx_r_);
@@ -183,15 +185,15 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
         Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], pmy_rad->nu_grid(nfreq-1)*cm_nu[n]);
         Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         fre_flx_r[n] = ir_r[n] * (ratio - 1.0);
-      }else{
+      }else if(cm_nu[n] > 1.0){
         Real delta_nu = pmy_rad->nu_grid(nfreq-1) - pmy_rad->nu_grid(nfreq-2);
         Real ratio = (cm_nu[n] - 1.0) * pmy_rad->nu_grid(nfreq-1)/(cm_nu[n] * delta_nu);
         fre_flx_r[n] = ir_l[n] * (1.0 - ratio);
-      }
+      }// end cm_nu
     }
     for(int n=0; n<nang; ++n){
-      ir_shift((nfreq-2)*nang+n) = ir_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
-      ir_shift((nfreq-1)*nang+n) = ir_r[n] + fre_flx_r[n];
+      ir_shift((nfreq-2)*nang+n) -= (fre_flx_r[n] - fre_flx_l[n]);
+      ir_shift((nfreq-1)*nang+n) +=  fre_flx_r[n];
     }
 
   }// end nfreq > 2
@@ -212,6 +214,10 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
   int &nang = pmy_rad->nang; 
   Real *cm_nu = &(tran_coef(0));
 
+    // first copy the data
+  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
+    ir_cm(n) = ir_shift(n);
+
 
   if(nfreq == 2){
     // the frequency grid is 0, nu, infty in this case
@@ -225,8 +231,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
       if(cm_nu[n] < 1.0){
         delta_i = ir_shift_l[n] * (1.0 - cm_nu[n]);
 
-        ir_l[n] = ir_shift_l[n] - delta_i;
-        ir_r[n] = ir_shift_r[n] + delta_i;
+        ir_l[n] -= delta_i;
+        ir_r[n] += delta_i;
 
       }else{
         // nu_tr = cm_nu nu/ T_r
@@ -234,8 +240,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
         Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr*cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
         delta_i = ir_shift_r[n] * (1.0 - ratio);
 
-        ir_l[n] = ir_shift_l[n] + delta_i;
-        ir_r[n] = ir_shift_r[n] - delta_i;
+        ir_l[n] += delta_i;
+        ir_r[n] -= delta_i;
       }
 
 
@@ -261,7 +267,7 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
         fre_flx_r[n] = nuflxl[n] * ir_shift_l[n] + nuflxr[n] * ir_shift_r[n];
       // now apply flux divergence
       for(int n=0; n<nang; ++n)
-        ir_l[n] = ir_shift_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
+        ir_l[n] -= (fre_flx_r[n] - fre_flx_l[n]);
 
       //save nu_flx_r to nu_flx_l
       fre_flx_l_.SwapAthenaArray(fre_flx_r_);
@@ -283,8 +289,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
       }
     }
     for(int n=0; n<nang; ++n){
-      ir_cm((nfreq-2)*nang+n) = ir_shift_l[n] - (fre_flx_r[n] - fre_flx_l[n]);
-      ir_cm((nfreq-1)*nang+n) = ir_shift_r[n] + fre_flx_r[n];
+      ir_cm((nfreq-2)*nang+n) -= (fre_flx_r[n] - fre_flx_l[n]);
+      ir_cm((nfreq-1)*nang+n) +=  fre_flx_r[n];
     }
 
   }// end nfreq > 2
