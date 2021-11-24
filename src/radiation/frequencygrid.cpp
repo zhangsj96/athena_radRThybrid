@@ -126,10 +126,14 @@ Real Radiation::FitBlackBody(Real nu_t)
   if(nu_t < 1.5){
     integral = 0.051329911273422 * nu_3 -0.019248716727533 * nu_t * nu_3
                + 0.002566495563671 * nu_2 * nu_3;
-  }else{
+  }else if(nu_t < 18.6){
     Real exp_nu = exp(-nu_t);
     integral = -0.156915538762850 * exp_nu * (nu_3 + 2.69 * nu_2 + 6.714 * nu_t)
                + 1.000009331428801*(1- exp_nu);
+  }else if(nu_t < 45){
+    integral = 1.0 - 192.1 * exp(-0.9014*nu_t);
+  }else{
+    integral = 1.0;
   }
 
   return integral;
