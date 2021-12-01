@@ -147,23 +147,25 @@ void RadIntegrator::ComAngle(const Real vx, const Real vy, const Real vz,
 void RadIntegrator::CheckFrequencyShift(AthenaArray<Real> &tran_coef)
 {
 
-  for(int n=0; n<pmy_rad->nang; ++n){
-    if(tran_coef(n) > pmy_rad->fre_ratio){
-        std::stringstream msg;
-        msg << "### FATAL ERROR in function [CheckFrequencyShift]"
-            << std::endl << "tran_coef '" << tran_coef(n) << 
-            "' larger than fre_ratio " << pmy_rad->fre_ratio;
-        ATHENA_ERROR(msg);
-    }else if(tran_coef(n) * pmy_rad->fre_ratio < 1.0){
-        std::stringstream msg;
-        msg << "### FATAL ERROR in function [CheckFrequencyShift]"
-            << std::endl << "tran_coef '" << tran_coef(n) << 
-            "' smaller than 1/fre_ratio " << 1/pmy_rad->fre_ratio;
-        ATHENA_ERROR(msg);
-    }
+  if(pmy_rad->nfreq > 2){
+    for(int n=0; n<pmy_rad->nang; ++n){
+      if(tran_coef(n) > pmy_rad->fre_ratio){
+          std::stringstream msg;
+          msg << "### FATAL ERROR in function [CheckFrequencyShift]"
+              << std::endl << "tran_coef '" << tran_coef(n) << 
+              "' larger than fre_ratio " << pmy_rad->fre_ratio;
+          ATHENA_ERROR(msg);
+      }else if(tran_coef(n) * pmy_rad->fre_ratio < 1.0){
+          std::stringstream msg;
+          msg << "### FATAL ERROR in function [CheckFrequencyShift]"
+              << std::endl << "tran_coef '" << tran_coef(n) << 
+              "' smaller than 1/fre_ratio " << 1/pmy_rad->fre_ratio;
+          ATHENA_ERROR(msg);
+      }
 
-  }// end angles
+    }// end angles
 
+  }
 
   return;
 }
