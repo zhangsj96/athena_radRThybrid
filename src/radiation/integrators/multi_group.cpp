@@ -42,75 +42,6 @@
 // interpolate the intensity back to the frequency grid cm_nu from nu_grid for each angle
 // Then transform the intensity back to the lab-frame
 
-void RadIntegrator::FrequencyShiftCoef(AthenaArray<Real> &tran_coef, 
-         AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r)
-{
-
-  // the current co-moving frequency is nu_grid * prad->mu_cm_factor
-  // now we need to map to the original frequency grid nu_grid
-  // no need to do this if nfreq == 1
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-  // nfreq == 2 case needs to be done specially
-  if(nfreq > 2){
-    // this is loop over frequency 0 to nfre-2
-    // the last frequency bin is special
-    for(int n=0; n<nang; ++n){
-      nu_flx_l(0,n) = 0.0;
-      nu_flx_r(0,n) = 0.0;
-    }
-    for(int ifr=1; ifr < nfreq-1; ++ifr){
-      Real *nuflxl = &(nu_flx_l(ifr,0));
-      Real *nuflxr = &(nu_flx_r(ifr,0));
-      Real *cm_nu = &(tran_coef(0));
-      Real delta_nu = pmy_rad->nu_grid(ifr)-pmy_rad->nu_grid(ifr-1);
-      Real delta_nu2= pmy_rad->nu_grid(ifr+1)-pmy_rad->nu_grid(ifr);
-      for(int n=0; n<nang; ++n){
-        if(cm_nu[n] > 1.0){
-          nuflxl[n]= (cm_nu[n] - 1.0) * pmy_rad->nu_grid(ifr)/(cm_nu[n] * delta_nu);
-          nuflxr[n] = 0.0;
-        }else if(cm_nu[n] < 1.0){
-          nuflxl[n]= 0.0;
-          nuflxr[n]= (cm_nu[n] - 1.0) * pmy_rad->nu_grid(ifr)/(cm_nu[n] * delta_nu2);
-        }else{
-          nuflxl[n] = 0.0;
-          nuflxr[n] = 0.0;
-        }
-      }// end loop over all angles
-    }// end loop over frequency
-
-  }// end if nfreq > 2
-
-  return;
-}
-
-void RadIntegrator::FrequencyInvShiftCoef(AthenaArray<Real> &tran_coef, 
-         AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r)
-{
-
-  // the current co-moving frequency is nu_grid * prad->mu_cm_factor
-  // now we need to map to the original frequency grid nu_grid
-  // no need to do this if nfreq == 1
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-  // nfreq == 2 case needs to be done specially
-  if(nfreq > 2){
-    // swap nu_flx_l and nu_flx_r
-    // then add a minus sign
-    nu_flx_l.SwapAthenaArray(nu_flx_r);
-    for(int ifr=1; ifr < nfreq-1; ++ifr){
-      Real *nuflxl = &(nu_flx_l(ifr,0));
-      Real *nuflxr = &(nu_flx_r(ifr,0));
-      for(int n=0; n<nang; ++n){
-        nuflxl[n] *= -1.0;
-        nuflxr[n] *= -1.0;
-      }
-    }
-  }// end nfreq > 2
-
-  return;
-}
-
 
 // interpolate co-moving frame specific intensity over frequency grid
 void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
@@ -133,68 +64,28 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
     Real *ir_r = &(ir_cm(nang));
     Real *ir_shift_l=&(ir_shift(0));
     Real *ir_shift_r=&(ir_shift(nang));
-    Real delta_i = 0.0;
+    Real *delta_i = &(delta_i_(1,0));
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
-        delta_i = ir_l[n] * (cm_nu[n] - 1.0) /cm_nu[n];
-        ir_shift_l[n] -= delta_i;
-        ir_shift_r[n] += delta_i;
+        Real di = ir_l[n] * (cm_nu[n] - 1.0) /cm_nu[n];
+        ir_shift_l[n] -= di;
+        ir_shift_r[n] += di;
+        // di_r[n] stores the ratio that gets shifted
+        delta_i[n] = di/ir_shift_r[n];
       }else if(cm_nu[n] < 1.0){
         // ir_r is already shifted into the co-moving frame
         // nu_tr = cm_nu nu/ T_r
         Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *pmy_rad->nu_grid(1));
         Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-        delta_i = ir_r[n] * (1.0 - ratio);
-        ir_shift_l[n] += delta_i;
-        ir_shift_r[n] -= delta_i;
+        Real di = ir_r[n] * (1.0 - ratio);
+        ir_shift_l[n] += di;
+        ir_shift_r[n] -= di;
+        // di_l[n] now stores the ratio to recover the shift
+        delta_i[n] = di/ir_shift_l[n];
       }// end cm_nu
     }// end all angles n
   }// end nfreq == 2
   else if(nfreq > 2){
-
-    Real *fre_flx_l = &(fre_flx_l_(0));
-    Real *fre_flx_r = &(fre_flx_r_(0));   
-
-    // first, initialize fre_flx_l = 0
-    for(int n=0; n<nang; ++n)
-      fre_flx_l[n] = 0.0; 
-
-    for(int ifr=0; ifr<nfreq-2; ++ifr){
-      Real *nuflxl = &(nu_flx_l_(ifr+1,0));
-      Real *nuflxr = &(nu_flx_r_(ifr+1,0));
-      Real *ir_l = &(ir_cm(ifr*nang));
-      Real *ir_r = &(ir_cm((ifr+1)*nang));
-      Real *ir_s=&(ir_shift(ifr*nang));
-      // calculate flux at right hand side
-      for(int n=0; n<nang; ++n)
-        fre_flx_r[n] = nuflxl[n] * ir_l[n] + nuflxr[n] * ir_r[n];
-      // now apply flux divergence
-      for(int n=0; n<nang; ++n)
-        ir_s[n] -= (fre_flx_r[n] - fre_flx_l[n]);
-
-      //save nu_flx_r to nu_flx_l
-      fre_flx_l_.SwapAthenaArray(fre_flx_r_);
-
-    }// end ifr from 0 to nfreq-2
-    // now check the interface between last two frequency bins
-    Real *ir_l = &(ir_cm((nfreq-2)*nang));
-    Real *ir_r = &(ir_cm((nfreq-1)*nang));
-
-    for(int n=0; n<nang; ++n){
-      if(cm_nu[n] < 1.0){
-        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], pmy_rad->nu_grid(nfreq-1)*cm_nu[n]);
-        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-        fre_flx_r[n] = ir_r[n] * (ratio - 1.0);
-      }else if(cm_nu[n] > 1.0){
-        Real delta_nu = pmy_rad->nu_grid(nfreq-1) - pmy_rad->nu_grid(nfreq-2);
-        Real ratio = (cm_nu[n] - 1.0) * pmy_rad->nu_grid(nfreq-1)/(cm_nu[n] * delta_nu);
-        fre_flx_r[n] = ir_l[n] * (1.0 - ratio);
-      }// end cm_nu
-    }
-    for(int n=0; n<nang; ++n){
-      ir_shift((nfreq-2)*nang+n) -= (fre_flx_r[n] - fre_flx_l[n]);
-      ir_shift((nfreq-1)*nang+n) +=  fre_flx_r[n];
-    }
 
   }// end nfreq > 2
 
@@ -226,72 +117,22 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
     Real *ir_r = &(ir_cm(nang));
     Real *ir_shift_l=&(ir_shift(0));
     Real *ir_shift_r=&(ir_shift(nang));
-    Real delta_i = 0.0;
+    Real *delta_i = &(delta_i_(1,0));
     for(int n=0; n<nang; ++n){
-      if(cm_nu[n] < 1.0){
-        delta_i = ir_shift_l[n] * (1.0 - cm_nu[n]);
-
-        ir_l[n] -= delta_i;
-        ir_r[n] += delta_i;
-
-      }else{
-        // nu_tr = cm_nu nu/ T_r
-        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(1));
-        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr*cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-        delta_i = ir_shift_r[n] * (1.0 - ratio);
-
-        ir_l[n] += delta_i;
-        ir_r[n] -= delta_i;
+      if(cm_nu[n] > 1.0){
+        Real di = delta_i[n] * ir_shift_r[n];
+        ir_l[n] += di;
+        ir_r[n] -= di;
+      }else if(cm_nu[n] < 1.0){
+        Real di = delta_i[n] * ir_shift_l[n];
+        ir_r[n] -= di;
+        ir_l[n] += di;
       }
-
 
     }// end all angles n
   }// end nfreq == 2
   else if(nfreq > 2){
 
-    Real *fre_flx_l = &(fre_flx_l_(0));
-    Real *fre_flx_r = &(fre_flx_r_(0));   
-
-    // first, initialize fre_flx_l = 0
-    for(int n=0; n<nang; ++n)
-      fre_flx_l[n] = 0.0; 
-
-    for(int ifr=0; ifr<nfreq-2; ++ifr){
-      Real *nuflxl = &(nu_flx_l_(ifr+1,0));
-      Real *nuflxr = &(nu_flx_r_(ifr+1,0));
-      Real *ir_shift_l = &(ir_shift(ifr*nang));
-      Real *ir_shift_r = &(ir_shift((ifr+1)*nang));
-      Real *ir_l = &(ir_cm(ifr*nang));
-      // calculate flux at right hand side
-      for(int n=0; n<nang; ++n)
-        fre_flx_r[n] = nuflxl[n] * ir_shift_l[n] + nuflxr[n] * ir_shift_r[n];
-      // now apply flux divergence
-      for(int n=0; n<nang; ++n)
-        ir_l[n] -= (fre_flx_r[n] - fre_flx_l[n]);
-
-      //save nu_flx_r to nu_flx_l
-      fre_flx_l_.SwapAthenaArray(fre_flx_r_);
-
-    }// end ifr from 0 to nfreq-2
-    // now check the interface between last two frequency bins
-    Real *ir_shift_l = &(ir_shift((nfreq-2)*nang));
-    Real *ir_shift_r = &(ir_shift((nfreq-1)*nang));
-
-    for(int n=0; n<nang; ++n){
-      if(cm_nu[n] > 1.0){
-        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_shift_r[n], pmy_rad->nu_grid(nfreq-1));
-        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr*cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-        fre_flx_r[n] = ir_shift_r[n] * (ratio - 1.0);
-      }else{
-        Real delta_nu = pmy_rad->nu_grid(nfreq-1) - pmy_rad->nu_grid(nfreq-2);
-        Real ratio = (1.0 - cm_nu[n]) * pmy_rad->nu_grid(nfreq-1)/(delta_nu);
-        fre_flx_r[n] = ir_shift_l[n] * ratio;
-      }
-    }
-    for(int n=0; n<nang; ++n){
-      ir_cm((nfreq-2)*nang+n) -= (fre_flx_r[n] - fre_flx_l[n]);
-      ir_cm((nfreq-1)*nang+n) +=  fre_flx_r[n];
-    }
 
   }// end nfreq > 2
 

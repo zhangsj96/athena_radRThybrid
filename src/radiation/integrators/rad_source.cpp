@@ -189,17 +189,12 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           CheckFrequencyShift(tran_coef);
 
 
-         //prepare friency shift coefficient
-          FrequencyShiftCoef(tran_coef,nu_flx_l_,nu_flx_r_);
 
          // shift intensity from shifted frequency bins
           MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
                               sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
-
-          // prepare coefficient for inverse transfer
-          FrequencyInvShiftCoef(tran_coef,nu_flx_l_,nu_flx_r_);
           // inverseshift
           InverseMapFrequency(tran_coef,ir_shift_,ir_cm);
        
@@ -363,23 +358,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
         u(IM1,k,j,i) += (-prat*(frx- frx0) * invredc);
         u(IM2,k,j,i) += (-prat*(fry- fry0) * invredc);
         u(IM3,k,j,i) += (-prat*(frz- frz0) * invredc);
-        if(prad->set_source_flag == 2){
-          Real ekin = 0.5 *(SQR(u(IM1,k,j,i))+SQR(u(IM2,k,j,i))
-                 +SQR(u(IM3,k,j,i)))/u(IDN,k,j,i);
-          Real pb = 0.0;
-          if(MAGNETIC_FIELDS_ENABLED){
-            pb = 0.5*(SQR(pfield->bcc(IB1,k,j,i))+SQR(pfield->bcc(IB2,k,j,i))
-              +SQR(pfield->bcc(IB3,k,j,i)));
-          }
-          Real eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
-          
-          u(IEN,k,j,i) = eint + pb + ekin;         
 
-        }else{
-          u(IEN,k,j,i) += (-prat*(er - er0 ) * invredfactor);          
-        }
-
-        
         //limit the velocity by speed of light
         Real vx = u(IM1,k,j,i)/u(IDN,k,j,i);
         Real vy = u(IM2,k,j,i)/u(IDN,k,j,i);
@@ -393,24 +372,33 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           u(IM2,k,j,i) *= factor;
           u(IM3,k,j,i) *= factor;
         }
-        // check gas temperature
+
         Real ekin = 0.5 *(SQR(u(IM1,k,j,i))+SQR(u(IM2,k,j,i))
-                 +SQR(u(IM3,k,j,i)))/u(IDN,k,j,i);
+                  +SQR(u(IM3,k,j,i)))/u(IDN,k,j,i);
         Real pb = 0.0;
         if(MAGNETIC_FIELDS_ENABLED){
           pb = 0.5*(SQR(pfield->bcc(IB1,k,j,i))+SQR(pfield->bcc(IB2,k,j,i))
-              +SQR(pfield->bcc(IB3,k,j,i)));
-        }
-        Real eint = u(IEN,k,j,i) - ekin - pb;
-        Real tgas = eint * gm1 /u(IDN,k,j,i);
-        if(tgas < prad->t_floor_(k,j,i)){
-          eint = prad->t_floor_(k,j,i) * u(IDN,k,j,i) /gm1;
-          u(IEN,k,j,i) = ekin + pb + eint;
-        }else if(tgas > prad->t_ceiling_(k,j,i)){
-          eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
-          u(IEN,k,j,i) = ekin + pb + eint;
-        }
+               +SQR(pfield->bcc(IB3,k,j,i)));
+        }       
 
+        if(prad->set_source_flag == 2){
+          Real eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
+          u(IEN,k,j,i) = eint + pb + ekin;         
+        }else{
+          Real e_source = (-prat*(er - er0 ) * invredfactor);  
+          // first check that gas internal energy will not become negative
+          Real eint = u(IEN,k,j,i) + e_source - ekin - pb;
+          Real tgas = eint * gm1/u(IDN,k,j,i);
+          if(eint < 0.0){
+            eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
+            u(IEN,k,j,i) = eint + pb + ekin;
+          }else if(tgas > prad->t_ceiling_(k,j,i)){
+            eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
+            u(IEN,k,j,i) = ekin + pb + eint;
+          }else{
+            u(IEN,k,j,i) += eint;   
+          }       
+        }// end source_flag
 
       }// end i
     }// end j

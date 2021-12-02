@@ -98,12 +98,6 @@ public:
   void CheckFrequencyShift(AthenaArray<Real> &tran_coef);
 
 
-
-  void FrequencyShiftCoef(AthenaArray<Real> &tran_coef, 
-          AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r);
-  void FrequencyInvShiftCoef(AthenaArray<Real> &tran_coef, 
-          AthenaArray<Real> &nu_flx_l, AthenaArray<Real> &nu_flx_r);
-
   void MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
                                      AthenaArray<Real> &ir_shift);
 
@@ -189,9 +183,10 @@ private:
   //----------------------------------------------------
   // array for multi-group 
   // This is the coefficient in front I when calculate frequency flux
-  AthenaArray<Real> nu_flx_l_, nu_flx_r_; 
+
   // This is the actual flux in frequency space
-  AthenaArray<Real> fre_flx_l_, fre_flx_r_;
+  AthenaArray<Real> delta_i_; // shift amount from the frequency boundary
+  AthenaArray<Real> nu_cen_, spec_ir_; //center of the frequency grid, specific intensity 
   AthenaArray<Real> ir_shift_;
   int iteration_tgas_;
   Real tgas_error_;

@@ -300,6 +300,18 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     pmb->pbval->bvars_main_int.push_back(&rad_bvar);
   }
 
+
+  //------------------------------------------
+  // temporary arrays for multi-group moments
+  cosx_cm_.NewAthenaArray(nang);
+  cosy_cm_.NewAthenaArray(nang);
+  cosz_cm_.NewAthenaArray(nang);
+ 
+
+
+
+  //------------------------------------------
+
   // set the default t_floor and t_ceiling
   for(int k=0; k<nc3; ++k)
     for(int j=0; j<nc2; ++j)

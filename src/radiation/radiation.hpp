@@ -141,6 +141,8 @@ public:
 private:
 
   int user_unit_;
+  // temporary arrays for co-moving moments
+  AthenaArray<Real> cosx_cm_, cosy_cm_, cosz_cm_; 
 
   friend class BoundaryValues;
   

@@ -188,11 +188,10 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   //----------------------------------------------------
   // array for multi-group 
   if(nfreq > 1){
-    nu_flx_l_.NewAthenaArray(nfreq,nang);
-    nu_flx_r_.NewAthenaArray(nfreq,nang);
-    fre_flx_l_.NewAthenaArray(nang);
-    fre_flx_r_.NewAthenaArray(nang);
+    delta_i_.NewAthenaArray(nfreq,nang);
     ir_shift_.NewAthenaArray(prad->n_fre_ang);
+    nu_cen_.NewAthenaArray(nfreq);
+    spec_ir_.NewAthenaArray(prad->n_fre_ang);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);
@@ -497,10 +496,9 @@ RadIntegrator::~RadIntegrator()
   // multi-group array
 
   if(pmy_rad->nfreq > 1){
-    nu_flx_l_.DeleteAthenaArray();
-    nu_flx_r_.DeleteAthenaArray();
-    fre_flx_l_.DeleteAthenaArray();
-    fre_flx_r_.DeleteAthenaArray();
+    delta_i_.DeleteAthenaArray();
+    nu_cen_.DeleteAthenaArray();
+    spec_ir_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();
   }
 
