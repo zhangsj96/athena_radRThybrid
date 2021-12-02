@@ -83,6 +83,7 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
         // di_l[n] now stores the ratio to recover the shift
         delta_i[n] = di/ir_shift_l[n];
       }// end cm_nu
+
     }// end all angles n
   }// end nfreq == 2
   else if(nfreq > 2){
@@ -125,8 +126,8 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
         ir_r[n] -= di;
       }else if(cm_nu[n] < 1.0){
         Real di = delta_i[n] * ir_shift_l[n];
-        ir_r[n] -= di;
-        ir_l[n] += di;
+        ir_l[n] -= di;
+        ir_r[n] += di;
       }
 
     }// end all angles n
