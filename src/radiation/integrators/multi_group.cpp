@@ -17,6 +17,9 @@
 //  \brief  Add absorption source terms
 //======================================================================================
 
+#include <stdexcept>  // runtime_error
+#include <sstream>  // msg
+
 // Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
@@ -52,43 +55,89 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
   int &nang = pmy_rad->nang; 
   Real *cm_nu = &(tran_coef(0));
 
+  // check to make sure nfreq > 2
+  if(nfreq < 2){
+
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+        << std::endl << "nfreq '" << nfreq << 
+          "' is smaller than 2! ";
+    ATHENA_ERROR(msg);
+  }
+
   // first copy the data
   for(int n=0; n<pmy_rad->n_fre_ang; ++n)
     ir_shift(n) = ir_cm(n);
 
 
-  if(nfreq == 2){
-    // the frequency grid is 0, nu, infty in this case
+  if(nfreq > 2){
+    // first, work on frequency groups 0 to nfreq-3
+    for(int ifr=0; ifr<nfreq-2; ++ifr){
+      Real *ir_l = &(ir_cm(ifr*nang));
+      Real *ir_r = &(ir_cm((ifr+1)*nang));
+      Real *ir_shift_l=&(ir_shift(ifr*nang));
+      Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+      Real *delta_i = &(delta_i_(ifr,0));
+      Real delta_nu_l = pmy_rad->nu_grid(ifr+1)-pmy_rad->nu_grid(ifr);
+      Real delta_nu_r = pmy_rad->nu_grid(ifr+2)-pmy_rad->nu_grid(ifr+1);
+      Real &nu_r = pmy_rad->nu_grid(ifr+1);
+      // This is working on the right hand side of frequency bin ifr
+      for(int n=0; n<nang; ++n){
+        if(cm_nu[n] > 1.0){
+          delta_i[n] = ir_l[n] * (cm_nu[n] - 1.0) * nu_r/(cm_nu[n] * delta_nu_l);
+          ir_shift_l[n] -= delta_i[n];
+          ir_shift_r[n] += delta_i[n];
+        }else if(cm_nu[n] < 1.0){
+          delta_i[n] = ir_r[n] * (1.0 - cm_nu[n]) * nu_r/(cm_nu[n] * delta_nu_r);
+          ir_shift_l[n] += delta_i[n];
+          ir_shift_r[n] -= delta_i[n];
+        }
+      }// end angle 
 
-    Real *ir_l = &(ir_cm(0));
-    Real *ir_r = &(ir_cm(nang));
-    Real *ir_shift_l=&(ir_shift(0));
-    Real *ir_shift_r=&(ir_shift(nang));
-    Real *delta_i = &(delta_i_(1,0));
+    }// end ifr=nfreq-3
+  }// end nfreq > 2
+    // now the interface between the last two bins
+  int ifr = nfreq - 2;
+  Real *ir_l = &(ir_cm(ifr*nang));
+  Real *ir_r = &(ir_cm((ifr+1)*nang));
+  Real *ir_shift_l=&(ir_shift(ifr*nang));
+  Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+  Real *delta_i = &(delta_i_(ifr,0));
+  Real delta_nu_l = pmy_rad->nu_grid(ifr+1)-pmy_rad->nu_grid(ifr);
+  Real &nu_r = pmy_rad->nu_grid(ifr+1); 
+
+  for(int n=0; n<nang; ++n){
+    if(cm_nu[n] > 1.0){
+      delta_i[n] = ir_l[n] * (cm_nu[n] - 1.0) * nu_r/(cm_nu[n] * delta_nu_l);
+      ir_shift_l[n] -= delta_i[n];
+      ir_shift_r[n] += delta_i[n];
+    }else if(cm_nu[n] < 1.0){
+       // ir_r is already shifted into the co-moving frame
+        // nu_tr = cm_nu nu/ T_r
+      Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_r);
+      Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
+      delta_i[n] = ir_r[n] * (1.0 - ratio);
+      ir_shift_l[n] += delta_i[n];
+      ir_shift_r[n] -= delta_i[n];
+    }// end cm_nu
+
+  }// end all angles n
+
+  // Now determine the ratio
+  for(int ifr=0; ifr<nfreq-1; ++ifr){
+    Real *delta_i = &(delta_i_(ifr,0));
+    Real *delta_ratio = &(delta_ratio_(ifr,0));
+    Real *ir_shift_l=&(ir_shift(ifr*nang));
+    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
-        Real di = ir_l[n] * (cm_nu[n] - 1.0) /cm_nu[n];
-        ir_shift_l[n] -= di;
-        ir_shift_r[n] += di;
-        // di_r[n] stores the ratio that gets shifted
-        delta_i[n] = di/ir_shift_r[n];
+        delta_ratio[n] = delta_i[n]/ir_shift_r[n];        
       }else if(cm_nu[n] < 1.0){
-        // ir_r is already shifted into the co-moving frame
-        // nu_tr = cm_nu nu/ T_r
-        Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *pmy_rad->nu_grid(1));
-        Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-        Real di = ir_r[n] * (1.0 - ratio);
-        ir_shift_l[n] += di;
-        ir_shift_r[n] -= di;
-        // di_l[n] now stores the ratio to recover the shift
-        delta_i[n] = di/ir_shift_l[n];
-      }// end cm_nu
+        delta_ratio[n] = delta_i[n]/ir_shift_l[n];           
+      }
+    }// end n
+  }// end ifr
 
-    }// end all angles n
-  }// end nfreq == 2
-  else if(nfreq > 2){
-
-  }// end nfreq > 2
 
   return;
 
@@ -111,31 +160,25 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
     ir_cm(n) = ir_shift(n);
 
 
-  if(nfreq == 2){
-    // the frequency grid is 0, nu, infty in this case
-
-    Real *ir_l = &(ir_cm(0));
-    Real *ir_r = &(ir_cm(nang));
-    Real *ir_shift_l=&(ir_shift(0));
-    Real *ir_shift_r=&(ir_shift(nang));
-    Real *delta_i = &(delta_i_(1,0));
+  for(int ifr=0; ifr<nfreq-1; ++ifr){
+    Real *delta_ratio = &(delta_ratio_(ifr,0));
+    Real *ir_l = &(ir_cm(ifr*nang));
+    Real *ir_r = &(ir_cm((ifr+1)*nang));
+    Real *ir_shift_l=&(ir_shift(ifr*nang));
+    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
     for(int n=0; n<nang; ++n){
       if(cm_nu[n] > 1.0){
-        Real di = delta_i[n] * ir_shift_r[n];
+        Real di = delta_ratio[n] * ir_shift_r[n];
         ir_l[n] += di;
-        ir_r[n] -= di;
+        ir_r[n] -= di;       
       }else if(cm_nu[n] < 1.0){
-        Real di = delta_i[n] * ir_shift_l[n];
+        Real di = delta_ratio[n] * ir_shift_l[n];
         ir_l[n] -= di;
-        ir_r[n] += di;
+        ir_r[n] += di;           
       }
+    }// end n
+  }// end ifr
 
-    }// end all angles n
-  }// end nfreq == 2
-  else if(nfreq > 2){
-
-
-  }// end nfreq > 2
 
   return;
 

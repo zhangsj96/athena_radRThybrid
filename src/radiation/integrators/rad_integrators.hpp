@@ -185,8 +185,7 @@ private:
   // This is the coefficient in front I when calculate frequency flux
 
   // This is the actual flux in frequency space
-  AthenaArray<Real> delta_i_; // shift amount from the frequency boundary
-  AthenaArray<Real> nu_cen_, spec_ir_; //center of the frequency grid, specific intensity 
+  AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
   AthenaArray<Real> ir_shift_;
   int iteration_tgas_;
   Real tgas_error_;
