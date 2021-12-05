@@ -97,9 +97,13 @@ public:
 
   void CheckFrequencyShift(AthenaArray<Real> &tran_coef);
 
+  void GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
+                        AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face);
 
   void MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
                                      AthenaArray<Real> &ir_shift);
+  void MapIrcmFrequencyFirstOrder(AthenaArray<Real> &tran_coef, 
+                 AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift);
 
   void InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_shift, 
                                      AthenaArray<Real> &ir_cm);
@@ -186,7 +190,7 @@ private:
 
   // This is the actual flux in frequency space
   AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
-  AthenaArray<Real> ir_shift_;
+  AthenaArray<Real> ir_shift_, ir_cen_, ir_face_;
   int iteration_tgas_;
   Real tgas_error_;
 

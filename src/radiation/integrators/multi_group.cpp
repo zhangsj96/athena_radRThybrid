@@ -45,9 +45,201 @@
 // interpolate the intensity back to the frequency grid cm_nu from nu_grid for each angle
 // Then transform the intensity back to the lab-frame
 
+//Giving the frequency integrated intensity for each group in the co-moving frame,
+// get the monochromatic intensity at the face and center of the frequency grid
+void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
+                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face)
+{
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+  Real *cm_nu = &(tran_coef(0));
+
+  if(nfreq > 1){
+    // no frequency center for the last bin 
+    for(int ifr=0; ifr<nfreq-1; ++ifr){
+      Real &delta_nu = pmy_rad->delta_nu(ifr);
+      Real *ir_int = &(ir_cm(ifr*nang));
+      Real *ir_n_cen = &(ir_cen(ifr,0));
+      for(int n=0; n<nang; ++n){
+        ir_n_cen[n] = ir_int[n]/(cm_nu[n] * delta_nu);
+      }
+    }// end ir_n-cen
+
+    // now get value at frequency face
+    // the face value at nu=0 is always 0
+    for(int n=0; n<nang; ++n)
+      ir_face(0,n) = 0.0;
+
+    for(int ifr=1; ifr<nfreq; ++ifr){
+      Real *ir_cen_l = &(ir_cen(ifr-1,0));
+      Real *ir_cen_r = &(ir_cen(ifr,0));
+      Real &nu_r = pmy_rad->nu_grid(ifr);
+      Real &nu_cen_l = pmy_rad->nu_cen(ifr-1);
+      Real &nu_cen_r = pmy_rad->nu_cen(ifr);
+      Real *ir_n_face = &(ir_face(ifr,0));
+      if(ifr<nfreq-1){
+        for(int n=0; n<nang; ++n)
+          ir_n_face[n] = ir_cen_l[n] + 
+                       (ir_cen_r[n] - ir_cen_l[n])*(nu_r - nu_cen_l)/(nu_cen_r-nu_cen_l);
+      }else if(ifr == nfreq-1){
+        // this is set ir_face(nfreq-1) = ir_cen(nfreq-2)
+        for(int n=0; n<nang; ++n)
+          ir_n_face[n] = ir_cen_l[n];
+      }
+    }
+
+
+
+  }// end nfreq > 1
+
+}
 
 // interpolate co-moving frame specific intensity over frequency grid
 void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
+                                     AthenaArray<Real> &ir_shift)
+{
+
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+  Real *cm_nu = &(tran_coef(0));
+
+  // check to make sure nfreq > 2
+  if(nfreq < 2){
+
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+        << std::endl << "nfreq '" << nfreq << 
+          "' is smaller than 2! ";
+    ATHENA_ERROR(msg);
+  }
+
+  // first copy the data
+  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
+    ir_shift(n) = ir_cm(n);
+
+
+  if(nfreq > 2){
+    // first, work on frequency groups 0 to nfreq-3
+    for(int ifr=0; ifr<nfreq-2; ++ifr){
+      Real *ir_l = &(ir_cm(ifr*nang));
+      Real *ir_r = &(ir_cm((ifr+1)*nang));
+      Real *ir_shift_l=&(ir_shift(ifr*nang));
+      Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+      Real *delta_i = &(delta_i_(ifr,0));
+      Real &nu_r = pmy_rad->nu_grid(ifr+1);
+      Real &nu_l = pmy_rad->nu_grid(ifr);
+      Real &nu_r2 = pmy_rad->nu_grid(ifr+2);
+      Real &nu_cen_l = pmy_rad->nu_cen(ifr);
+      Real &nu_cen_r = pmy_rad->nu_cen(ifr+1);
+      Real *ir_face_l = &(ir_face_(ifr,0));
+      Real *ir_face_r = &(ir_face_(ifr+1,0));
+      Real *ir_face_r2 = &(ir_face_(ifr+2,0));
+      Real *ir_cen_l = &(ir_cen_(ifr,0));
+      Real *ir_cen_r = &(ir_cen_(ifr+1,0));
+      // All these frequency grid properties are in the lab frame
+
+      // This is working on the right hand side of frequency bin ifr
+      for(int n=0; n<nang; ++n){
+        if(cm_nu[n] > 1.0){
+          Real ir_nu_r = 0.0;
+          if(cm_nu[n] * nu_cen_l > nu_r){
+            ir_nu_r = ir_face_l[n] + (ir_cen_l[n] - ir_face_l[n]) * 
+                           (nu_r - cm_nu[n] * nu_l)/(cm_nu[n] *(nu_cen_l - nu_l)); 
+          }else{
+            ir_nu_r = ir_cen_l[n] + (ir_face_r[n] - ir_cen_l[n]) * 
+                           (nu_r - cm_nu[n] * nu_cen_l)/(cm_nu[n] *(nu_r - nu_cen_l));
+         
+          }
+          delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+
+          ir_shift_l[n] -= delta_i[n];
+          ir_shift_r[n] += delta_i[n];
+        }else if(cm_nu[n] < 1.0){
+          Real ir_nu_r = 0.0;
+          if(nu_r > cm_nu[n] * nu_cen_r){
+            ir_nu_r = ir_cen_r[n] + (ir_face_r2[n] - ir_cen_r[n]) * 
+                           (nu_r - cm_nu[n] * nu_cen_r)/(cm_nu[n] *(nu_r2 - nu_cen_r)); 
+          }else{
+            ir_nu_r = ir_face_r[n] + (ir_cen_r[n] - ir_face_r[n]) * 
+                           (nu_r - cm_nu[n] * nu_r)/(cm_nu[n] *(nu_cen_r - nu_r)); 
+          }
+          delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+          ir_shift_l[n] += delta_i[n];
+          ir_shift_r[n] -= delta_i[n];
+        }
+      }// end angle 
+
+    }// end ifr=nfreq-3
+  }// end nfreq > 2
+    // now the interface between the last two bins
+  int ifr = nfreq - 2;
+  Real *ir_l = &(ir_cm(ifr*nang));
+  Real *ir_r = &(ir_cm((ifr+1)*nang));
+  Real *ir_shift_l=&(ir_shift(ifr*nang));
+  Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+  Real *delta_i = &(delta_i_(ifr,0));
+  Real &nu_r = pmy_rad->nu_grid(ifr+1);
+  Real &nu_l = pmy_rad->nu_grid(ifr);
+  Real &nu_cen_l = pmy_rad->nu_cen(ifr);
+  Real &nu_cen_r = pmy_rad->nu_cen(ifr+1);
+  Real *ir_face_l = &(ir_face_(ifr,0));
+  Real *ir_face_r = &(ir_face_(ifr+1,0));
+  Real *ir_cen_l = &(ir_cen_(ifr,0));
+  Real *ir_cen_r = &(ir_cen_(ifr+1,0));
+
+  for(int n=0; n<nang; ++n){
+    if(cm_nu[n] > 1.0){
+
+      Real ir_nu_r = 0.0;
+      if(cm_nu[n] * nu_cen_l > nu_r){
+        ir_nu_r = ir_face_l[n] + (ir_cen_l[n] - ir_face_l[n]) * 
+                  (nu_r - cm_nu[n] * nu_l)/(cm_nu[n] *(nu_cen_l - nu_l)); 
+      }else{
+        ir_nu_r = ir_cen_l[n] + (ir_face_r[n] - ir_cen_l[n]) * 
+                  (nu_r - cm_nu[n] * nu_cen_l)/(cm_nu[n] *(nu_r - nu_cen_l)); 
+         
+      }
+      delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+
+      ir_shift_l[n] -= delta_i[n];
+      ir_shift_r[n] += delta_i[n];
+
+    }else if(cm_nu[n] < 1.0){
+       // ir_r is already shifted into the co-moving frame
+        // nu_tr = cm_nu nu/ T_r
+      Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_r);
+      Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
+      delta_i[n] = ir_r[n] * (1.0 - ratio);
+      ir_shift_l[n] += delta_i[n];
+      ir_shift_r[n] -= delta_i[n];
+    }// end cm_nu
+
+  }// end all angles n
+
+  // Now determine the ratio
+  for(int ifr=0; ifr<nfreq-1; ++ifr){
+    Real *delta_i = &(delta_i_(ifr,0));
+    Real *delta_ratio = &(delta_ratio_(ifr,0));
+    Real *ir_shift_l=&(ir_shift(ifr*nang));
+    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+    for(int n=0; n<nang; ++n){
+      if(cm_nu[n] > 1.0){
+        delta_ratio[n] = delta_i[n]/ir_shift_r[n];        
+      }else if(cm_nu[n] < 1.0){
+        delta_ratio[n] = delta_i[n]/ir_shift_l[n];           
+      }
+    }// end n
+  }// end ifr
+
+
+  return;
+
+}// end map function
+
+
+
+// interpolate co-moving frame specific intensity over frequency grid
+void RadIntegrator::MapIrcmFrequencyFirstOrder(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
                                      AthenaArray<Real> &ir_shift)
 {
 

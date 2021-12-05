@@ -189,7 +189,8 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           CheckFrequencyShift(tran_coef);
 
 
-
+          // get monochromatic specific intensity 
+          GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_face_);
          // shift intensity from shifted frequency bins
           MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
           // calculate the source term 

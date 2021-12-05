@@ -94,7 +94,17 @@ void Radiation::FrequencyGrid()
       nu_grid(n) = nu_grid(n-1) * fre_ratio;
     }// end nfreq > 2
 
-  }
+    nu_cen.NewAthenaArray(nfreq);
+
+    for(int n=0; n<nfreq-1; ++n)
+      nu_cen(n) = 0.5*(nu_grid(n)+nu_grid(n+1));
+
+    delta_nu.NewAthenaArray(nfreq);
+
+    for(int n=0; n<nfreq-1; ++n)
+      delta_nu(n) = nu_grid(n+1)-nu_grid(n);
+
+  }// end nfreq > 2
   emission_spec.NewAthenaArray(nfreq);
 
   // initialize with default emission spectrum assuming tgas=1

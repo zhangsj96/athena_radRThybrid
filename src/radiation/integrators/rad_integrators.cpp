@@ -190,6 +190,8 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   if(nfreq > 1){
     delta_i_.NewAthenaArray(nfreq,nang);
     delta_ratio_.NewAthenaArray(nfreq,nang);
+    ir_cen_.NewAthenaArray(nfreq, nang);
+    ir_face_.NewAthenaArray(nfreq, nang);
     ir_shift_.NewAthenaArray(prad->n_fre_ang);
   }
 
@@ -497,6 +499,8 @@ RadIntegrator::~RadIntegrator()
   if(pmy_rad->nfreq > 1){
     delta_i_.DeleteAthenaArray();
     delta_ratio_.DeleteAthenaArray();
+    ir_cen_.DeleteAthenaArray();
+    ir_face_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();
   }
 

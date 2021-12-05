@@ -89,7 +89,7 @@ public:
   // mininum and maximum frequencies, and number of frequency bins
   int nfreq; // number of frequency bins
   Real fre_ratio; // ratio between neighboring frequency bins
-  AthenaArray<Real> nu_grid;  // frequency grid
+  AthenaArray<Real> nu_grid, nu_cen, delta_nu;  // frequency grid, center of each frequency bin
   AthenaArray<Real> emission_spec; //gas emission term in each frequency bin relative to a_rT^4
   FrequencyFunc UserFrequency; // user defined frequency grid
   void EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction);
