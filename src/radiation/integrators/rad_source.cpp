@@ -190,9 +190,13 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
 
           // get monochromatic specific intensity 
-          GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_face_);
+          if(rad_fre_order > 1){
+            GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_face_, ir_face_lab_);
          // shift intensity from shifted frequency bins
-          MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
+            MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
+          }else{
+            MapIrcmFrequencyFirstOrder(tran_coef,ir_cm,ir_shift_);
+          }
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
                               sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);

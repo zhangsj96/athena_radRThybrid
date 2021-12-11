@@ -48,7 +48,8 @@
 //Giving the frequency integrated intensity for each group in the co-moving frame,
 // get the monochromatic intensity at the face and center of the frequency grid
 void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
-                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face)
+                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face,
+                                     AthenaArray<Real> &ir_face_lab)
 {
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
@@ -67,8 +68,10 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
 
     // now get value at frequency face
     // the face value at nu=0 is always 0
-    for(int n=0; n<nang; ++n)
+    for(int n=0; n<nang; ++n){
       ir_face(0,n) = 0.0;
+      ir_face_lab(0,n) = 0.0;
+    }
 
     for(int ifr=1; ifr<nfreq; ++ifr){
       Real *ir_cen_l = &(ir_cen(ifr-1,0));
@@ -77,6 +80,7 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
       Real &nu_cen_l = pmy_rad->nu_cen(ifr-1);
       Real &nu_cen_r = pmy_rad->nu_cen(ifr);
       Real *ir_n_face = &(ir_face(ifr,0));
+
       if(ifr<nfreq-1){
         for(int n=0; n<nang; ++n)
           ir_n_face[n] = ir_cen_l[n] + 
@@ -88,6 +92,43 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
       }
     }
 
+    // now get monochromatic frequency at lab frame frequency
+    for(int ifr=1; ifr<nfreq-1; ++ifr){
+      Real *ir_face_l = &(ir_face(ifr-1,0));
+      Real *ir_face_n = &(ir_face(ifr,0));
+      Real *ir_face_r = &(ir_face(ifr+1,0));
+      Real &nu_l = pmy_rad->nu_grid(ifr-1);
+      Real &nu_n = pmy_rad->nu_grid(ifr);
+      Real &nu_r = pmy_rad->nu_grid(ifr+1);
+      Real *ir_n_face_lab=&(ir_face_lab(ifr,0));
+      for(int n=0; n<nang; ++n){
+        if(cm_nu[n] > 1.0){
+          Real slope = (ir_face_n[n] - ir_face_l[n])/(cm_nu[n] * (nu_n - nu_l));
+          ir_n_face_lab[n] = ir_face_l[n] + (nu_n - cm_nu[n] * nu_l) * slope;
+        }else{
+          Real slope = (ir_face_r[n] - ir_face_n[n])/(cm_nu[n] * (nu_r - nu_n));
+          ir_n_face_lab[n] = ir_face_n[n] + (nu_n - cm_nu[n] * nu_n) * slope;          
+        }
+      }
+
+    }// end ifr=1 to nfreq-2
+
+    // the last frequency 
+    Real *ir_n_face_lab=&(ir_face_lab(nfreq-1,0));
+    Real *ir_face_n = &(ir_face(nfreq-1,0));
+    Real *ir_face_l = &(ir_face(nfreq-2,0));
+
+    Real &nu_l = pmy_rad->nu_grid(nfreq-2);
+    Real &nu_n = pmy_rad->nu_grid(nfreq-1);
+
+    for(int n=0; n<nang; ++n){
+      if(cm_nu[n] > 1.0){
+        Real slope = (ir_face_n[n] - ir_face_l[n])/(cm_nu[n] * (nu_n - nu_l));
+        ir_n_face_lab[n] = ir_face_l[n] + (nu_n - cm_nu[n] * nu_l) * slope;
+      }else{
+        ir_n_face_lab[n] = ir_face_n[n];
+      }
+    }
 
 
   }// end nfreq > 1
@@ -117,104 +158,58 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
   for(int n=0; n<pmy_rad->n_fre_ang; ++n)
     ir_shift(n) = ir_cm(n);
 
-
-  if(nfreq > 2){
-    // first, work on frequency groups 0 to nfreq-3
-    for(int ifr=0; ifr<nfreq-2; ++ifr){
-      Real *ir_l = &(ir_cm(ifr*nang));
-      Real *ir_r = &(ir_cm((ifr+1)*nang));
-      Real *ir_shift_l=&(ir_shift(ifr*nang));
-      Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-      Real *delta_i = &(delta_i_(ifr,0));
-      Real &nu_r = pmy_rad->nu_grid(ifr+1);
-      Real &nu_l = pmy_rad->nu_grid(ifr);
-      Real &nu_r2 = pmy_rad->nu_grid(ifr+2);
-      Real &nu_cen_l = pmy_rad->nu_cen(ifr);
-      Real &nu_cen_r = pmy_rad->nu_cen(ifr+1);
-      Real *ir_face_l = &(ir_face_(ifr,0));
-      Real *ir_face_r = &(ir_face_(ifr+1,0));
-      Real *ir_face_r2 = &(ir_face_(ifr+2,0));
-      Real *ir_cen_l = &(ir_cen_(ifr,0));
-      Real *ir_cen_r = &(ir_cen_(ifr+1,0));
-      // All these frequency grid properties are in the lab frame
-
-      // This is working on the right hand side of frequency bin ifr
+  for(int ifr=0; ifr<nfreq-1; ++ifr){
+    Real *delta_i = &(delta_i_(ifr,0));
+    Real *ir_r = &(ir_cm((ifr+1)*nang));
+    Real *ir_face_l = &(ir_face_(ifr,0));
+    Real *ir_face_n = &(ir_face_(ifr+1,0));
+    Real *ir_face_lab_n = &(ir_face_lab_(ifr+1,0));
+    Real &nu_n_lab = pmy_rad->nu_grid(ifr+1);
+    Real &nu_l_lab = pmy_rad->nu_grid(ifr);
+    Real *ir_shift_l=&(ir_shift(ifr*nang));
+    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+    if(ifr == nfreq-1){
+      // the last interface
       for(int n=0; n<nang; ++n){
         if(cm_nu[n] > 1.0){
-          Real ir_nu_r = 0.0;
-          if(cm_nu[n] * nu_cen_l > nu_r){
-            ir_nu_r = ir_face_l[n] + (ir_cen_l[n] - ir_face_l[n]) * 
-                           (nu_r - cm_nu[n] * nu_l)/(cm_nu[n] *(nu_cen_l - nu_l)); 
-          }else{
-            ir_nu_r = ir_cen_l[n] + (ir_face_r[n] - ir_cen_l[n]) * 
-                           (nu_r - cm_nu[n] * nu_cen_l)/(cm_nu[n] *(nu_r - nu_cen_l));
-         
-          }
-          delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
+                                (cm_nu[n] * nu_n_lab - nu_n_lab);   
 
           ir_shift_l[n] -= delta_i[n];
           ir_shift_r[n] += delta_i[n];
+
         }else if(cm_nu[n] < 1.0){
-          Real ir_nu_r = 0.0;
-          if(nu_r > cm_nu[n] * nu_cen_r){
-            ir_nu_r = ir_cen_r[n] + (ir_face_r2[n] - ir_cen_r[n]) * 
-                           (nu_r - cm_nu[n] * nu_cen_r)/(cm_nu[n] *(nu_r2 - nu_cen_r)); 
-          }else{
-            ir_nu_r = ir_face_r[n] + (ir_cen_r[n] - ir_face_r[n]) * 
-                           (nu_r - cm_nu[n] * nu_r)/(cm_nu[n] *(nu_cen_r - nu_r)); 
-          }
-          delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+          Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_n_lab);
+          Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
+          delta_i[n] = ir_r[n] * (1.0 - ratio);
           ir_shift_l[n] += delta_i[n];
           ir_shift_r[n] -= delta_i[n];
+
         }
-      }// end angle 
-
-    }// end ifr=nfreq-3
-  }// end nfreq > 2
-    // now the interface between the last two bins
-  int ifr = nfreq - 2;
-  Real *ir_l = &(ir_cm(ifr*nang));
-  Real *ir_r = &(ir_cm((ifr+1)*nang));
-  Real *ir_shift_l=&(ir_shift(ifr*nang));
-  Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-  Real *delta_i = &(delta_i_(ifr,0));
-  Real &nu_r = pmy_rad->nu_grid(ifr+1);
-  Real &nu_l = pmy_rad->nu_grid(ifr);
-  Real &nu_cen_l = pmy_rad->nu_cen(ifr);
-  Real &nu_cen_r = pmy_rad->nu_cen(ifr+1);
-  Real *ir_face_l = &(ir_face_(ifr,0));
-  Real *ir_face_r = &(ir_face_(ifr+1,0));
-  Real *ir_cen_l = &(ir_cen_(ifr,0));
-  Real *ir_cen_r = &(ir_cen_(ifr+1,0));
-
-  for(int n=0; n<nang; ++n){
-    if(cm_nu[n] > 1.0){
-
-      Real ir_nu_r = 0.0;
-      if(cm_nu[n] * nu_cen_l > nu_r){
-        ir_nu_r = ir_face_l[n] + (ir_cen_l[n] - ir_face_l[n]) * 
-                  (nu_r - cm_nu[n] * nu_l)/(cm_nu[n] *(nu_cen_l - nu_l)); 
-      }else{
-        ir_nu_r = ir_cen_l[n] + (ir_face_r[n] - ir_cen_l[n]) * 
-                  (nu_r - cm_nu[n] * nu_cen_l)/(cm_nu[n] *(nu_r - nu_cen_l)); 
-         
       }
-      delta_i[n] = 0.5 * (ir_nu_r + ir_face_r[n]) * (cm_nu[n] * nu_r - nu_r);   
+    }else{
+      Real *ir_face_r = &(ir_face_(ifr+2,0));
+      Real &nu_r_lab = pmy_rad->nu_grid(ifr+2);
+      for(int n=0; n<nang; ++n){
+        if(cm_nu[n] > 1.0){
+          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
+                                (cm_nu[n] * nu_n_lab - nu_n_lab);   
 
-      ir_shift_l[n] -= delta_i[n];
-      ir_shift_r[n] += delta_i[n];
+          ir_shift_l[n] -= delta_i[n];
+          ir_shift_r[n] += delta_i[n];
 
-    }else if(cm_nu[n] < 1.0){
-       // ir_r is already shifted into the co-moving frame
-        // nu_tr = cm_nu nu/ T_r
-      Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_r);
-      Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-      delta_i[n] = ir_r[n] * (1.0 - ratio);
-      ir_shift_l[n] += delta_i[n];
-      ir_shift_r[n] -= delta_i[n];
-    }// end cm_nu
+        }else if(cm_nu[n] < 1.0){
+          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
+                                (nu_n_lab - cm_nu[n] * nu_n_lab);   
 
-  }// end all angles n
+          ir_shift_l[n] += delta_i[n];
+          ir_shift_r[n] -= delta_i[n];
+
+        }
+      }
+
+    }// end frequency == nfreq-1
+  }
 
   // Now determine the ratio
   for(int ifr=0; ifr<nfreq-1; ++ifr){
