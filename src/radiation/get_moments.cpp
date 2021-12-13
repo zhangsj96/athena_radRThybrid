@@ -236,15 +236,12 @@ void Radiation::CalculateComMoment()
           // shift intensity from shifted frequency bins
 
          // get monochromatic specific intensity 
-          if(pradintegrator->rad_fre_order > 1){
-            pradintegrator->GetCmMCIntensity(ir_cm, tran_coef, pradintegrator->ir_cen_, 
-                              pradintegrator->ir_face_, pradintegrator->ir_face_lab_);
+
+          pradintegrator->GetCmMCIntensity(ir_cm, tran_coef, pradintegrator->ir_cen_, 
+                                           pradintegrator->ir_slope_);
          // shift intensity from shifted frequency bins
-            pradintegrator->MapIrcmFrequency(tran_coef,ir_cm,pradintegrator->ir_shift_);
-          }else{
-            pradintegrator->MapIrcmFrequencyFirstOrder(tran_coef,ir_cm,
-                                             pradintegrator->ir_shift_);            
-          }
+          pradintegrator->MapIrcmFrequency(tran_coef,ir_cm,pradintegrator->ir_shift_);
+
           // copy back to ir_cm
           ir_cm = pradintegrator->ir_shift_;
 

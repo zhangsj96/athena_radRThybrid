@@ -145,6 +145,9 @@ private:
   AthenaArray<Real> cosx_cm_, cosy_cm_, cosz_cm_; 
 
   friend class BoundaryValues;
+
+  // to use log frequency spaceing or not
+  int log_fre_; 
   
 
 };

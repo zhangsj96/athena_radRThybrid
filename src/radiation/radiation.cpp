@@ -221,6 +221,8 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // log frequency space ratio
   fre_ratio= pin->GetOrAddReal("radiation","frequency_ratio",1.0); 
 
+  log_fre_ = pin->GetOrAddInteger("radiation","log_frequency_spacing",1);
+
   // setup the frequency grid
   FrequencyGrid();  
 

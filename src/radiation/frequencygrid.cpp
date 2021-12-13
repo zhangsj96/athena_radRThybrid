@@ -47,42 +47,29 @@ void Radiation::FrequencyGrid()
     nu_max = nu_max * h_planck/(k_b * tunit);
 
 
-  if(fre_ratio > 1){
-
-    if(nu_min < TINY_NUMBER){
-      std::stringstream msg;
-      msg << "### FATAL ERROR in Radiation Class" << std::endl
-          << "frequency_min needs to be larger than 0!";
-      throw std::runtime_error(msg.str().c_str());
-    }
-
-    if(nu_max <= nu_min){
-      std::stringstream msg;
-      msg << "### FATAL ERROR in Radiation Class" << std::endl
-          << "frequency_max needs to be larger than frequency_min!";
-      throw std::runtime_error(msg.str().c_str());
-    }
-
-
-    if(nfreq > 2){
-      nu_max = nu_min * pow(fre_ratio,nfreq-2);
-    }else{
-      nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+2;
-    }// calculate nfreq if not given
-
-  }else{
-    if(nfreq > 2){
-      if(nu_max <= nu_min){
-        std::stringstream msg;
-        msg << "### FATAL ERROR in Radiation Class" << std::endl
-            << "frequency_max needs to be larger than frequency_min!";
-        throw std::runtime_error(msg.str().c_str());
-      }
-
-      fre_ratio = log10(nu_max/nu_min)/(nfreq - 2);
-      fre_ratio = pow(10.0,fre_ratio);
-    }// end nfreq > 1
+  if(nu_max <= nu_min){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in Radiation Class" << std::endl
+        << "frequency_max needs to be larger than frequency_min!";
+    throw std::runtime_error(msg.str().c_str());
   }
+
+  if(log_fre_ == 1){
+    if(fre_ratio > 1){
+
+      if(nfreq > 2){
+        nu_max = nu_min * pow(fre_ratio,nfreq-2);
+      }else{
+        nfreq = log10(nu_max/nu_min)/log10(fre_ratio)+2;
+      }// calculate nfreq if not given
+
+    }else{
+      if(nfreq > 2){
+        fre_ratio = log10(nu_max/nu_min)/(nfreq - 2);
+        fre_ratio = pow(10.0,fre_ratio);
+      }// end nfreq > 1
+    }
+  }// end log frequency spacing
 
   if(nfreq > 1){
     nu_grid.NewAthenaArray(nfreq);
@@ -90,8 +77,15 @@ void Radiation::FrequencyGrid()
     nu_grid(1) = nu_min;
 
     if(nfreq > 2){
-      for(int n=2; n<nfreq; ++n)
-      nu_grid(n) = nu_grid(n-1) * fre_ratio;
+      if(log_fre_ == 1){
+        for(int n=2; n<nfreq; ++n)
+          nu_grid(n) = nu_grid(n-1) * fre_ratio;
+      }else{
+        Real d_nu = (nu_max - nu_min)/(nfreq-2);
+
+        for(int n=2; n<nfreq; ++n)
+          nu_grid(n) = nu_grid(n-1) + d_nu;
+      }
     }// end nfreq > 2
 
     nu_cen.NewAthenaArray(nfreq);

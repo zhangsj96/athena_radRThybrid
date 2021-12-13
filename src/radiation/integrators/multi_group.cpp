@@ -48,8 +48,7 @@
 //Giving the frequency integrated intensity for each group in the co-moving frame,
 // get the monochromatic intensity at the face and center of the frequency grid
 void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
-                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face,
-                                     AthenaArray<Real> &ir_face_lab)
+                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_slope)
 {
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
@@ -65,84 +64,85 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
         ir_n_cen[n] = ir_int[n]/(cm_nu[n] * delta_nu);
       }
     }// end ir_n-cen
-
-    // now get value at frequency face
-    // the face value at nu=0 is always 0
-    for(int n=0; n<nang; ++n){
-      ir_face(0,n) = 0.0;
-      ir_face_lab(0,n) = 0.0;
-    }
-
-    for(int ifr=1; ifr<nfreq; ++ifr){
-      Real *ir_cen_l = &(ir_cen(ifr-1,0));
-      Real *ir_cen_r = &(ir_cen(ifr,0));
-      Real &nu_r = pmy_rad->nu_grid(ifr);
-      Real &nu_cen_l = pmy_rad->nu_cen(ifr-1);
-      Real &nu_cen_r = pmy_rad->nu_cen(ifr);
-      Real *ir_n_face = &(ir_face(ifr,0));
-
-      if(ifr<nfreq-1){
-        for(int n=0; n<nang; ++n)
-          ir_n_face[n] = ir_cen_l[n] + 
-                       (ir_cen_r[n] - ir_cen_l[n])*(nu_r - nu_cen_l)/(nu_cen_r-nu_cen_l);
-      }else if(ifr == nfreq-1){
-        // this is set ir_face(nfreq-1) = ir_cen(nfreq-2)
-        for(int n=0; n<nang; ++n)
-          ir_n_face[n] = ir_cen_l[n];
-      }
-    }
-
-    // now get monochromatic frequency at lab frame frequency
-    for(int ifr=1; ifr<nfreq-1; ++ifr){
-      Real *ir_face_l = &(ir_face(ifr-1,0));
-      Real *ir_face_n = &(ir_face(ifr,0));
-      Real *ir_face_r = &(ir_face(ifr+1,0));
-      Real &nu_l = pmy_rad->nu_grid(ifr-1);
-      Real &nu_n = pmy_rad->nu_grid(ifr);
-      Real &nu_r = pmy_rad->nu_grid(ifr+1);
-      Real *ir_n_face_lab=&(ir_face_lab(ifr,0));
-      for(int n=0; n<nang; ++n){
-        if(cm_nu[n] > 1.0){
-          Real slope = (ir_face_n[n] - ir_face_l[n])/(cm_nu[n] * (nu_n - nu_l));
-          ir_n_face_lab[n] = ir_face_l[n] + (nu_n - cm_nu[n] * nu_l) * slope;
-        }else{
-          Real slope = (ir_face_r[n] - ir_face_n[n])/(cm_nu[n] * (nu_r - nu_n));
-          ir_n_face_lab[n] = ir_face_n[n] + (nu_n - cm_nu[n] * nu_n) * slope;          
+  //-------------------------------------------------------------
+    // now get the slope with a limiter
+    if((rad_fre_order == 1) || (nfreq == 2)){
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        for(int n=0; n<nang; ++n){
+          ir_slope(ifr,n) = 0.0;
         }
+    }else{
+      // the first bin
+      // nfreq > 2
+      Real delta_nu = pmy_rad->nu_cen(1) - pmy_rad->nu_cen(0);
+      for(int n=0; n<nang; ++n){
+        ir_slope(0,n) = (ir_cen(1,n) - ir_cen(0,n))/(cm_nu[n]*delta_nu);
       }
 
-    }// end ifr=1 to nfreq-2
 
-    // the last frequency 
-    Real *ir_n_face_lab=&(ir_face_lab(nfreq-1,0));
-    Real *ir_face_n = &(ir_face(nfreq-1,0));
-    Real *ir_face_l = &(ir_face(nfreq-2,0));
+      // now frequency bin from 1 to nfreq-2
+      for(int ifr=1; ifr<nfreq-2; ++ifr){
+        Real delta_nu_l = pmy_rad->nu_cen(ifr)-pmy_rad->nu_cen(ifr-1);
+        Real delta_nu_r = pmy_rad->nu_cen(ifr+1)-pmy_rad->nu_cen(ifr);
+        Real *ir_l = &(ir_cen(ifr-1,0));
+        Real *ir_n = &(ir_cen(ifr,0));
+        Real *ir_r = &(ir_cen(ifr+1,0));
+        Real *slope = &(ir_slope(ifr,0));
+        for(int n=0; n<nang; ++n){
+          Real slope_l = (ir_n[n] - ir_l[n])/(cm_nu[n]*delta_nu_l);
+          Real slope_r = (ir_r[n] - ir_n[n])/(cm_nu[n]*delta_nu_r);
+          if(slope_l * slope_r > 0.0){
+            slope[n] = 2.0 * slope_l * slope_r/(slope_l+slope_r);
+          }else{
+            slope[n] = 0.0;
+          }
+        }// end n
 
-    Real &nu_l = pmy_rad->nu_grid(nfreq-2);
-    Real &nu_n = pmy_rad->nu_grid(nfreq-1);
+      }// end ifr nfreq-3
+      // the last bin
 
-    for(int n=0; n<nang; ++n){
-      if(cm_nu[n] > 1.0){
-        Real slope = (ir_face_n[n] - ir_face_l[n])/(cm_nu[n] * (nu_n - nu_l));
-        ir_n_face_lab[n] = ir_face_l[n] + (nu_n - cm_nu[n] * nu_l) * slope;
-      }else{
-        ir_n_face_lab[n] = ir_face_n[n];
+      delta_nu = pmy_rad->nu_cen(nfreq-2) - pmy_rad->nu_cen(nfreq-3);
+      for(int n=0; n<nang; ++n){
+        ir_slope(nfreq-2,n) = (ir_cen(nfreq-2,n) - ir_cen(nfreq-3,n))/(cm_nu[n]*delta_nu);
       }
-    }
 
+      // check to make sure it does not cause negative intensity
+      for(int ifr=0; ifr<nfreq-1; ++ifr){
+        Real *slope = &(ir_slope(ifr,0));
+        Real *ir_n = &(ir_cen(ifr,0));
+        Real &delta_nu = pmy_rad->delta_nu(ifr);
+        for(int n=0; n<nang; ++n){
+          if(slope[n] < 0.0){
+            Real ir_rbd = ir_n[n] + slope[n] * 0.5 * cm_nu[n] * delta_nu;
+            if(ir_rbd < 0.0)
+              slope[n] = 0.0;
+          }else if(slope[n] > 0){
+            Real ir_lbd = ir_n[n] - slope[n] * 0.5 * cm_nu[n] * delta_nu;
+            if(ir_lbd < 0.0)
+              slope[n] = 0.0;            
+          }
+        }
+      }// end ifr 
+ 
+    }// end nfreq > 2
 
   }// end nfreq > 1
 
 }
 
 // interpolate co-moving frame specific intensity over frequency grid
-void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
-                                     AthenaArray<Real> &ir_shift)
+// every bin is 
+void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, 
+            AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift)
 {
 
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
   Real *cm_nu = &(tran_coef(0));
+  Real *nu_lab = &(pmy_rad->nu_grid(0));
+
+  // initialize ir_shift to be 0
+  ir_shift.ZeroClear();
 
   // check to make sure nfreq > 2
   if(nfreq < 2){
@@ -154,174 +154,134 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<R
     ATHENA_ERROR(msg);
   }
 
-  // first copy the data
-  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
-    ir_shift(n) = ir_cm(n);
-
+  // map intensity to the desired bin
   for(int ifr=0; ifr<nfreq-1; ++ifr){
-    Real *delta_i = &(delta_i_(ifr,0));
-    Real *ir_r = &(ir_cm((ifr+1)*nang));
-    Real *ir_face_l = &(ir_face_(ifr,0));
-    Real *ir_face_n = &(ir_face_(ifr+1,0));
-    Real *ir_face_lab_n = &(ir_face_lab_(ifr+1,0));
-    Real &nu_n_lab = pmy_rad->nu_grid(ifr+1);
+   // map shifted intensity to the nu_grid
+  // inside each bin, the profile is 
+  // slope (nu-nu_cen[ifr]) + ir_cen[ifr] 
+    Real &nu_r_lab = pmy_rad->nu_grid(ifr+1);
     Real &nu_l_lab = pmy_rad->nu_grid(ifr);
-    Real *ir_shift_l=&(ir_shift(ifr*nang));
-    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-    if(ifr == nfreq-1){
-      // the last interface
-      for(int n=0; n<nang; ++n){
-        if(cm_nu[n] > 1.0){
-          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
-                                (cm_nu[n] * nu_n_lab - nu_n_lab);   
+    Real &nu_cen_lab = pmy_rad->nu_cen(ifr);
 
-          ir_shift_l[n] -= delta_i[n];
-          ir_shift_r[n] += delta_i[n];
-
-        }else if(cm_nu[n] < 1.0){
-          Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_n_lab);
-          Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-          delta_i[n] = ir_r[n] * (1.0 - ratio);
-          ir_shift_l[n] += delta_i[n];
-          ir_shift_r[n] -= delta_i[n];
-
-        }
-      }
-    }else{
-      Real *ir_face_r = &(ir_face_(ifr+2,0));
-      Real &nu_r_lab = pmy_rad->nu_grid(ifr+2);
-      for(int n=0; n<nang; ++n){
-        if(cm_nu[n] > 1.0){
-          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
-                                (cm_nu[n] * nu_n_lab - nu_n_lab);   
-
-          ir_shift_l[n] -= delta_i[n];
-          ir_shift_r[n] += delta_i[n];
-
-        }else if(cm_nu[n] < 1.0){
-          delta_i[n] = 0.5 * (ir_face_lab_n[n] + ir_face_n[n]) * 
-                                (nu_n_lab - cm_nu[n] * nu_n_lab);   
-
-          ir_shift_l[n] += delta_i[n];
-          ir_shift_r[n] -= delta_i[n];
-
-        }
-      }
-
-    }// end frequency == nfreq-1
-  }
-
-  // Now determine the ratio
-  for(int ifr=0; ifr<nfreq-1; ++ifr){
-    Real *delta_i = &(delta_i_(ifr,0));
-    Real *delta_ratio = &(delta_ratio_(ifr,0));
-    Real *ir_shift_l=&(ir_shift(ifr*nang));
-    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+    int *map_start = &(map_bin_start_(ifr,0));
+    int *map_end = &(map_bin_end_(ifr,0));
     for(int n=0; n<nang; ++n){
+      Real nu_l = nu_l_lab * cm_nu[n];
+      Real nu_r = nu_r_lab * cm_nu[n];
+
       if(cm_nu[n] > 1.0){
-        delta_ratio[n] = delta_i[n]/ir_shift_r[n];        
-      }else if(cm_nu[n] < 1.0){
-        delta_ratio[n] = delta_i[n]/ir_shift_l[n];           
-      }
-    }// end n
-  }// end ifr
 
+        // find the overlap bin in nu_grid
+        int l_bd = ifr;// it will always be >= current bin
+        while((nu_l > nu_lab[l_bd+1]) && (l_bd < nfreq-1))   l_bd++;
+        int r_bd = l_bd; // r_bd always > l_bd
+        while((nu_r > nu_lab[r_bd+1]) && (r_bd < nfreq-1))   r_bd++;   
+        // This frequency bin now maps to l_bd to r_bd 
+        map_start[n] = l_bd;
+        map_end[n] = r_bd;
 
-  return;
+        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
+                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
+                          ir_slope_(ifr,n), ir_shift);
 
-}// end map function
+        if(r_bd-l_bd+1 > nmax_map_){
+          std::stringstream msg;
+          msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+              << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
+              "' larger than maximum allowed " << nmax_map_;
+          ATHENA_ERROR(msg);
 
-
-
-// interpolate co-moving frame specific intensity over frequency grid
-void RadIntegrator::MapIrcmFrequencyFirstOrder(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
-                                     AthenaArray<Real> &ir_shift)
-{
-
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-  Real *cm_nu = &(tran_coef(0));
-
-  // check to make sure nfreq > 2
-  if(nfreq < 2){
-
-    std::stringstream msg;
-    msg << "### FATAL ERROR in function [MapIrcmFrequency]"
-        << std::endl << "nfreq '" << nfreq << 
-          "' is smaller than 2! ";
-    ATHENA_ERROR(msg);
-  }
-
-  // first copy the data
-  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
-    ir_shift(n) = ir_cm(n);
-
-
-  if(nfreq > 2){
-    // first, work on frequency groups 0 to nfreq-3
-    for(int ifr=0; ifr<nfreq-2; ++ifr){
-      Real *ir_l = &(ir_cm(ifr*nang));
-      Real *ir_r = &(ir_cm((ifr+1)*nang));
-      Real *ir_shift_l=&(ir_shift(ifr*nang));
-      Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-      Real *delta_i = &(delta_i_(ifr,0));
-      Real delta_nu_l = pmy_rad->nu_grid(ifr+1)-pmy_rad->nu_grid(ifr);
-      Real delta_nu_r = pmy_rad->nu_grid(ifr+2)-pmy_rad->nu_grid(ifr+1);
-      Real &nu_r = pmy_rad->nu_grid(ifr+1);
-      // This is working on the right hand side of frequency bin ifr
-      for(int n=0; n<nang; ++n){
-        if(cm_nu[n] > 1.0){
-          delta_i[n] = ir_l[n] * (cm_nu[n] - 1.0) * nu_r/(cm_nu[n] * delta_nu_l);
-          ir_shift_l[n] -= delta_i[n];
-          ir_shift_r[n] += delta_i[n];
-        }else if(cm_nu[n] < 1.0){
-          delta_i[n] = ir_r[n] * (1.0 - cm_nu[n]) * nu_r/(cm_nu[n] * delta_nu_r);
-          ir_shift_l[n] += delta_i[n];
-          ir_shift_r[n] -= delta_i[n];
         }
-      }// end angle 
 
-    }// end ifr=nfreq-3
-  }// end nfreq > 2
-    // now the interface between the last two bins
-  int ifr = nfreq - 2;
-  Real *ir_l = &(ir_cm(ifr*nang));
-  Real *ir_r = &(ir_cm((ifr+1)*nang));
-  Real *ir_shift_l=&(ir_shift(ifr*nang));
-  Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-  Real *delta_i = &(delta_i_(ifr,0));
-  Real delta_nu_l = pmy_rad->nu_grid(ifr+1)-pmy_rad->nu_grid(ifr);
-  Real &nu_r = pmy_rad->nu_grid(ifr+1); 
+
+      //-----------------------------------------------------
+      }else if(cm_nu[n] < 1.0){
+        // find the overlap bin in nu_grid
+        int r_bd = ifr;// it will always be <= current bin
+        while((nu_r < nu_lab[r_bd]) && (r_bd > 0))   r_bd--;
+        int l_bd = r_bd; // r_bd always > l_bd
+        while((nu_l < nu_lab[l_bd]) && (l_bd > 0))   l_bd--;   
+        // This frequency bin now maps to l_bd to r_bd 
+        map_start[n] = l_bd;
+        map_end[n] = r_bd;
+
+        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
+                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
+                          ir_slope_(ifr,n), ir_shift);
+
+        if(r_bd-l_bd+1 > nmax_map_){
+          std::stringstream msg;
+          msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+              << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
+              "' larger than maximum allowed " << nmax_map_;
+          ATHENA_ERROR(msg);
+
+        }
+
+      }else{
+        map_start[n] = ifr;
+        map_end[n] = ifr;
+        delta_i_(ifr,n,0) = ir_cm(ifr*nang+n);
+        ir_shift(ifr*nang+n) = ir_cm(ifr*nang+n);
+      }
+          
+    }// end nang
+
+  }// end ifr=nfreq-2
+
+  // now the last frequency bin
 
   for(int n=0; n<nang; ++n){
-    if(cm_nu[n] > 1.0){
-      delta_i[n] = ir_l[n] * (cm_nu[n] - 1.0) * nu_r/(cm_nu[n] * delta_nu_l);
-      ir_shift_l[n] -= delta_i[n];
-      ir_shift_r[n] += delta_i[n];
+    if(cm_nu[n] >= 1.0){
+      map_bin_start_(nfreq-1,n) = nfreq-1;
+      map_bin_end_(nfreq-1,n) = nfreq-1;
+      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n);
+      ir_shift_((nfreq-1)*nang+n) = ir_cm((nfreq-1)*nang+n);
     }else if(cm_nu[n] < 1.0){
-       // ir_r is already shifted into the co-moving frame
-        // nu_tr = cm_nu nu/ T_r
-      Real nu_tr = pmy_rad->EffectiveBlackBody(ir_r[n], cm_nu[n] *nu_r);
-      Real ratio = (1.0-pmy_rad->FitBlackBody(nu_tr/cm_nu[n]))/(1.0-pmy_rad->FitBlackBody(nu_tr));
-      delta_i[n] = ir_r[n] * (1.0 - ratio);
-      ir_shift_l[n] += delta_i[n];
-      ir_shift_r[n] -= delta_i[n];
-    }// end cm_nu
+      Real nu_l = pmy_rad->nu_grid(nfreq-1) * cm_nu[n];
+      int r_bd = nfreq-1;
+      int l_bd = nfreq-2;// it will always be <= current bin
+      while((nu_l < nu_lab[l_bd]) && (l_bd > 0))   l_bd--;   
+        // This frequency bin now maps to l_bd to r_bd 
+      map_bin_start_(nfreq-1,n) = l_bd;
+      map_bin_end_(nfreq-1,n) = r_bd;
+      // nu_l/kt
+      Real nu_tr = pmy_rad->EffectiveBlackBody(ir_cm((nfreq-1)*nang+n), nu_l);
+      Real ori_norm = pmy_rad->FitBlackBody(nu_tr);
 
-  }// end all angles n
+      // the first bin
+      Real ratio = pmy_rad->FitBlackBody(nu_tr*nu_lab[l_bd+1]/nu_l);
+      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n) * (ratio - ori_norm)/(1.0 - ori_norm);
+      ir_shift(l_bd*nang+n) += delta_i_(nfreq-1,n,0);
 
-  // Now determine the ratio
-  for(int ifr=0; ifr<nfreq-1; ++ifr){
-    Real *delta_i = &(delta_i_(ifr,0));
-    Real *delta_ratio = &(delta_ratio_(ifr,0));
-    Real *ir_shift_l=&(ir_shift(ifr*nang));
-    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
-    for(int n=0; n<nang; ++n){
-      if(cm_nu[n] > 1.0){
-        delta_ratio[n] = delta_i[n]/ir_shift_r[n];        
-      }else if(cm_nu[n] < 1.0){
-        delta_ratio[n] = delta_i[n]/ir_shift_l[n];           
+      for(int m=l_bd+1; m<r_bd; ++m){
+        Real ratio_r = pmy_rad->FitBlackBody(nu_tr*nu_lab[m+1]/nu_l);
+        Real ratio_l = pmy_rad->FitBlackBody(nu_tr*nu_lab[m]/nu_l);
+        delta_i_(nfreq-1,n,m-l_bd) = ir_cm((nfreq-1)*nang+n) * (ratio_r - ratio_l)/(1.0 - ori_norm);
+        ir_shift(m*nang+n) += delta_i_(nfreq-1,n,m-l_bd);
       }
+      // the last r_bd
+      ratio = pmy_rad->FitBlackBody(nu_tr*nu_lab[r_bd]/nu_l);
+      delta_i_(nfreq-1,n,r_bd-l_bd) = ir_cm((nfreq-1)*nang+n) * (1.0 - ratio)/(1.0 - ori_norm);
+      ir_shift(r_bd*nang+n) += delta_i_(nfreq-1,n,r_bd-l_bd);
+
+
+    }
+
+  }
+   //-----------------------------------------------------
+  // Now determine the ratio
+  for(int ifr=0; ifr<nfreq; ++ifr){
+    int *map_start = &(map_bin_start_(ifr,0));
+    int *map_end = &(map_bin_end_(ifr,0));
+    for(int n=0; n<nang; ++n){
+      int start_fre = map_bin_start_(ifr,n);
+      int end_fre=map_bin_end_(ifr,n);
+      for(int m=start_fre; m<=end_fre; ++m){
+        delta_ratio_(ifr,n,m-start_fre) = delta_i_(ifr,n,m-start_fre)
+                                          /ir_shift(m*nang+n);
+      }
+
     }// end n
   }// end ifr
 
@@ -330,6 +290,52 @@ void RadIntegrator::MapIrcmFrequencyFirstOrder(AthenaArray<Real> &tran_coef, Ath
 
 }// end map function
 
+void RadIntegrator::SplitFrequencyBin(int n, int &l_bd, int &r_bd, Real *nu_lab, Real &nu_l, 
+                  Real &nu_r, Real *delta_i, Real &ir_cm, Real &ir_cen, Real &nu_cen_lab, 
+                  Real &cm_nu, Real &ir_slope, AthenaArray<Real> &ir_shift)
+{
+  int &nang = pmy_rad->nang;
+
+  if(r_bd == l_bd){
+//    delta_i_(ifr,n,0) = ir_n[n];
+    delta_i[0] = ir_cm;
+    ir_shift(l_bd*nang+n) += ir_cm;
+  }else{
+  // between nu_l and nu_lab[l_bd+1]
+    Real d_nu = nu_lab[l_bd+1] - nu_l;
+    Real mean_nu = 0.5 * (nu_lab[l_bd+1] + nu_l);
+    delta_i[0] = d_nu * ir_cen + ir_slope * 
+              d_nu * (mean_nu - nu_cen_lab * cm_nu);
+    ir_shift(l_bd*nang+n) += delta_i[0];
+
+          
+    for(int m=l_bd+1; m<r_bd; ++m){
+      d_nu = nu_lab[m+1] - nu_lab[m];
+      mean_nu = 0.5 * (nu_lab[m+1] + nu_lab[m]);
+      delta_i[m-l_bd] = d_nu * ir_cen + ir_slope * 
+                       d_nu * (mean_nu - nu_cen_lab * cm_nu);
+      ir_shift(m*nang+n) += delta_i[m-l_bd];     
+
+
+    }// end m=r_bd-1
+    // the last bin
+//    d_nu = nu_r - nu_lab[r_bd];
+//    mean_nu = 0.5 * (nu_lab[r_bd] + nu_r);
+//    delta_i[r_bd-l_bd] = d_nu * ir_cen + ir_slope * 
+//                      d_nu * (mean_nu - nu_cen_lab * cm_nu);
+
+    // make sure sum is always to be the original
+    Real sum = 0;
+    for(int m=l_bd; m<r_bd; ++m)
+      sum += delta_i[m-l_bd];
+    delta_i[r_bd-l_bd] = ir_cm - sum;
+
+    ir_shift(r_bd*nang+n) += delta_i[r_bd-l_bd];          
+  }
+
+  return;
+
+}
 
 
 // interpolate co-moving frame specific intensity over frequency grid
@@ -340,29 +346,22 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
 
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
-  Real *cm_nu = &(tran_coef(0));
 
-    // first copy the data
-  for(int n=0; n<pmy_rad->n_fre_ang; ++n)
-    ir_cm(n) = ir_shift(n);
+  // clear zero
+  ir_cm.ZeroClear();
 
 
-  for(int ifr=0; ifr<nfreq-1; ++ifr){
-    Real *delta_ratio = &(delta_ratio_(ifr,0));
-    Real *ir_l = &(ir_cm(ifr*nang));
-    Real *ir_r = &(ir_cm((ifr+1)*nang));
-    Real *ir_shift_l=&(ir_shift(ifr*nang));
-    Real *ir_shift_r=&(ir_shift((ifr+1)*nang));
+  for(int ifr=0; ifr<nfreq; ++ifr){
+    int *map_start = &(map_bin_start_(ifr,0));
+    int *map_end = &(map_bin_end_(ifr,0));
+    Real *ir_n = &(ir_cm(ifr*nang));
     for(int n=0; n<nang; ++n){
-      if(cm_nu[n] > 1.0){
-        Real di = delta_ratio[n] * ir_shift_r[n];
-        ir_l[n] += di;
-        ir_r[n] -= di;       
-      }else if(cm_nu[n] < 1.0){
-        Real di = delta_ratio[n] * ir_shift_l[n];
-        ir_l[n] -= di;
-        ir_r[n] += di;           
+      int start_fre = map_bin_start_(ifr,n);
+      int end_fre=map_bin_end_(ifr,n);
+      for(int m=start_fre; m<=end_fre; ++m){
+        ir_n[n] += delta_ratio_(ifr,n,m-start_fre) * ir_shift(m*nang+n);
       }
+
     }// end n
   }// end ifr
 

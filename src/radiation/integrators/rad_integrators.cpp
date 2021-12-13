@@ -52,7 +52,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       ATHENA_ERROR(msg);
     }
   }
-  rad_fre_order = pin->GetOrAddInteger("time","rad_fre_order",2);
+  rad_fre_order = pin->GetOrAddInteger("radiation","rad_fre_order",2);
 
   
       // factor to separate the diffusion and advection part
@@ -63,10 +63,13 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
 
+
   // multi-group iteration
   // iterations < iterative_tgas_
   iteration_tgas_  = pin->GetOrAddInteger("radiation","iterative_tgas",5);
   tgas_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
+  // maximum number of bins each frequency bin will map to, default is nfreq/2
+  nmax_map_ = pin->GetOrAddInteger("radiation","max_map_bin",0);
 
 
   int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
@@ -189,12 +192,14 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   //----------------------------------------------------
   // array for multi-group 
   if(nfreq > 1){
-    delta_i_.NewAthenaArray(nfreq,nang);
-    delta_ratio_.NewAthenaArray(nfreq,nang);
     ir_cen_.NewAthenaArray(nfreq, nang);
-    ir_face_.NewAthenaArray(nfreq, nang);
-    ir_face_lab_.NewAthenaArray(nfreq, nang);
+    ir_slope_.NewAthenaArray(nfreq, nang);
     ir_shift_.NewAthenaArray(prad->n_fre_ang);
+    if(nmax_map_ == 0)  nmax_map_ = nfreq/2;
+    delta_i_.NewAthenaArray(nfreq,nang,nmax_map_);
+    delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    map_bin_start_.NewAthenaArray(nfreq,nang);
+    map_bin_end_.NewAthenaArray(nfreq,nang);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);
@@ -502,9 +507,10 @@ RadIntegrator::~RadIntegrator()
     delta_i_.DeleteAthenaArray();
     delta_ratio_.DeleteAthenaArray();
     ir_cen_.DeleteAthenaArray();
-    ir_face_.DeleteAthenaArray();
-    ir_face_lab_.DeleteAthenaArray();
+    ir_slope_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();
+    map_bin_start_.DeleteAthenaArray();
+    map_bin_end_.DeleteAthenaArray();
   }
 
   sum_nu3_.DeleteAthenaArray();

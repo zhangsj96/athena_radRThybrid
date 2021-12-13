@@ -142,30 +142,3 @@ void RadIntegrator::ComAngle(const Real vx, const Real vy, const Real vz,
   return;
 }
 
-// get the co-moving frame frequencies based on lab-frame frequency and 
-// check the frequency shift factor is smaller than spacing in frequency grid
-void RadIntegrator::CheckFrequencyShift(AthenaArray<Real> &tran_coef)
-{
-
-  if(pmy_rad->nfreq > 2){
-    for(int n=0; n<pmy_rad->nang; ++n){
-      if(tran_coef(n) > pmy_rad->fre_ratio){
-          std::stringstream msg;
-          msg << "### FATAL ERROR in function [CheckFrequencyShift]"
-              << std::endl << "tran_coef '" << tran_coef(n) << 
-              "' larger than fre_ratio " << pmy_rad->fre_ratio;
-          ATHENA_ERROR(msg);
-      }else if(tran_coef(n) * pmy_rad->fre_ratio < 1.0){
-          std::stringstream msg;
-          msg << "### FATAL ERROR in function [CheckFrequencyShift]"
-              << std::endl << "tran_coef '" << tran_coef(n) << 
-              "' smaller than 1/fre_ratio " << 1/pmy_rad->fre_ratio;
-          ATHENA_ERROR(msg);
-      }
-
-    }// end angles
-
-  }
-
-  return;
-}

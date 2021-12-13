@@ -95,16 +95,18 @@ public:
   //====================================
   // multi-group functions
 
-  void CheckFrequencyShift(AthenaArray<Real> &tran_coef);
+
 
   void GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
-                        AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_face, 
-                        AthenaArray<Real> &ir_face_lab);
+                        AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_slope);
 
   void MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
                                      AthenaArray<Real> &ir_shift);
-  void MapIrcmFrequencyFirstOrder(AthenaArray<Real> &tran_coef, 
-                 AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift);
+
+  void SplitFrequencyBin(int n, int &l_bd, int &r_bd, Real *nu_lab, Real &nu_l, 
+                          Real &nu_r, Real *delta_i, Real &ir_cm, Real &ir_cen, 
+                          Real &nu_cen_lab, Real &cm_nu, Real &ir_slope, 
+                          AthenaArray<Real> &ir_shift);
 
   void InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_shift, 
                                      AthenaArray<Real> &ir_cm);
@@ -191,9 +193,11 @@ private:
 
   // This is the actual flux in frequency space
   AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
-  AthenaArray<Real> ir_shift_, ir_cen_, ir_face_, ir_face_lab_;
+  AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_;
+  AthenaArray<int> map_bin_start_, map_bin_end_;
   int iteration_tgas_;
   Real tgas_error_;
+  int nmax_map_; //maximum number of frequency bins that each bin will map to
 
 
 
