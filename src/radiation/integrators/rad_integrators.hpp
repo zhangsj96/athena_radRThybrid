@@ -193,7 +193,7 @@ private:
 
   // This is the actual flux in frequency space
   AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
-  AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_;
+  AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
   int iteration_tgas_;
   Real tgas_error_;

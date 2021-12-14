@@ -64,6 +64,21 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
         ir_n_cen[n] = ir_int[n]/(cm_nu[n] * delta_nu);
       }
     }// end ir_n-cen
+    // get value at frequency grid face
+    for(int n=0; n<nang; ++n)
+      ir_face_(0,n) = 0.0;
+    for(int ifr=1; ifr<nfreq-1; ++ifr){
+      Real d_nu = pmy_rad->nu_cen(ifr) - pmy_rad->nu_cen(ifr-1);
+      Real d_nu_face = pmy_rad->nu_grid(ifr) - pmy_rad->nu_cen(ifr-1);
+      Real *ir_n_cen = &(ir_cen(ifr,0));
+      Real *ir_l_cen = &(ir_cen(ifr-1,0));
+      Real *ir_face = &(ir_face_(ifr,0));
+      // the cm_nu[n] factor is cancelled 
+      for(int n=0; n<nang; ++n){
+        ir_face[n] = ir_l_cen[n] + (ir_n_cen[n] - ir_l_cen[n]) * d_nu_face/d_nu;
+      }
+    }
+
   //-------------------------------------------------------------
     // now get the slope with a limiter
     if((rad_fre_order == 1) || (nfreq == 2)){
@@ -74,36 +89,28 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
     }else{
       // the first bin
       // nfreq > 2
-      Real delta_nu = pmy_rad->nu_cen(1) - pmy_rad->nu_cen(0);
+      Real delta_nu = pmy_rad->nu_grid(1) - pmy_rad->nu_cen(0);
       for(int n=0; n<nang; ++n){
-        ir_slope(0,n) = (ir_cen(1,n) - ir_cen(0,n))/(cm_nu[n]*delta_nu);
+        ir_slope(0,n) = (ir_face_(1,n) - ir_cen(0,n))/(cm_nu[n]*delta_nu);
       }
 
 
       // now frequency bin from 1 to nfreq-2
       for(int ifr=1; ifr<nfreq-2; ++ifr){
-        Real delta_nu_l = pmy_rad->nu_cen(ifr)-pmy_rad->nu_cen(ifr-1);
-        Real delta_nu_r = pmy_rad->nu_cen(ifr+1)-pmy_rad->nu_cen(ifr);
-        Real *ir_l = &(ir_cen(ifr-1,0));
-        Real *ir_n = &(ir_cen(ifr,0));
-        Real *ir_r = &(ir_cen(ifr+1,0));
+        Real &delta_nu = pmy_rad->delta_nu(ifr);
+        Real *ir_face = &(ir_face_(ifr,0));
+        Real *ir_face_r = &(ir_face_(ifr+1,0));
         Real *slope = &(ir_slope(ifr,0));
         for(int n=0; n<nang; ++n){
-          Real slope_l = (ir_n[n] - ir_l[n])/(cm_nu[n]*delta_nu_l);
-          Real slope_r = (ir_r[n] - ir_n[n])/(cm_nu[n]*delta_nu_r);
-          if(slope_l * slope_r > 0.0){
-            slope[n] = 2.0 * slope_l * slope_r/(slope_l+slope_r);
-          }else{
-            slope[n] = 0.0;
-          }
+          slope[n] = (ir_face_r[n] - ir_face[n])/(cm_nu[n]*delta_nu);
         }// end n
 
       }// end ifr nfreq-3
       // the last bin
 
-      delta_nu = pmy_rad->nu_cen(nfreq-2) - pmy_rad->nu_cen(nfreq-3);
+      delta_nu = pmy_rad->nu_cen(nfreq-2) - pmy_rad->nu_grid(nfreq-2);
       for(int n=0; n<nang; ++n){
-        ir_slope(nfreq-2,n) = (ir_cen(nfreq-2,n) - ir_cen(nfreq-3,n))/(cm_nu[n]*delta_nu);
+        ir_slope(nfreq-2,n) = (ir_cen(nfreq-2,n) - ir_face_(nfreq-2,n))/(cm_nu[n]*delta_nu);
       }
 
       // check to make sure it does not cause negative intensity
