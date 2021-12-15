@@ -101,8 +101,12 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
         Real *ir_face = &(ir_face_(ifr,0));
         Real *ir_face_r = &(ir_face_(ifr+1,0));
         Real *slope = &(ir_slope(ifr,0));
+        Real *ir_n = &(ir_cen(ifr,0));
         for(int n=0; n<nang; ++n){
-          slope[n] = (ir_face_r[n] - ir_face[n])/(cm_nu[n]*delta_nu);
+          if((ir_face_r[n]-ir_n[n]) * (ir_n[n]-ir_face[n]) > 0.0)
+            slope[n] = (ir_face_r[n] - ir_face[n])/(cm_nu[n]*delta_nu);
+          else
+            slope[n] = 0.0;
         }// end n
 
       }// end ifr nfreq-3
@@ -187,10 +191,6 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
         map_start[n] = l_bd;
         map_end[n] = r_bd;
 
-        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
-                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
-                          ir_slope_(ifr,n), ir_shift);
-
         if(r_bd-l_bd+1 > nmax_map_){
           std::stringstream msg;
           msg << "### FATAL ERROR in function [MapIrcmFrequency]"
@@ -199,6 +199,12 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
           ATHENA_ERROR(msg);
 
         }
+
+        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
+                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
+                          ir_slope_(ifr,n), ir_shift);
+
+
 
 
       //-----------------------------------------------------
@@ -212,10 +218,6 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
         map_start[n] = l_bd;
         map_end[n] = r_bd;
 
-        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
-                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
-                          ir_slope_(ifr,n), ir_shift);
-
         if(r_bd-l_bd+1 > nmax_map_){
           std::stringstream msg;
           msg << "### FATAL ERROR in function [MapIrcmFrequency]"
@@ -224,6 +226,12 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
           ATHENA_ERROR(msg);
 
         }
+
+        SplitFrequencyBin(n, l_bd, r_bd, nu_lab, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
+                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen_lab, cm_nu[n], 
+                          ir_slope_(ifr,n), ir_shift);
+
+
 
       }else{
         map_start[n] = ifr;
@@ -376,4 +384,5 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArra
   return;
 
 }// end map function
+
 

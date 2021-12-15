@@ -111,7 +111,9 @@ public:
   void InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_shift, 
                                      AthenaArray<Real> &ir_cm);
 
-
+  void ComToLabMultiGroup(const Real vx, const Real vy, const Real vz,
+                          Real *mux, Real *muy, Real *muz,
+                          AthenaArray<Real> &ir_cm, Real *ir_lab);
 
   Real MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
@@ -195,6 +197,7 @@ private:
   AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
   AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
+  AthenaArray<Real> nu_shift_;
   int iteration_tgas_;
   Real tgas_error_;
   int nmax_map_; //maximum number of frequency bins that each bin will map to
