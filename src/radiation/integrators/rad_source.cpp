@@ -395,7 +395,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
             eint = prad->t_ceiling_(k,j,i) * u(IDN,k,j,i)/gm1;
             u(IEN,k,j,i) = ekin + pb + eint;
           }else{
-            u(IEN,k,j,i) += eint;   
+            u(IEN,k,j,i) += e_source;   
           }       
         }// end source_flag
 
