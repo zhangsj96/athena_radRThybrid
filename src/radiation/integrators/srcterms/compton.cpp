@@ -43,7 +43,7 @@
 
 void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_s,
-          Real dt, Real rho, Real &tgas, AthenaArray<Real> &ir_cm)
+          Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm)
 {
 
   Real& prat = pmy_rad->prat;
@@ -84,7 +84,7 @@ void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
          jr_cm += irn[n] * wmun[n];
          suma1 += tcoef[n] * wmun[n] * 4.0 * rdtcsigma * telectron;
       }
-      suma2 = 4.0 * prat * dtcsigma*(gamma-1.0)*telectron/rho;
+      suma2 = 4.0 * lorz * prat * dtcsigma*(gamma-1.0)*telectron/rho;
       
       Real tr = sqrt(sqrt(jr_cm));
       Real trnew;

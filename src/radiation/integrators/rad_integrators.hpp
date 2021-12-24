@@ -69,7 +69,7 @@ public:
 
   Real AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas,
+          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas,
           AthenaArray<Real> &implicit_coef_, AthenaArray<Real> &ir_cm);
 
   void GetTgasVel(MeshBlock *pmb, const Real dt,
@@ -79,7 +79,7 @@ public:
   
   void Compton(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_s,
-          Real dt, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
+          Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
   
   void LabToCom(const Real vx, const Real vy, const Real vz,
                           Real *mux, Real *muy, Real *muz,
@@ -117,7 +117,7 @@ public:
 
   Real MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
+          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm);
   
   //====================================

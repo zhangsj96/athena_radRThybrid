@@ -46,7 +46,7 @@
 
 Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
+          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
@@ -113,7 +113,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     suma3[ifr] = suma1[ifr] * (rdtcsigmas - rdtcsigmap);
     suma1[ifr] *= (rdtcsigmat + rdtcsigmap);
     
-    coef[0] += - (dtcsigmae + dtcsigmap) * prat * suma2[ifr] 
+    coef[0] += - (dtcsigmae + dtcsigmap) * lorz * prat * suma2[ifr] 
                * (gamma - 1.0)/(rho*(1.0-suma3[ifr]));
 
   }// end frequency groups
@@ -144,7 +144,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       }
 
       // No need to do this if already in thermal equilibrium
-      coef[1] += prat * (dtcsigmat + dtcsigmap 
+      coef[1] += lorz * prat * (dtcsigmat + dtcsigmap 
                  - (dtcsigmae + dtcsigmap) * suma1[ifr]/(1.0-suma3[ifr]))
                  * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
 

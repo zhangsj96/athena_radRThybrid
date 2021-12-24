@@ -43,7 +43,7 @@
 
 Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real rho, Real &tgas, 
+          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
@@ -105,14 +105,14 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     suma1 *= (rdtcsigmat + rdtcsigmap);
     
     // Now solve the equation
-    // rho dT/gamma-1=-Prat c(sigma T^4 - sigma(a1 T^4 + a2)/(1-a3))
+    // rho dT/gamma-1=-\gamma Prat c(sigma T^4 - sigma(a1 T^4 + a2)/(1-a3))
     // make sure jr_cm is positive
     jr_cm = std::max(jr_cm, TINY_NUMBER);
     
     // No need to do this if already in thermal equilibrium
-    coef[1] = prat * (dtcsigmat + dtcsigmap - (dtcsigmae + dtcsigmap) * suma1/(1.0-suma3))
+    coef[1] = lorz * prat * (dtcsigmat + dtcsigmap - (dtcsigmae + dtcsigmap) * suma1/(1.0-suma3))
                    * (gamma - 1.0)/rho;
-    coef[0] = -tgas - (dtcsigmae + dtcsigmap) * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
+    coef[0] = -tgas - (dtcsigmae + dtcsigmap) * lorz * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
     
     if(fabs(coef[1]) > TINY_NUMBER){
       int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);

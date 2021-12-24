@@ -94,6 +94,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         
         
         Real lorzsq = 1.0/(1.0 - vel  * invcrat * invcrat);
+        Real lorz = sqrt(lorzsq);
         
         
         sigma_at=&(prad->sigma_a(k,j,i,0));
@@ -109,7 +110,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
            Real vdotn = vx * prad->mu(0,k,j,i,n) + vy * prad->mu(1,k,j,i,n)
                         + vz * prad->mu(2,k,j,i,n);
            Real vnc = 1.0 - vdotn * invcrat;
-           tran_coef(n) = sqrt(lorzsq) * vnc;
+           tran_coef(n) = lorz * vnc;
            wmu_cm(n) = prad->wmu(n)/(tran_coef(n) * tran_coef(n));
            numsum += wmu_cm(n);
            cm_to_lab(n) = tran_coef(n)*tran_coef(n)*tran_coef(n)*tran_coef(n);
@@ -178,11 +179,11 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
          // Add absorption and scattering opacity source
           tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
+                              sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
         
          // Add compton scattering
           if(compton_flag_ > 0)
-            Compton(wmu_cm,tran_coef, sigma_s, dt, rho, tgas_new_(k,j,i), ir_cm);
+            Compton(wmu_cm,tran_coef, sigma_s, dt, lorz, rho, tgas_new_(k,j,i), ir_cm);
         }else{
         
           // get monochromatic specific intensity 
@@ -193,7 +194,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
+                              sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
           // inverseshift
           InverseMapFrequency(tran_coef,ir_shift_,ir_cm);
        
