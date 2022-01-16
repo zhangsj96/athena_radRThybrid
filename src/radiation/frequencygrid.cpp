@@ -175,4 +175,99 @@ Real Radiation::EffectiveBlackBody(Real intensity, Real nu)
 
 }
 
+// In the last frequency bin, [nu, infty]
+// we assum, n(nu)=1/(exp(nu/T)-1), the input value 
+// n_nu2 = \int_{nu_f}^{infty} n\nu^2 d\nu
+// we fit the formula n_nu2/nu^3=A=(1/y)^3\int_y^{infty} x^2/(exp(x)-1) dx
+
+Real Radiation::EffectiveBlackBodyNNu2(Real n_nu2, Real nu)
+{
+  Real fit_a = n_nu2/(nu*nu*nu);
+  Real log_fit_a=log(fit_a);
+  Real nu_tr = 1.0;
+  if(fit_a < 0.001){
+    nu_tr = 0.001177*log_fit_a*log_fit_a-0.8812*log_fit_a-0.7428;
+  }else if(fit_a < 5.0){
+    Real exp_nu = (log_fit_a+13.28)/9.551;
+    nu_tr=8.647*exp(-exp_nu*exp_nu);
+  }else{
+    nu_tr=pow(2.404113806319301/fit_a,1.0/3.0);
+  }
+
+  return nu_tr;
+
+}
+
+// return the integral (15/pi^4)\int_{\nu/T}^{\infty} \nu J_nu d\nu
+// =(15/pi^4)\int_{\nu/T}^{\infty} x^4/(exp(x)-1) dx
+// the input is nu_t=nu_f/T
+Real Radiation::IntegrateBBNuJ(Real nu_t)
+{
+  Real nu_sq = nu_t*nu_t;
+  Real nu_four = nu_sq * nu_sq;
+  Real nu_three = nu_t * nu_sq;
+  Real nu_five = nu_t * nu_four;
+  Real nu_six = nu_sq * nu_four;
+  Real exp_nu = exp(-nu_t);
+  Real integral = 0.0;
+  if(nu_t < 2.596){
+    integral = 3.832229496128511 
+               - 3.75 * ONE_PI_FOUR_POWER * nu_four 
+               + 1.5 * ONE_PI_FOUR_POWER * nu_five 
+               - (5.0/24.0) * ONE_PI_FOUR_POWER * nu_six;
+  }else{
+    integral = 15.0*ONE_PI_FOUR_POWER*exp_nu*(24.0
+               +24.0*nu_t+12.0*nu_sq+4.0*nu_three+nu_four);
+  }
+
+  return integral;
+
+}
+
+// return the integral (15/pi^4)\int_{\nu/T}^{\infty} (J_nu/nu)^2 d\nu
+// =(15/pi^4)\int_{\nu/T}^{\infty} x^4/(exp(x)-1)^2 dx
+// the input is nu_t=nu_f/T
+Real Radiation::IntegrateBBJONuSq(Real nu_t)
+{
+  Real nu_sq = nu_t*nu_t;
+  Real nu_four = nu_sq * nu_sq;
+  Real nu_three = nu_t * nu_sq;
+  Real exp_nu = exp(-2.0*nu_t);
+  Real integral = 0.0;
+  if(nu_t < 10.0){
+    Real top = 0.01872 * nu_sq - 0.2732 * nu_t + 0.9735;
+    Real bottom = nu_sq - 1.854 * nu_t + 5.828;
+    integral = top/bottom;
+
+  }else{
+    integral = 3.75*ONE_PI_FOUR_POWER*exp_nu*(3.0
+               +6.0*nu_t+6.0*nu_sq+4.0*nu_three+2.0*nu_four);
+  }
+
+  return integral;
+
+}
+
+// return the integral \int_{nu/T}^{\infty} n \nu^2 d\nu
+// = \int_{nu/T}^{\infty} x^2/(exp(x)-1) dx
+// the input is nu_t=nu_f/T_r
+Real Radiation::IntegrateBBNNu2(Real nu_t)
+{
+  Real nu_sq = nu_t*nu_t;
+  Real nu_three = nu_t * nu_sq;
+  Real nu_four = nu_sq * nu_sq;
+  Real nu_six = nu_three * nu_three;
+  Real nu_eight = nu_four * nu_four;
+  Real exp_nu = exp(-nu_t);
+  Real integral = 0.0;
+  if(nu_t < 3.297){
+    integral = 2.404113806319301 - 0.5 * nu_sq + (1.0/6.0) * nu_three
+             - (1.0/48.0) * nu_four + (1.0/4320.0) * nu_six 
+             - (1.0/241920.0) * nu_eight;
+  }else{
+    integral = exp_nu * (2.0 + 2.0 * nu_t + nu_sq);
+  }
+
+  return integral;
+}
 

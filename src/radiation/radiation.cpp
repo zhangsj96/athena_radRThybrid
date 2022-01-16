@@ -111,6 +111,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
   lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
   mol_weight = pin->GetOrAddReal("radiation","molecular_weight",0.6);
+  kappa_es = pin->GetOrAddReal("radiation","electron_scattering",0.34);
+
+  kappa_es = kappa_es * rhounit * lunit; // dimensionless electron scattering
   
   if(user_unit_ == 0){  
     prat = pin->GetReal("radiation","Prat");

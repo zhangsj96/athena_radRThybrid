@@ -17,7 +17,7 @@ CXX := mpicxx
 CPPFLAGS := 
 CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
-LDLIBS :=  -lhdf5
+LDLIBS := 
 GCOV_CMD := gcov
 
 # Preliminary definitions

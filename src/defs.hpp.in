@@ -128,6 +128,8 @@
 #define HUGE_NUMBER 1.0e+36
 #define SQR(x) ( (x)*(x) )
 #define SIGN(x) ( ((x) < 0.0) ? -1.0 : 1.0 )
+#define PI_FOUR_POWER 97.409091034002415
+#define ONE_PI_FOUR_POWER 0.010265982254684
 
 #ifdef ENABLE_EXCEPTIONS
 #define ATHENA_ERROR(x) throw std::runtime_error(x.str().c_str())

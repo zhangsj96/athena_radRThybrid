@@ -195,6 +195,11 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
                               sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
+
+          // Add compton scattering 
+          if(compton_flag_ > 0)
+            MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
+
           // inverseshift
           InverseMapFrequency(tran_coef,ir_shift_,ir_cm);
        

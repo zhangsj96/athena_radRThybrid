@@ -119,6 +119,13 @@ public:
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
           Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm);
+
+  // multigroup compton scattering function
+  void MultiGroupCompton(AthenaArray<Real> &wmu_cm,
+          AthenaArray<Real> &tran_coef, 
+          Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
+
+  Real QuasiEqSol(Real &tgas, Real &tot_n);
   
   //====================================
   
@@ -155,7 +162,13 @@ private:
   AthenaArray<Real> tgas_, vel_source_, tgas_new_; // array to store gas temperature, 
                                         // velocity for source term
   // these are temporary arrays for multi-group source terms
-  AthenaArray<Real> sum_nu3_, sum_nu2_, sum_nu1_; 
+  AthenaArray<Real> sum_nu3_, sum_nu2_, sum_nu1_;
+  AthenaArray<Real> eq_sol_;
+  // The coefficients to solve the Kompaneets equation
+  AthenaArray<Real> com_b_face_coef_, com_d_face_coef_;
+  AthenaArray<Real> com_b_coef_l_, com_b_coef_r_;
+  AthenaArray<Real> com_d_coef_l_, com_d_coef_r_;
+  AthenaArray<Real> nf_rhs_, nf_n0_, new_j_nu_;
 
                                     
  // temporary 1D array with size of nang
@@ -201,7 +214,6 @@ private:
   int iteration_tgas_;
   Real tgas_error_;
   int nmax_map_; //maximum number of frequency bins that each bin will map to
-
 
 
 };

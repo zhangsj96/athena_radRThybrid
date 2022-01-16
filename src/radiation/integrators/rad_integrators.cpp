@@ -202,11 +202,23 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     map_bin_start_.NewAthenaArray(nfreq,nang);
     map_bin_end_.NewAthenaArray(nfreq,nang);
     nu_shift_.NewAthenaArray(nang,nfreq);
+
+    com_b_face_coef_.NewAthenaArray(nfreq);
+    com_d_face_coef_.NewAthenaArray(nfreq);
+    com_b_coef_l_.NewAthenaArray(nfreq);
+    com_b_coef_r_.NewAthenaArray(nfreq);
+    com_d_coef_l_.NewAthenaArray(nfreq);
+    com_d_coef_r_.NewAthenaArray(nfreq);
+
+    nf_rhs_.NewAthenaArray(nfreq);
+    nf_n0_.NewAthenaArray(nfreq);
+    new_j_nu_.NewAthenaArray(nfreq);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);
   sum_nu2_.NewAthenaArray(nfreq);
   sum_nu1_.NewAthenaArray(nfreq);
+  eq_sol_.NewAthenaArray(nfreq);
 
   //----------------------------------------------------
   // array for multi-group 
@@ -515,11 +527,24 @@ RadIntegrator::~RadIntegrator()
     map_bin_start_.DeleteAthenaArray();
     map_bin_end_.DeleteAthenaArray();
     nu_shift_.DeleteAthenaArray();
+
+    com_b_face_coef_.DeleteAthenaArray();
+    com_d_face_coef_.DeleteAthenaArray();
+    com_b_coef_l_.DeleteAthenaArray();
+    com_b_coef_r_.DeleteAthenaArray();
+    com_d_coef_l_.DeleteAthenaArray();
+    com_d_coef_r_.DeleteAthenaArray();
+
+    nf_rhs_.DeleteAthenaArray();
+    nf_n0_.DeleteAthenaArray();
+    new_j_nu_.DeleteAthenaArray();
+
   }
 
   sum_nu3_.DeleteAthenaArray();
   sum_nu2_.DeleteAthenaArray();
   sum_nu1_.DeleteAthenaArray();
+  eq_sol_.DeleteAthenaArray();
 
 }
 

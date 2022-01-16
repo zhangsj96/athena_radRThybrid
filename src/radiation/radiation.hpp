@@ -109,6 +109,8 @@ public:
     // The function pointer for the opacity
   OpacityFunc UpdateOpacity;
 
+  Real kappa_es; // the frequency independent electron scattering opacity
+
 
   
   int rotate_theta; // flag to rotate the boundary
@@ -135,6 +137,10 @@ public:
 
   Real BlackBodySpec(Real nu_min, Real nu_max);
   Real EffectiveBlackBody(Real intensity, Real nu);
+  Real EffectiveBlackBodyNNu2(Real n_nu2, Real nu);
+  Real IntegrateBBNuJ(Real nu_t); // integral of 
+  Real IntegrateBBJONuSq(Real nu_t); //\integral of (j/\nu)^2d\nu
+  Real IntegrateBBNNu2(Real nu_t); // ingral of n\nu^2d\nu
 
   AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
 
