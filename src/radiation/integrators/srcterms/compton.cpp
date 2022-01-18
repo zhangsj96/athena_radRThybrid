@@ -156,7 +156,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
     j_nu[ifr] = 0.0;
     Real *irn = &(ir_cm(nang*ifr));
     for(int n=0; n<nang; ++n){
-      j_nu[ifr] += wmun[ifr] * irn[n];
+      j_nu[ifr] += wmun[n] * irn[n];
     }// end n
   }//calculate j over frequency
   Real sum_jnu = 0.0;
@@ -202,7 +202,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
   r_four_sol = pow(r_four_sol,0.25);
   int count=0;
-  while((count < 10) || (fabs(r_ini-r_four_sol)/r_four_sol < 1.e-6)){
+  while((count < 10) && (fabs(r_ini-r_four_sol)/r_four_sol > 1.e-6)){
     r_ini = r_four_sol;
     r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
     r_four_sol = pow(r_four_sol,0.25);    
@@ -300,42 +300,44 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // -B_r * n_f+1 + (1 - D_r + B_l) * n_f + D_l * n_f-1 = n_f^old
   // now solve the matrix from the left boundary
   // relate the right variable with the left variable
+  // using Gauss elimination 
 
-  // each variable is nfl*_n0 * n0 + nfl*_rhs
+  // each variable at nf is related to nf+1 as
+  // n_f =  nf_n0 * n_{f+1} + nf_rhs
 
   Real *nf_rhs = &(nf_rhs_(0));
   Real *nf_n0 = &(nf_n0_(0));
 
-  nf_rhs[0] = 0.0;
-  nf_n0[0] = 0.0;
+  nf_rhs[0] = n_nu[0]/(1.0-com_d_coef_r[0]+com_b_coef_l[0]);
+  nf_n0[0] = com_b_coef_r[0]/(1.0-com_d_coef_r[0]+com_b_coef_l[0]);
 
-  nf_n0[1] = (1.0-com_d_coef_r[0]+com_b_coef_l[0])/com_b_coef_r[0];
-  nf_rhs[1] = -n_nu[0]/com_b_coef_r[0];
+  for(int ifr=1; ifr<nfreq-2; ++ifr){
+    //eliminate n_{f-1}, get a relation between n_f and n_{f+1}
+    // n_{f-1} = nf_n0[f-1] * n_{f} + nf_rhs[f-1]
+    Real ef = (1.0-com_d_coef_r[ifr]+com_b_coef_l[ifr]);
+    Real new_ef = 1.0 + com_d_coef_l[ifr] * nf_n0[ifr-1]/ef;
+    nf_rhs[ifr] = n_nu[ifr]/ef-com_d_coef_l[ifr] * nf_rhs[ifr-1]/ef;
+    nf_rhs[ifr] /= new_ef;
+    nf_n0[ifr] = com_b_coef_r[ifr]/(ef*new_ef);
+  }
 
-  for(int ifr=2; ifr<nfreq-1; ++ifr){
-    Real ef = (1.0-com_d_coef_r[ifr-1]+com_b_coef_l[ifr-1]);
-    nf_n0[ifr] = (ef*nf_n0[ifr-1]+com_d_coef_l[ifr-1]*nf_n0[ifr-2])
-                 /com_b_coef_r[ifr-1];
-    nf_rhs[ifr] = (ef*nf_rhs[ifr-1]+com_d_coef_l[ifr-1]*nf_rhs[ifr-2])
-                 /com_b_coef_r[ifr-1]-n_nu[ifr-1]/com_b_coef_r[ifr-1];
-  }// end ifr
   // for the flux at the last face, we calculate the flux explicitly
   Real nf_last=1.0/(exp(nu_tr)-1.0);
   Real flux_last_face=compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
                       *nu_grid[nfreq-1]*nu_grid[nfreq-1]
                       *nf_last*(1.0+nf_last)*(1.0-tgas_new/eff_tr)
                       /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
+
   // We use the bin nfreq-2 to get the solution
-  Real n0_coef = (1.0+com_b_coef_l[nfreq-2])*nf_n0[nfreq-2]
+  Real n0_coef = (1.0+com_b_coef_l[nfreq-2])
                  +com_d_coef_l[nfreq-2]*nf_n0[nfreq-3];
   Real rhs_coef = n_nu[nfreq-2]+flux_last_face
-                 -(1.0+com_b_coef_l[nfreq-2])*nf_rhs[nfreq-2]
                  -com_d_coef_l[nfreq-2]*nf_rhs[nfreq-3];
-
-  // Now calculate new n_nu
-  n_nu[0] = rhs_coef/n0_coef;
-  for(int ifr=1; ifr<nfreq-1; ++ifr)
-    n_nu[ifr] = nf_n0[ifr] * n_nu[0] + nf_rhs[ifr];
+  // update new solution at nfreq-2
+  n_nu[nfreq-2] = rhs_coef/n0_coef;
+  for(int ifr=nfreq-3; ifr>=0; --ifr){
+    n_nu[ifr] = nf_n0[ifr] * n_nu[ifr+1] + nf_rhs[ifr];
+  }
 
   // the last bin, the flux changes \int nu^2 n d\nu
   n_nusq_last_bin -= flux_last_face * 
