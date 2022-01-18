@@ -374,7 +374,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
 
   // now update tgas_new via energy conservation
   tgas_new = (prat/redfactor)*(sum_jnu-sum_new_jnu)
-            *((gamma-1.0)/rho) - tgas;
+            *((gamma-1.0)/rho) + tgas;
 
   tgas = tgas_new;
 
