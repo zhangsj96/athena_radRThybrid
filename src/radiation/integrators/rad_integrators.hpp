@@ -126,6 +126,7 @@ public:
           Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
 
   Real QuasiEqSol(Real &tgas, Real &tot_n);
+  Real ComptCorrection(Real &tgas);
   
   //====================================
   

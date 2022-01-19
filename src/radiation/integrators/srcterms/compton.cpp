@@ -137,6 +137,9 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   int& nfreq=pmy_rad->nfreq;
   Real gamma = pmy_rad->pmy_block->peos->GetGamma();
   Real one_telectron = 1.0/pmy_rad->telectron;
+  //correction factor for high order terms of energy change per scattering
+  // f_theta is 1 when kT/m_ec^2 -->0
+  Real f_theta=ComptCorrection(tgas);
 
   //Compton scattering coefficient always use the frequency 
   // independent kappa_es
@@ -145,7 +148,8 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   //--------------------------------------------------------------------
   // Estimate gas temperature based on integrated Kompaneets Equation
 
-  Real compt_coef = lorz*ct*redfactor*rho*pmy_rad->kappa_es*one_telectron;
+  Real compt_coef = f_theta*lorz*ct*redfactor*rho*pmy_rad->kappa_es
+                    *one_telectron;
   Real coef_a1=4*compt_coef;
   Real coef_a2=(gamma -1.0)*prat*coef_a1/(redfactor*rho);
 
@@ -408,4 +412,14 @@ Real RadIntegrator::QuasiEqSol(Real &tgas, Real &tot_n)
   return eq_sol_c;
 
 }
+
+Real RadIntegrator::ComptCorrection(Real &tgas)
+{
+  // this is kT/m_ec^2
+  Real theta=tgas/pmy_rad->telectron;
+  Real f_theta=(1.0+3.683*theta+4.0*theta*theta)/(1.0+theta);
+
+  return f_theta;
+}
+
 
