@@ -141,6 +141,10 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   //Compton scattering coefficient always use the frequency 
   // independent kappa_es
   // rho * kappa_es=sigma_es
+
+  //--------------------------------------------------------------------
+  // Estimate gas temperature based on integrated Kompaneets Equation
+
   Real compt_coef = lorz*ct*redfactor*rho*pmy_rad->kappa_es*one_telectron;
   Real coef_a1=4*compt_coef;
   Real coef_a2=(gamma -1.0)*prat*coef_a1/(redfactor*rho);
@@ -212,6 +216,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real tgas_new = tgas + ((gamma-1.0)*prat/(redfactor*rho)) * sum_jnu * 
                  (1.0 - r_four_sol * r_four_sol * r_four_sol * r_four_sol);
 
+  //-------------------------------------------------------------------------
   // now solve the Kompaneets equation
 
   // frequency centers are: [0] [1] [2]....| [f-2] | [f-1]
@@ -229,6 +234,8 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // if we assume blackbody spectrum, \int n \nu^2 d\nu 
   // = T^3 \int x^2/(exp(x)-1) dx
   Real n_nusq_last_bin = eff_tr * eff_tr * eff_tr * pmy_rad->IntegrateBBNNu2(nu_tr);
+  Real last_bin_ratio = j_nu[nfreq-1]/n_nusq_last_bin;
+
   Real sum_n_nusq = n_nusq_last_bin;
   for(int ifr=0; ifr<nfreq-1; ++ifr)
     sum_n_nusq += n_nu[ifr] * nu_cen[ifr] * nu_cen[ifr] * delta_nu[ifr];     
@@ -256,6 +263,9 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   }
   delta_coef[nfreq-1] = 0.5;
 
+
+  //-------------------------------------------------------------------------
+   // construct the matrix coefficients
 
   Real *com_b_face_coef = &(com_b_face_coef_(0));
   Real *com_d_face_coef = &(com_d_face_coef_(0));
@@ -339,30 +349,25 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
     n_nu[ifr] = nf_n0[ifr] * n_nu[ifr+1] + nf_rhs[ifr];
   }
 
-  // the last bin, the flux changes \int nu^2 n d\nu
-  n_nusq_last_bin -= flux_last_face * 
-                     (nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
-
-  //use n_nusq to update effective T_r in the last bin
-  Real new_nu_tr = pmy_rad->EffectiveBlackBodyNNu2(n_nusq_last_bin,
-                                                  nu_grid[nfreq-1]);
-
-  // now get the new j_nu=(15/pi^4)\int_nu_t^{infty} x^3/(exp(x)-1) dx
-  Real j_nu_last_bin = 1.0-pmy_rad->FitBlackBody(new_nu_tr);
-  Real new_tr = nu_grid[nfreq-1]/new_nu_tr;
-  j_nu_last_bin *= (new_tr*new_tr*new_tr*new_tr);
-
  
+  //-------------------------------------------------------------------------
+  // now go from update n_nu to new_j_nu
+
   Real *new_j_nu = &(new_j_nu_(0));
   for(int ifr=0; ifr<nfreq-1; ++ifr){
     new_j_nu[ifr] = 15.0*ONE_PI_FOUR_POWER*n_nu[ifr]*nu_cen[ifr]
                 *nu_cen[ifr]*nu_cen[ifr]*delta_nu[ifr];
   }
-  new_j_nu[nfreq-1] = j_nu_last_bin;
+
+  // The last bin
+  // we calculdate dn/dt for the last bin, and we take 
+  // dJ/dt= (dn/dt) * (J/n)
+  new_j_nu[nfreq-1] = j_nu[nfreq-1] - last_bin_ratio * flux_last_face * 
+                     (nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
 
   //now calculate the total j
   Real sum_new_jnu = 0.0;
-  sum_new_jnu = j_nu_last_bin;
+  sum_new_jnu = new_j_nu[nfreq-1];
   for(int ifr=0; ifr<nfreq-1; ++ifr)
     sum_new_jnu += new_j_nu[ifr];
 
@@ -383,7 +388,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   for(int ifr=0; ifr<nfreq; ++ifr){
     Real *irn = &(ir_cm(nang*ifr));
     for(int n=0; n<nang; n++){
-      irn[n] += tcoef[n]* (sum_new_jnu - sum_jnu);
+      irn[n] += tcoef[n]* (new_j_nu[ifr] - j_nu[ifr]);
     }
   }
 
