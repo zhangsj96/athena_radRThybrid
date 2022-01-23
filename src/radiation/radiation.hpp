@@ -89,8 +89,10 @@ public:
   // mininum and maximum frequencies, and number of frequency bins
   int nfreq; // number of frequency bins
   Real fre_ratio; // ratio between neighboring frequency bins
-  AthenaArray<Real> nu_grid, nu_cen, delta_nu;  // frequency grid, center of each frequency bin
-  AthenaArray<Real> emission_spec; //gas emission term in each frequency bin relative to a_rT^4
+  // frequency grid, center of each frequency bin
+  AthenaArray<Real> nu_grid, nu_cen, delta_nu;  
+  //gas emission term in each frequency bin relative to a_rT^4
+  AthenaArray<Real> emission_spec; 
   FrequencyFunc UserFrequency; // user defined frequency grid
   void EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction);
   EmissionFunc UserEmissionSpec; 
@@ -141,6 +143,18 @@ public:
   Real IntegrateBBNuJ(Real nu_t); // integral of 
   Real IntegrateBBJONuSq(Real nu_t); //\integral of (j/\nu)^2d\nu
   Real IntegrateBBNNu2(Real nu_t); // ingral of n\nu^2d\nu
+  Real ConvertBBJNNu2(Real &bb_j, Real &nu_f);
+  // Convert from n\nu^2 dnu to J
+  Real InverseConvertBBJNNu2(Real &nnu2, Real &nu_f); 
+  // Convert J to \int (J/nu)^2
+  Real BBJToJONuSq(Real &bb_j, Real &nu_f);
+  // Convert J to n(nu_f)
+  Real BBJtoNnu(Real &bb_j, Real &nu_f); 
+  // Convert J to \int J\nu
+  Real BBJtoJnu(Real &bb_j, Real &nu_f); 
+  Real DBBjDNNu2(Real &bb_j, Real &nu_f);
+
+
 
   AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
 

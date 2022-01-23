@@ -22,6 +22,7 @@
 
 // Athena++ headers
 #include "./radiation.hpp"
+#include "../utils/utils.hpp"
 
 
 //--------------------------------------------------------------------------------------
@@ -163,12 +164,35 @@ Real Radiation::EffectiveBlackBody(Real intensity, Real nu)
   
   Real a_nu = intensity/(nu*nu*nu*nu); // I/nu^4
   Real nu_tr = 1.0;
-  if(a_nu > 0.5){
-    nu_tr = pow((1.0/a_nu),0.25);
+  if(a_nu > 0.184077200146896){
+    // solve the fourth order polynomial (1/y)^4-(5/pi^4)(1/y)-a_nu=0
+    // -(pi^4/5) (1/y)^4 + (1/y) + a_nu(pi^4/5)==0
+    Real coef4=-PI_FOUR_POWER*0.2;
+    Real coef = a_nu*0.2*PI_FOUR_POWER;
+    int flag=FouthPolyRoot(coef4, coef, nu_tr);
+    if(flag == -1)
+      nu_tr = pow((1.0/a_nu),0.25);
+    else
+      nu_tr = 1.0/nu_tr;
   }else{
     Real loganu = -log(a_nu);
     nu_tr = -0.000525 * loganu * loganu * loganu + 0.03138 * loganu * loganu 
             + 0.3223 * loganu + 0.8278;
+    if(a_nu < 1.e-10){
+      // improve the accuracy with iteration
+      Real yini = nu_tr;
+      int count=0;
+      Real residual=1.0;
+      while((count < 6) && (residual > 1.e-6)){
+        Real ratio = yini*yini*yini*yini/(6.0+6.0*yini+3.0*yini*yini+yini*yini*yini);
+        nu_tr=-log((PI_FOUR_POWER*a_nu/15.0)*ratio);
+        residual=fabs((nu_tr-yini)/nu_tr);
+        count++;
+        yini=nu_tr;
+      }
+
+    }
+
   }
 
   return nu_tr;
@@ -248,6 +272,113 @@ Real Radiation::IntegrateBBJONuSq(Real nu_t)
 
 }
 
+//For a given value J=(15/pi^4)T_r^4\int x^3/(exp(x)-1) dx, 
+// get the integral \int (J/\nu)^2 dx=
+// (15/pi^4)^2 T_r^5\int x^4/(exp(x)-1)^2 dx
+// The input is J and nu_f
+
+Real Radiation::BBJToJONuSq(Real &bb_j, Real &nu_f)
+{
+  Real j_nu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
+  Real log_j_nu4 = log10(j_nu4);
+  Real log_jonu2 = 0.0;
+  if(log_j_nu4 < -2.71777){
+    log_jonu2 = (1.987*log_j_nu4*log_j_nu4-2.123*log_j_nu4+4.532)/
+       (log_j_nu4-1.733);
+  }else if((log_j_nu4 >= -2.71777) && (log_j_nu4 < 2.66367)){
+    log_jonu2 = 0.006977*log_j_nu4*log_j_nu4*log_j_nu4
+         -0.03641*log_j_nu4*log_j_nu4+1.314*log_j_nu4-1.632;
+  }else{
+    log_jonu2 = 1.25*log_j_nu4-1.588;
+  }
+
+  Real jonu2 = pow(10.0, log_jonu2);
+  jonu2 = jonu2 * nu_f*nu_f*nu_f*nu_f*nu_f;
+
+  return jonu2;
+
+}
+
+// For a given value J=(15/pi^4)T_r^4\int x^3/(exp(x)-1) dx, 
+// return the value n(nu_f)=1/(exp(x)-1)
+// The input is J and nu_f
+
+Real Radiation::BBJtoNnu(Real &bb_j, Real &nu_f)
+{
+  Real j_nu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
+  Real log_j_nu4 = log10(j_nu4)+3.0;
+  Real log_nnu = 0.0;
+
+  if(log_j_nu4 < 0.0){
+    log_nnu = -0.003321*log_j_nu4*log_j_nu4+0.8649*log_j_nu4-1.869;
+  }else if(log_j_nu4 >= 0.0 && log_j_nu4 < 7.07128){
+    log_nnu = 0.004199*log_j_nu4*log_j_nu4*log_j_nu4
+            -0.07701*log_j_nu4*log_j_nu4+0.7398*log_j_nu4-1.869;
+  }else{
+    log_nnu = -0.002325*log_j_nu4*log_j_nu4+0.2955*log_j_nu4-0.977;
+  }
+
+  Real nnu = pow(10.0, log_nnu);
+
+  return nnu;
+
+}
+
+
+// For a given value J=(15/pi^4)T_r^4\int x^3/(exp(x)-1) dx, 
+// return the value Jnu=(15/pi^4)T_r^5\int x^4/(exp(x)-1) dx
+// The input is J and nu_f
+
+Real Radiation::BBJtoJnu(Real &bb_j, Real &nu_f)
+{
+  Real j_nu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
+  Real log_j_nu4 = log10(j_nu4);
+  Real log_jnu = 0.0;
+  if(log_j_nu4 < -3.1936){
+    log_jnu = 6.363e-5 * log_j_nu4*log_j_nu4*log_j_nu4
+              +0.002858*log_j_nu4*log_j_nu4
+              +1.043*log_j_nu4+0.2264;
+  }else if((log_j_nu4 >= -3.1936) && (log_j_nu4 < 2.6701)){
+    log_jnu = -0.003183*log_j_nu4*log_j_nu4*log_j_nu4
+              +0.0158*log_j_nu4*log_j_nu4
+              +1.225*log_j_nu4+0.5983;
+  }else{
+    log_jnu = 1.25*log_j_nu4+0.5836;
+  }
+
+  Real jnu = pow(10.0, log_jnu);
+  jnu *= (nu_f*nu_f*nu_f*nu_f*nu_f);
+
+  return jnu;
+  
+}
+
+Real Radiation::DBBjDNNu2(Real &bb_j, Real &nu_f)
+{
+  Real j_nu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
+  Real log_j_nu4 = log10(j_nu4);
+  Real log_ratio=0.0;
+  if(log_j_nu4 < -3.06556){
+    log_ratio=(-0.8125*log_j_nu4*log_j_nu4-1.888*log_j_nu4-2.331)/
+              (log_j_nu4*log_j_nu4+2.091*log_j_nu4+3.25);
+  }else if(log_j_nu4 >= -3.06556 && log_j_nu4 < 2.87328){
+    log_ratio=(0.2166*log_j_nu4*log_j_nu4*log_j_nu4
+              +1.491*log_j_nu4*log_j_nu4+4.095*log_j_nu4-5.699)/
+              (log_j_nu4*log_j_nu4+6.111*log_j_nu4+24.98);
+  }else{
+    log_ratio=0.2499*log_j_nu4-0.2551;
+  }
+
+  Real ratio = pow(10.0, log_ratio);
+  ratio *= nu_f;
+
+  return ratio;
+
+}
+
+
+
+
 // return the integral \int_{nu/T}^{\infty} n \nu^2 d\nu
 // = \int_{nu/T}^{\infty} x^2/(exp(x)-1) dx
 // the input is nu_t=nu_f/T_r
@@ -270,4 +401,45 @@ Real Radiation::IntegrateBBNNu2(Real nu_t)
 
   return integral;
 }
+
+// We assume blackbody spectrum in the frequency range nu_f to infty
+// For a given value of J=(15/\pi^4)\int_{\nu_f}^infty nu^3/(exp(nu/Tr)-1) dnu
+// and frequency nu_f, we return the integral 
+// nnu2=\int_{nu_f}^{infty} nu^2/(exp(nu/Tr)-1) d\nu
+// We use piecewise linear relationship between J and nnu2
+Real Radiation::ConvertBBJNNu2(Real &bb_j, Real &nu_f)
+{
+  Real jnu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
+  Real log_jnu4=log(jnu4);
+  Real log_nnu2=1.0;
+  if(log_jnu4 > 0.0){
+    log_nnu2 = 0.7644*log_jnu4+0.746;
+  }else{
+    log_nnu2 = 0.9846*log_jnu4+0.746;
+  }
+  Real nnu2 = exp(log_nnu2)*nu_f*nu_f*nu_f;
+
+  return nnu2;
+
+}
+
+// inverse conversion from nnu2 to J. 
+// The conversion from J to nnu2, and then from nnu2 to J
+// Should be exact
+Real Radiation::InverseConvertBBJNNu2(Real &nnu2, Real &nu_f)
+{
+  Real nnu2_nu3=nnu2/(nu_f*nu_f*nu_f);
+  Real log_nnu2=log(nnu2_nu3);
+  Real log_jnu4=1.0;
+  if(log_nnu2 > 0.746){
+    log_jnu4=(log_nnu2-0.746)/0.7644;
+  }else{
+    log_jnu4=(log_nnu2-0.746)/0.9846;
+  }
+  Real bbj = exp(log_jnu4)*nu_f*nu_f*nu_f*nu_f;
+
+  return bbj;
+}
+
+
 
