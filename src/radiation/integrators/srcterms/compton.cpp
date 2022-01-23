@@ -336,9 +336,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   }
 
   // for the flux at the last face, we calculate the flux explicitly
-//  Real nf_last=1.0/(exp(nu_tr)-1.0);
-  Real nf_last=pmy_rad->BBJtoNnu(j_nu[nfreq-1],nu_grid[nfreq-1]);
-
+  Real nf_last=1.0/(exp(nu_tr)-1.0);
   Real flux_last_face=compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
                       *nu_grid[nfreq-1]*nu_grid[nfreq-1]
                       *nf_last*(1.0+nf_last)*(1.0-tgas_new/eff_tr)
