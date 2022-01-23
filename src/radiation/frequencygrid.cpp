@@ -410,14 +410,18 @@ Real Radiation::IntegrateBBNNu2(Real nu_t)
 Real Radiation::ConvertBBJNNu2(Real &bb_j, Real &nu_f)
 {
   Real jnu4 = bb_j/(nu_f*nu_f*nu_f*nu_f);
-  Real log_jnu4=log(jnu4);
+  Real log_jnu4=log10(jnu4);
   Real log_nnu2=1.0;
-  if(log_jnu4 > 0.0){
-    log_nnu2 = 0.7644*log_jnu4+0.746;
+  if(log_jnu4 < -3.99793){
+    log_nnu2 = 0.9971*log_jnu4+0.7464;
+  }else if(log_jnu4 >= -3.99793 & log_jnu4 < 2.73043){
+    Real jsq = log_jnu4*log_jnu4;
+    log_nnu2 = 0.0003484*jsq*jsq+0.002327*jsq*log_jnu4-0.02137*jsq
+               +0.8037*log_jnu4+0.3249;
   }else{
-    log_nnu2 = 0.9846*log_jnu4+0.746;
+    log_nnu2 = 0.7506*log_jnu4+0.3773;
   }
-  Real nnu2 = exp(log_nnu2)*nu_f*nu_f*nu_f;
+  Real nnu2 = pow(10.0,log_nnu2)*nu_f*nu_f*nu_f;
 
   return nnu2;
 
