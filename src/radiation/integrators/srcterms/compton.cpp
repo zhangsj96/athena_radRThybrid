@@ -287,7 +287,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // the face coefficient: comp_t_coef * nu_f^4 * (T/((d\nu))+(1+n)(1-\delta))
   for(int ifr=1; ifr<nfreq-1; ++ifr){
     Real a_coef = compt_coef*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr];
-    Real n_face = (1-delta_coef[ifr]) * eq_sol[ifr]+delta_coef[ifr]*eq_sol[ifr-1];
+    Real n_face = (1-delta_coef[ifr]) * n_nu[ifr]+delta_coef[ifr]*n_nu[ifr-1];
     Real tdnu_face=tgas_new/(nu_cen[ifr]-nu_cen[ifr-1]);
     com_b_face_coef[ifr] = a_coef*(tdnu_face+(1.0+n_face)*(1.0-delta_coef[ifr]));
     com_d_face_coef[ifr] = a_coef*((1+n_face)*delta_coef[ifr]-tdnu_face);
