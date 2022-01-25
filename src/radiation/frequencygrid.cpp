@@ -129,16 +129,18 @@ Real Radiation::FitBlackBody(Real nu_t)
   Real nu_2 = nu_t * nu_t;
   Real nu_3 = nu_t * nu_2; 
   Real nu_7 = nu_2 * nu_2 * nu_3;
-  if(nu_t < 1.8){
+  if(nu_t < 1.9434){
     integral = 0.051329911273422 * nu_3 -0.019248716727533 * nu_t * nu_3
                + 0.002566495563671 * nu_2 * nu_3
                -3.055351861513195*1.e-5*nu_7;
-  }else if(nu_t < 18.6){
-    Real exp_nu = exp(-nu_t);
-    integral = -0.156915538762850 * exp_nu * (nu_3 + 2.69 * nu_2 + 6.714 * nu_t)
-               + 1.000009331428801*(1- exp_nu);
-  }else if(nu_t < 45){
-    integral = 1.0 - 192.1 * exp(-0.9014*nu_t);
+  }else if(nu_t < 5.23754){
+    Real logfre=log10(nu_t);
+    integral = -0.6874*logfre*logfre*logfre
+               -0.5698*logfre*logfre+2.671*logfre-1.476;
+    integral = pow(10.0,integral);
+  }else if(nu_t < 50){
+    integral = 1.0-15*ONE_PI_FOUR_POWER*exp(-nu_t) *
+               (6.0+6.0*nu_t+3.0*nu_t*nu_t+nu_t*nu_t*nu_t);
   }else{
     integral = 1.0;
   }
