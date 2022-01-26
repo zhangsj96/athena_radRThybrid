@@ -186,9 +186,17 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real nu_tr = pmy_rad->EffectiveBlackBody(j_nu[nfreq-1], nu_grid[nfreq-1]);
   Real eff_tr = nu_grid[nfreq-1]/nu_tr;
 
+  Real nu_jnu_last_bin = 0.0;
+  Real jnu_sq_last_bin = 0.0;
+  Real n_nusq_last_bin = 0.0;
+  Real nf_last = 0.0;
+
+  pmy_rad->ConvertBBJWien(j_nu[nfreq-1], nu_grid[nfreq-1], eff_tr,
+                         nu_jnu_last_bin, jnu_sq_last_bin);
+
   // convert from j_nu to \int nu J_nu d\nu
-  Real nu_jnu_last_bin = pmy_rad->BBJtoJnu(j_nu[nfreq-1],nu_grid[nfreq-1]);
-  Real jnu_sq_last_bin = pmy_rad->BBJToJONuSq(j_nu[nfreq-1],nu_grid[nfreq-1]);
+//  Real nu_jnu_last_bin = pmy_rad->BBJtoJnu(j_nu[nfreq-1],nu_grid[nfreq-1]);
+//  Real jnu_sq_last_bin = pmy_rad->BBJToJONuSq(j_nu[nfreq-1],nu_grid[nfreq-1]);
 
   sum_nu_jnu += nu_jnu_last_bin;
 
@@ -221,6 +229,10 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real tgas_new = tgas + ((gamma-1.0)*prat/(redfactor*rho)) * sum_jnu * 
                  (1.0 - r_four_sol * r_four_sol * r_four_sol * r_four_sol);
 
+// update
+  pmy_rad->ConvertBBJWien2(j_nu[nfreq-1], nu_grid[nfreq-1], tgas_new,
+                                          n_nusq_last_bin,  nf_last);
+
   //-------------------------------------------------------------------------
   // now solve the Kompaneets equation
 
@@ -238,7 +250,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // get the conserved total number density n \nu^2 d\nu
   // if we assume blackbody spectrum, \int n \nu^2 d\nu 
   // = T^3 \int x^2/(exp(x)-1) dx
-  Real n_nusq_last_bin = pmy_rad->ConvertBBJNNu2(j_nu[nfreq-1],nu_grid[nfreq-1]);
+//  Real n_nusq_last_bin = pmy_rad->ConvertBBJNNu2(j_nu[nfreq-1],nu_grid[nfreq-1]);
 
   Real sum_n_nusq = n_nusq_last_bin;
   for(int ifr=0; ifr<nfreq-1; ++ifr)
@@ -336,16 +348,19 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   }
 
   // for the flux at the last face, we calculate the flux explicitly
-  Real nf_last=1.0/(exp(nu_tr)-1.0);
-  Real flux_last_face=compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
-                      *nu_grid[nfreq-1]*nu_grid[nfreq-1]
-                      *nf_last*(1.0+nf_last)*(1.0-tgas_new/eff_tr)
-                      /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
+//  Real nf_last=1.0/(exp(nu_tr)-1.0);
+  Real a_coef_last = compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
+                     *nu_grid[nfreq-1]*nu_grid[nfreq-1]
+                     /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
+  Real flux_last_explicit=a_coef_last*(nf_last*(1.0+nf_last)
+                         +tgas_new*nf_last*2.0/delta_nu[nfreq-2]);
+  Real flux_last_im_coef=a_coef_last*tgas_new*2.0/delta_nu[nfreq-2];
+
 
   // We use the bin nfreq-2 to get the solution
-  Real n0_coef = (1.0+com_b_coef_l[nfreq-2])
+  Real n0_coef = (1.0+com_b_coef_l[nfreq-2]+flux_last_im_coef)
                  +com_d_coef_l[nfreq-2]*nf_n0[nfreq-3];
-  Real rhs_coef = n_nu[nfreq-2]+flux_last_face
+  Real rhs_coef = n_nu[nfreq-2]+flux_last_explicit
                  -com_d_coef_l[nfreq-2]*nf_rhs[nfreq-3];
   // update new solution at nfreq-2
   n_nu[nfreq-2] = rhs_coef/n0_coef;
@@ -353,6 +368,10 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
     n_nu[ifr] = nf_n0[ifr] * n_nu[ifr+1] + nf_rhs[ifr];
   }
 
+  Real flux_last = flux_last_explicit - flux_last_im_coef * n_nu[nfreq-2];
+  // update n_nusq in the last bin
+  n_nusq_last_bin -= flux_last *
+                     (nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
  
   //-------------------------------------------------------------------------
   // now go from update n_nu to new_j_nu
@@ -363,15 +382,10 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
                 *nu_cen[ifr]*nu_cen[ifr]*delta_nu[ifr];
   }
 
-  // The last bin
-  // we calculdate dn/dt for the last bin, and we take 
-  // dJ/dt= (dn/dt) * (\partial J/\partial n)
-  Real delta_nnu2 = -flux_last_face * 
-                     (nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
-  Real djdnnu2 = pmy_rad->DBBjDNNu2(j_nu[nfreq-1],nu_grid[nfreq-1]);
 
 
-  new_j_nu[nfreq-1] = j_nu[nfreq-1]  + delta_nnu2 * djdnnu2;
+  new_j_nu[nfreq-1] = pmy_rad->InverseConvertBBJNNu2Wien(n_nusq_last_bin, 
+                      nu_grid[nfreq-1], tgas_new);
 
   //now calculate the total j
   Real sum_new_jnu = 0.0;

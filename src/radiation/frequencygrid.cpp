@@ -159,7 +159,8 @@ Real Radiation::BlackBodySpec(Real nu_min, Real nu_max)
 // In the last frequency bin, [nu, infty]
 // we assume the spectrum is blackbody with effective temeprature Tr
 // so that intensity=T_r^4 (15/pi^4) int_{nu/T_r}^{infty} x^3dx/(exp(x)-1)
-// This is rearranged to intensity/nu^4=A=(1/y)^4(15/pi^4)\int_y^{infty} x^3dx/(exp(x)-1)
+// This is rearranged to 
+// intensity/nu^4=A=(1/y)^4(15/pi^4)\int_y^{infty} x^3dx/(exp(x)-1)
 // we use a fitting formula to get y
 Real Radiation::EffectiveBlackBody(Real intensity, Real nu)
 {
@@ -447,5 +448,63 @@ Real Radiation::InverseConvertBBJNNu2(Real &nnu2, Real &nu_f)
   return bbj;
 }
 
+// convert J to nnu2 assuming Wien profile spectrum
+
+void Radiation::ConvertBBJWien(Real &bb_j, Real &nu_f, Real &tgas,
+                              Real &nuj, Real &jonusq)
+{
+  Real nu_t = nu_f/tgas;
+
+  // return \int \nu Jd\nu
+  Real j_coef = 6.0+6.0*nu_t+3.0*nu_t*nu_t+nu_t*nu_t*nu_t;
+  Real nj_coef = 24.0 + 24.0*nu_t + 12.0*nu_t*nu_t
+               + 4.0*nu_t*nu_t*nu_t + nu_t*nu_t*nu_t*nu_t;
+  nuj = bb_j*tgas*nj_coef/j_coef;
+
+
+  // return \int (J/\nu)^2 d\nu
+  Real jonu2_coef = 0.25*(3.0+6.0*nu_t+6.0*nu_t*nu_t
+                   +4.0*nu_t*nu_t*nu_t+2.0*nu_t*nu_t*nu_t*nu_t);
+  Real bbj_ratio = bb_j/(tgas*tgas*j_coef);
+  jonusq = bbj_ratio*bbj_ratio*tgas*jonu2_coef;
+
+
+  return;
+
+}
+
+void Radiation::ConvertBBJWien2(Real &bb_j, Real &nu_f, Real &tgas,
+                               Real &nnu2, Real &n_nuf)
+{
+  Real nu_t = nu_f/tgas;
+
+  // return \int n\nu^2d\nu
+  Real n_coef = 2.0+2.0*nu_t+nu_t*nu_t;
+  Real j_coef = 6.0+6.0*nu_t+3.0*nu_t*nu_t+nu_t*nu_t*nu_t;
+  nnu2 = bb_j*PI_FOUR_POWER*n_coef/(15.0*tgas*j_coef);
+
+
+  // return n(nu_f) = exp(-nu_f/T)/\lambda
+  Real tgas_four = tgas*tgas*tgas*tgas;
+  n_nuf = bb_j*PI_FOUR_POWER/(15.0*tgas_four*j_coef);
+
+  return;
+
+}
+
+// convert nnu2 to J assuming Wien profile spectrum
+
+Real Radiation::InverseConvertBBJNNu2Wien(Real &nnu2, Real &nu_f, Real &tgas)
+{
+
+  Real nu_t = nu_f/tgas;
+  Real n_coef = 2.0+2.0*nu_t+nu_t*nu_t;
+  Real j_coef = 6.0+6.0*nu_t+3.0*nu_t*nu_t+nu_t*nu_t*nu_t;
+
+  Real bb_j = nnu2*tgas*15.0*ONE_PI_FOUR_POWER*j_coef/n_coef;
+
+  return bb_j;
+
+}
 
 

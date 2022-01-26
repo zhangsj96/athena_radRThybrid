@@ -154,6 +154,12 @@ public:
   Real BBJtoJnu(Real &bb_j, Real &nu_f); 
   Real DBBjDNNu2(Real &bb_j, Real &nu_f);
 
+  // convert j to different quantities assuming Wien spectrum
+  void ConvertBBJWien(Real &bb_j, Real &nu_f, Real &tgas,
+                                 Real &nuj, Real &jonusq);
+  void ConvertBBJWien2(Real &bb_j, Real &nu_f, Real &tgas,
+                                 Real &nnu2, Real &n_nuf);
+  Real InverseConvertBBJNNu2Wien(Real &nnu2, Real &nu_f, Real &tgas);
 
 
   AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
