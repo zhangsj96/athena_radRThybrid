@@ -400,10 +400,13 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // rho * tgas_new/(gamma-1) + (prat/redfactor) * sum_new_jnu
 
   // now update tgas_new via energy conservation
-  tgas_new = (prat/redfactor)*(sum_jnu-sum_new_jnu)
+  Real tgas_test = (prat/redfactor)*(sum_jnu-sum_new_jnu)
             *((gamma-1.0)/rho) + tgas;
 
-  tgas = tgas_new;
+  if(tgas_test < TINY_NUMBER)
+    tgas_test = tgas_new;
+
+  tgas = tgas_test;
 
   // now update intensity isotropically
   Real *tcoef = &(tran_coef(0));
