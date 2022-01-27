@@ -183,15 +183,15 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   //from frequency nu_grid[0], nu_grid[nfreq-1]
   // This is nu/Tr for the last bin
 
-  Real nu_tr = pmy_rad->EffectiveBlackBody(j_nu[nfreq-1], nu_grid[nfreq-1]);
-  Real eff_tr = nu_grid[nfreq-1]/nu_tr;
+//  Real nu_tr = pmy_rad->EffectiveBlackBody(j_nu[nfreq-1], nu_grid[nfreq-1]);
+//  Real eff_tr = nu_grid[nfreq-1]/nu_tr;
 
   Real nu_jnu_last_bin = 0.0;
   Real jnu_sq_last_bin = 0.0;
   Real n_nusq_last_bin = 0.0;
   Real nf_last = 0.0;
 
-  pmy_rad->ConvertBBJWien(j_nu[nfreq-1], nu_grid[nfreq-1], eff_tr,
+  pmy_rad->ConvertBBJWien(j_nu[nfreq-1], nu_grid[nfreq-1], tgas,
                          nu_jnu_last_bin, jnu_sq_last_bin);
 
   // convert from j_nu to \int nu J_nu d\nu
