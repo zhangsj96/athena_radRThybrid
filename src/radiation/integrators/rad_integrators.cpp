@@ -59,6 +59,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   Real taucell = pin->GetOrAddReal("radiation","taucell",4);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
+  compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
@@ -213,6 +214,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     nf_rhs_.NewAthenaArray(nfreq);
     nf_n0_.NewAthenaArray(nfreq);
     new_j_nu_.NewAthenaArray(nfreq);
+    com_correct_coef_.NewAthenaArray(nfreq);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);
@@ -538,6 +540,7 @@ RadIntegrator::~RadIntegrator()
     nf_rhs_.DeleteAthenaArray();
     nf_n0_.DeleteAthenaArray();
     new_j_nu_.DeleteAthenaArray();
+    com_correct_coef_.DeleteAthenaArray();
 
   }
 

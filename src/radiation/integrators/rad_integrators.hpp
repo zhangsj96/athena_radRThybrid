@@ -31,6 +31,7 @@ public:
   ~RadIntegrator();
   
   Radiation *pmy_rad;
+
   
   void FluxDivergence(const Real wght, AthenaArray<Real> &ir_in, 
                                        AthenaArray<Real> &ir_out);
@@ -127,6 +128,9 @@ public:
 
   Real QuasiEqSol(Real &tgas, Real &tot_n);
   Real ComptCorrection(Real &tgas);
+  void DownScatteringCorrection(Real *nu_grid, Real &tgas, 
+                                         Real *com_correct_coef);
+
   
   //====================================
   
@@ -170,12 +174,15 @@ private:
   AthenaArray<Real> com_b_coef_l_, com_b_coef_r_;
   AthenaArray<Real> com_d_coef_l_, com_d_coef_r_;
   AthenaArray<Real> nf_rhs_, nf_n0_, new_j_nu_;
+  AthenaArray<Real> com_correct_coef_;
 
                                     
  // temporary 1D array with size of nang
 
   int tau_flag_;
-  int compton_flag_; // flag to add simple Compton scattering
+  // flag to add simple Compton scattering
+  // compton_t_ flag to estimate gas temperature or not for Compton scattering
+  int compton_flag_, compton_t_; 
   int planck_flag_; // flag to add additional Planck absorption opacity
   int adv_flag_; // flag used to indicate whether separate
                  // advection flux from diffustion flux or not.

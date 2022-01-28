@@ -159,6 +159,12 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real *nu_grid = &(pmy_rad->nu_grid(0));
   Real *nu_cen = &(pmy_rad->nu_cen(0));
   Real *delta_nu = &(pmy_rad->delta_nu(0));
+  Real *com_correct_coef = &(com_correct_coef_(0));
+
+
+  //--------------------------------------------------------------------
+  // do not include the correction factor when estimate T
+  Real tgas_new = tgas;
 
   for(int ifr=0; ifr<nfreq; ++ifr){
     j_nu[ifr] = 0.0;
@@ -173,10 +179,13 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
     sum_jnu += j_nu[ifr];
   }
 
-  // calculate integral \int nu J_nu d\nu
-  Real sum_nu_jnu = 0.0;
-  for(int ifr=0; ifr<nfreq-1; ++ifr)
-    sum_nu_jnu += nu_cen[ifr] * j_nu[ifr];
+
+  if(compton_t_ > 0){
+
+ // calculate integral \int nu J_nu d\nu
+    Real sum_nu_jnu = 0.0;
+    for(int ifr=0; ifr<nfreq-1; ++ifr)
+      sum_nu_jnu += nu_cen[ifr] * j_nu[ifr];
 
   //The last frequency bin is special
   // determine the effective blackbody temperature
@@ -186,52 +195,56 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
 //  Real nu_tr = pmy_rad->EffectiveBlackBody(j_nu[nfreq-1], nu_grid[nfreq-1]);
 //  Real eff_tr = nu_grid[nfreq-1]/nu_tr;
 
-  Real nu_jnu_last_bin = 0.0;
-  Real jnu_sq_last_bin = 0.0;
-  Real n_nusq_last_bin = 0.0;
-  Real nf_last = 0.0;
+    Real nu_jnu_last_bin = 0.0;
+    Real jnu_sq_last_bin = 0.0;
 
-  pmy_rad->ConvertBBJWien(j_nu[nfreq-1], nu_grid[nfreq-1], tgas,
+
+    pmy_rad->ConvertBBJWien(j_nu[nfreq-1], nu_grid[nfreq-1], tgas,
                          nu_jnu_last_bin, jnu_sq_last_bin);
 
   // convert from j_nu to \int nu J_nu d\nu
 //  Real nu_jnu_last_bin = pmy_rad->BBJtoJnu(j_nu[nfreq-1],nu_grid[nfreq-1]);
 //  Real jnu_sq_last_bin = pmy_rad->BBJToJONuSq(j_nu[nfreq-1],nu_grid[nfreq-1]);
 
-  sum_nu_jnu += nu_jnu_last_bin;
+    sum_nu_jnu += nu_jnu_last_bin;
 
   // calculate the integral \int (J_nu/nu)^2 d\nu
-  Real sum_jonu_sq = 0.0;
-  for(int ifr=0; ifr<nfreq-1; ++ifr){
-    sum_jonu_sq += j_nu[ifr] * j_nu[ifr]/(nu_cen[ifr] * nu_cen[ifr] 
-                   * delta_nu[ifr]);
-  }
+    Real sum_jonu_sq = 0.0;
+    for(int ifr=0; ifr<nfreq-1; ++ifr){
+      sum_jonu_sq += j_nu[ifr] * j_nu[ifr]/(nu_cen[ifr] * nu_cen[ifr] 
+                     * delta_nu[ifr]);
+    }
   // the last bin
-  sum_jonu_sq += jnu_sq_last_bin;
+    sum_jonu_sq += jnu_sq_last_bin;
 
   // construct the coefficients
-  Real coef_r4 = sum_jnu + coef_a2 * sum_jnu * sum_jnu;
-  Real coef_r5 = 0.25*coef_a1*sum_nu_jnu+coef_a1*PI_FOUR_POWER*sum_jonu_sq/60.0;
-  Real coef_rhs = sum_jnu + coef_a1 * sum_jnu * tgas 
+    Real coef_r4 = sum_jnu + coef_a2 * sum_jnu * sum_jnu;
+    Real coef_r5 = 0.25*coef_a1*sum_nu_jnu+coef_a1*PI_FOUR_POWER*sum_jonu_sq/60.0;
+    Real coef_rhs = sum_jnu + coef_a1 * sum_jnu * tgas 
                   + coef_a2 * sum_jnu * sum_jnu;
 
-  Real r_ini = 1.0;
-  Real r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
-  r_four_sol = pow(r_four_sol,0.25);
-  int count=0;
-  while((count < 10) && (fabs(r_ini-r_four_sol)/r_four_sol > 1.e-6)){
-    r_ini = r_four_sol;
-    r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
-    r_four_sol = pow(r_four_sol,0.25);    
-    count++;
-  }
+    Real r_ini = 1.0;
+    Real r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
+    r_four_sol = pow(r_four_sol,0.25);
+    int count=0;
+    while((count < 10) && (fabs(r_ini-r_four_sol)/r_four_sol > 1.e-6)){
+      r_ini = r_four_sol;
+      r_four_sol = coef_rhs/(coef_r4 + coef_r5 * r_ini);
+      r_four_sol = pow(r_four_sol,0.25);    
+      count++;
+    }
 
-  Real tgas_new = tgas + ((gamma-1.0)*prat/(redfactor*rho)) * sum_jnu * 
+     tgas_new = tgas + ((gamma-1.0)*prat/(redfactor*rho)) * sum_jnu * 
                  (1.0 - r_four_sol * r_four_sol * r_four_sol * r_four_sol);
-
+  }
+  //--------------------------------------------------------------------
+  Real n_nusq_last_bin = 0.0;
+  Real nf_last = 0.0;
 // update
-  pmy_rad->ConvertBBJWien2(j_nu[nfreq-1], nu_grid[nfreq-1], tgas_new,
-                                          n_nusq_last_bin,  nf_last);
+  pmy_rad->ConvertBBJWien2(j_nu[nfreq-1], nu_grid[nfreq-1], tgas_new, 
+                          n_nusq_last_bin,  nf_last);
+
+  DownScatteringCorrection(nu_grid, tgas_new, com_correct_coef); 
 
   //-------------------------------------------------------------------------
   // now solve the Kompaneets equation
@@ -298,7 +311,8 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   com_d_face_coef[0] = 0.0;
   // the face coefficient: comp_t_coef * nu_f^4 * (T/((d\nu))+(1+n)(1-\delta))
   for(int ifr=1; ifr<nfreq-1; ++ifr){
-    Real a_coef = compt_coef*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr];
+    Real a_coef = compt_coef*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]
+                                                        *com_correct_coef[ifr];
     Real n_face = (1-delta_coef[ifr]) * n_nu[ifr]+delta_coef[ifr]*n_nu[ifr-1];
     Real tdnu_face=tgas_new/(nu_cen[ifr]-nu_cen[ifr-1]);
     com_b_face_coef[ifr] = a_coef*(tdnu_face+(1.0+n_face)*(1.0-delta_coef[ifr]));
@@ -350,7 +364,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // for the flux at the last face, we calculate the flux explicitly
 //  Real nf_last=1.0/(exp(nu_tr)-1.0);
   Real a_coef_last = compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
-                     *nu_grid[nfreq-1]*nu_grid[nfreq-1]
+                    *nu_grid[nfreq-1]*nu_grid[nfreq-1]*com_correct_coef[nfreq-1]
                      /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
   Real flux_last_explicit=a_coef_last*(nf_last*(1.0+nf_last)
                          +tgas_new*nf_last*2.0/delta_nu[nfreq-2]);
@@ -441,6 +455,31 @@ Real RadIntegrator::ComptCorrection(Real &tgas)
   Real f_theta=(1.0+3.683*theta+4.0*theta*theta)/(1.0+theta);
 
   return f_theta;
+}
+
+//correction factor for generalized Kompaneets equation
+//Take from 
+// https://ui.adsabs.harvard.edu/abs/2004ChA%26A..28...33L/abstract
+// Liu, et al. (2004), Chinese Astronomy and Astrophysics, 28, 33
+// Kompaneet equation is generalized to be df/dx, x=h\nu/kT
+// where flux is x^4(1+7*kT x^2/(10 m_ec^2))(dn/dx+n(1+n))
+// where the default value is x^4. The correction factor is important 
+// when hnu > kT (down scattering)
+void RadIntegrator::DownScatteringCorrection(Real *nu_grid, Real &tgas, 
+                                         Real *com_correct_coef)
+{
+
+  int &nfreq = pmy_rad->nfreq;
+
+  Real theta=tgas/pmy_rad->telectron;
+
+  for(int i=0; i<nfreq; ++i){
+
+    Real x=nu_grid[i]/tgas;
+    com_correct_coef[i] = 1.0+0.7*theta*x*x;
+
+  }
+
 }
 
 
