@@ -458,13 +458,8 @@ Real RadIntegrator::ComptCorrection(Real &tgas)
 }
 
 //correction factor for generalized Kompaneets equation
-//Take from 
-// https://ui.adsabs.harvard.edu/abs/2004ChA%26A..28...33L/abstract
-// Liu, et al. (2004), Chinese Astronomy and Astrophysics, 28, 33
-// Kompaneet equation is generalized to be df/dx, x=h\nu/kT
-// where flux is x^4(1+7*kT x^2/(10 m_ec^2))(dn/dx+n(1+n))
-// where the default value is x^4. The correction factor is important 
-// when hnu > kT (down scattering)
+//We can take high order relativistic corrections based on 
+// Callinor & Lasenby, 1998, ApJ, 499, 1
 void RadIntegrator::DownScatteringCorrection(Real *nu_grid, Real &tgas, 
                                          Real *com_correct_coef)
 {
@@ -476,8 +471,8 @@ void RadIntegrator::DownScatteringCorrection(Real *nu_grid, Real &tgas,
   for(int i=0; i<nfreq; ++i){
 
     Real x=nu_grid[i]/tgas;
-    com_correct_coef[i] = 1.0+0.7*theta*x*x;
-
+//    com_correct_coef[i] = 1.0+0.7*theta*x*x;
+    com_correct_coef[i] = 1.0;
   }
 
 }
