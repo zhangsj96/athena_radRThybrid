@@ -263,21 +263,27 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
       // nu_l/kt
       Real nu_tr = pmy_rad->EffectiveBlackBody(ir_cm((nfreq-1)*nang+n), nu_l);
       Real ori_norm = pmy_rad->FitBlackBody(nu_tr);
+      if(1.0 - ori_norm > TINY_NUMBER)
+        ori_norm = 1.0/(1.0 - ori_norm);
+      else
+        ori_norm = 0.0;
 
       // the first bin
       Real ratio = pmy_rad->FitBlackBody(nu_tr*nu_lab[l_bd+1]/nu_l);
-      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n) * (ratio - ori_norm)/(1.0 - ori_norm);
+
+      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n) * (ratio - ori_norm) * ori_norm;
+
       ir_shift(l_bd*nang+n) += delta_i_(nfreq-1,n,0);
 
       for(int m=l_bd+1; m<r_bd; ++m){
         Real ratio_r = pmy_rad->FitBlackBody(nu_tr*nu_lab[m+1]/nu_l);
         Real ratio_l = pmy_rad->FitBlackBody(nu_tr*nu_lab[m]/nu_l);
-        delta_i_(nfreq-1,n,m-l_bd) = ir_cm((nfreq-1)*nang+n) * (ratio_r - ratio_l)/(1.0 - ori_norm);
+        delta_i_(nfreq-1,n,m-l_bd) = ir_cm((nfreq-1)*nang+n) * (ratio_r - ratio_l) * ori_norm;
         ir_shift(m*nang+n) += delta_i_(nfreq-1,n,m-l_bd);
       }
       // the last r_bd
       ratio = pmy_rad->FitBlackBody(nu_tr*nu_lab[r_bd]/nu_l);
-      delta_i_(nfreq-1,n,r_bd-l_bd) = ir_cm((nfreq-1)*nang+n) * (1.0 - ratio)/(1.0 - ori_norm);
+      delta_i_(nfreq-1,n,r_bd-l_bd) = ir_cm((nfreq-1)*nang+n) * (1.0 - ratio) * ori_norm;
       ir_shift(r_bd*nang+n) += delta_i_(nfreq-1,n,r_bd-l_bd);
 
 
@@ -293,6 +299,9 @@ void RadIntegrator::MapIrcmFrequency(AthenaArray<Real> &tran_coef,
       int start_fre = map_bin_start_(ifr,n);
       int end_fre=map_bin_end_(ifr,n);
       for(int m=start_fre; m<=end_fre; ++m){
+        if(ir_shift(m*nang+n) < TINY_NUMBER)
+          delta_ratio_(ifr,n,m-start_fre) = 0.0;
+        else
         delta_ratio_(ifr,n,m-start_fre) = delta_i_(ifr,n,m-start_fre)
                                           /ir_shift(m*nang+n);
       }
