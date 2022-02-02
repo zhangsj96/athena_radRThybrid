@@ -161,6 +161,11 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           for(int n=0; n<nang; ++n){
             ir_cm(n+ifr*nang) *= cm_to_lab(n);
           }
+          // apply floor to ir_cm
+#pragma omp simd
+          for(int n=0; n<nang; ++n){
+            ir_cm(n+ifr*nang) = std::max(ir_cm(n+ifr*nang),TINY_NUMBER);
+          }
     
           for(int n=0; n<nang; n++){
             implicit_coef_(n+ifr*nang) = 1.0;

@@ -164,8 +164,9 @@ Real Radiation::BlackBodySpec(Real nu_min, Real nu_max)
 // we use a fitting formula to get y
 Real Radiation::EffectiveBlackBody(Real intensity, Real nu)
 {
-  
-  Real a_nu = intensity/(nu*nu*nu*nu); // I/nu^4
+ 
+  Real ir = std::max(intensity,TINY_NUMBER); 
+  Real a_nu = ir/(nu*nu*nu*nu); // I/nu^4
   Real nu_tr = 1.0;
   if(a_nu > 0.184077200146896){
     // solve the fourth order polynomial (1/y)^4-(5/pi^4)(1/y)-a_nu=0
@@ -179,8 +180,13 @@ Real Radiation::EffectiveBlackBody(Real intensity, Real nu)
       nu_tr = 1.0/nu_tr;
   }else{
     Real loganu = -log(a_nu);
-    nu_tr = -0.000525 * loganu * loganu * loganu + 0.03138 * loganu * loganu 
+    if(loganu < 40.0){
+      nu_tr = -0.000525 * loganu * loganu * loganu + 0.03138 * loganu * loganu 
             + 0.3223 * loganu + 0.8278;
+    }else{
+      nu_tr = 30.3278;
+    }
+    
     if(a_nu < 1.e-10){
       // improve the accuracy with iteration
       Real yini = nu_tr;
