@@ -362,7 +362,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   }
 
   // for the flux at the last face, we calculate the flux explicitly
-//  Real nf_last=1.0/(exp(nu_tr)-1.0);
+//  Real nf_last=1.0/(\lambda exp(nu_tr)-1.0);
   Real a_coef_last = compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
                     *nu_grid[nfreq-1]*nu_grid[nfreq-1]*com_correct_coef[nfreq-1]
                      /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
