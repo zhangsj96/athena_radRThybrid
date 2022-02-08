@@ -101,16 +101,24 @@ public:
   void GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &tran_coef, 
                         AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_slope);
 
-  void MapIrcmFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_cm, 
-                                     AthenaArray<Real> &ir_shift);
+  void ForwardSplitting(AthenaArray<Real> &tran_coef, 
+                      AthenaArray<Real> &ir_cm, AthenaArray<Real> &slope,
+                      AthenaArray<Real> &split_ratio,
+                      AthenaArray<int> &map_start,AthenaArray<int> &map_end);
 
-  void SplitFrequencyBin(int n, int &l_bd, int &r_bd, Real *nu_lab, Real &nu_l, 
-                          Real &nu_r, Real *delta_i, Real &ir_cm, Real &ir_cen, 
-                          Real &nu_cen_lab, Real &cm_nu, Real &ir_slope, 
-                          AthenaArray<Real> &ir_shift);
 
-  void InverseMapFrequency(AthenaArray<Real> &tran_coef, AthenaArray<Real> &ir_shift, 
-                                     AthenaArray<Real> &ir_cm);
+  void MapIrcmFrequency(AthenaArray<Real> &input_array, 
+     AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio, 
+                                                     int save_ratio);
+  void InverseMapFrequency(AthenaArray<Real> &input_array, 
+                                     AthenaArray<Real> &shift_array);
+
+  void SplitFrequencyBinConstant(int &l_bd, int &r_bd, 
+                Real *nu_lab, Real &nu_l, Real &nu_r, Real *split_ratio);
+
+  void SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
+                  Real *nu_lab, Real &nu_l, Real &nu_r, Real &slope, 
+                                                 Real *split_ratio); 
 
   void ComToLabMultiGroup(const Real vx, const Real vy, const Real vz,
                           Real *mux, Real *muy, Real *muz,
@@ -215,7 +223,8 @@ private:
   // This is the coefficient in front I when calculate frequency flux
 
   // This is the actual flux in frequency space
-  AthenaArray<Real> delta_i_, delta_ratio_; // shift amount from the frequency boundary
+  // shift amount from the frequency boundary
+  AthenaArray<Real> split_ratio_, delta_ratio_;
   AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
   AthenaArray<Real> nu_shift_;

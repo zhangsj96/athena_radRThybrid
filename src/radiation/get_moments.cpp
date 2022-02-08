@@ -239,8 +239,12 @@ void Radiation::CalculateComMoment()
 
           pradintegrator->GetCmMCIntensity(ir_cm, tran_coef, pradintegrator->ir_cen_, 
                                            pradintegrator->ir_slope_);
-         // shift intensity from shifted frequency bins
-          pradintegrator->MapIrcmFrequency(tran_coef,ir_cm,pradintegrator->ir_shift_);
+
+          pradintegrator->ForwardSplitting(tran_coef, ir_cm, pradintegrator->ir_slope_, 
+                            pradintegrator->split_ratio_,pradintegrator->map_bin_start_,
+                            pradintegrator->map_bin_end_);
+          pradintegrator->MapIrcmFrequency(ir_cm,pradintegrator->ir_shift_, 
+                            pradintegrator->delta_ratio_, 0);
 
           // copy back to ir_cm
           ir_cm = pradintegrator->ir_shift_;

@@ -194,8 +194,10 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           // get monochromatic specific intensity 
 
           GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_slope_);
-         // shift intensity from shifted frequency bins
-          MapIrcmFrequency(tran_coef,ir_cm,ir_shift_);
+          // calculate the shift ratio
+          ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
+                                         map_bin_start_,map_bin_end_);
+          MapIrcmFrequency(ir_cm,ir_shift_, delta_ratio_, 1);
 
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
@@ -206,7 +208,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
             MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
 
           // inverseshift
-          InverseMapFrequency(tran_coef,ir_shift_,ir_cm);
+          InverseMapFrequency(ir_shift_,ir_cm);
        
         }
        

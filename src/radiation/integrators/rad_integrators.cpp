@@ -52,7 +52,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       ATHENA_ERROR(msg);
     }
   }
-  rad_fre_order = pin->GetOrAddInteger("radiation","rad_fre_order",2);
+  rad_fre_order = pin->GetOrAddInteger("radiation","rad_fre_order",1);
 
   
       // factor to separate the diffusion and advection part
@@ -198,7 +198,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     ir_face_.NewAthenaArray(nfreq,nang);
     ir_shift_.NewAthenaArray(prad->n_fre_ang);
     if(nmax_map_ == 0)  nmax_map_ = nfreq/2;
-    delta_i_.NewAthenaArray(nfreq,nang,nmax_map_);
+    split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
     delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
     map_bin_start_.NewAthenaArray(nfreq,nang);
     map_bin_end_.NewAthenaArray(nfreq,nang);
@@ -520,7 +520,6 @@ RadIntegrator::~RadIntegrator()
   // multi-group array
 
   if(pmy_rad->nfreq > 1){
-    delta_i_.DeleteAthenaArray();
     delta_ratio_.DeleteAthenaArray();
     ir_cen_.DeleteAthenaArray();
     ir_slope_.DeleteAthenaArray();

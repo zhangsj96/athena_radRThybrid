@@ -171,108 +171,92 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
     Real &nu_l = pmy_rad->nu_grid(ifr);
     Real &nu_r = pmy_rad->nu_grid(ifr+1);
 
+
+
     for(int n=0; n<nang; ++n){
       Real *nu_shift = &(nu_shift_(n,0));
-      Real nu_cen = pmy_rad->nu_cen(ifr)*cm_nu[n];
-      Real inverse_factor = 1.0/cm_nu[n];
+      int l_bd = ifr;
+      int r_bd = ifr;
       if(cm_nu[n] < 1.0){
-
-        // find the overlap bin in nu_grid
-        int l_bd = ifr;// it will always be >= current bin
         while((nu_l > nu_shift[l_bd+1]) && (l_bd < nfreq-1))   l_bd++;
-        int r_bd = l_bd; // r_bd always > l_bd
+        r_bd = l_bd; // r_bd always > l_bd
         while((nu_r > nu_shift[r_bd+1]) && (r_bd < nfreq-1))   r_bd++;   
-        // This frequency bin now maps to l_bd to r_bd 
-
-        if(r_bd-l_bd+1 > nmax_map_){
-          std::stringstream msg;
-          msg << "### FATAL ERROR in function [MapIrcmFrequency]"
-              << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
-              "' larger than maximum allowed " << nmax_map_;
-          ATHENA_ERROR(msg);
-
-        }
-
-        // the Split function will calculate nu_cen/cm_nu
-        SplitFrequencyBin(n, l_bd, r_bd, nu_shift, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
-                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen, inverse_factor, 
-                          ir_slope_(ifr,n), ir_shift_);
-
-
-
-
-      //-----------------------------------------------------
       }else if(cm_nu[n] > 1.0){
-        // find the overlap bin in nu_grid
-        int r_bd = ifr;// it will always be <= current bin
         while((nu_r < nu_shift[r_bd]) && (r_bd > 0))   r_bd--;
-        int l_bd = r_bd; // r_bd always > l_bd
-        while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--;   
-        // This frequency bin now maps to l_bd to r_bd 
-
-
-        if(r_bd-l_bd+1 > nmax_map_){
-          std::stringstream msg;
-          msg << "### FATAL ERROR in function [MapIrcmFrequency]"
-              << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
-              "' larger than maximum allowed " << nmax_map_;
-          ATHENA_ERROR(msg);
-
-        }
-
-        SplitFrequencyBin(n, l_bd, r_bd, nu_shift, nu_l, nu_r, &(delta_i_(ifr,n,0)), 
-                          ir_cm(ifr*nang+n), ir_cen_(ifr,n), nu_cen, inverse_factor, 
-                          ir_slope_(ifr,n), ir_shift_);
-
-
-
-      }else{
-
-        delta_i_(ifr,n,0) = ir_cm(ifr*nang+n);
-        ir_shift_(ifr*nang+n) = ir_cm(ifr*nang+n);
+        l_bd = r_bd; // r_bd always > l_bd
+        while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--; 
       }
-          
-    }// end nang
 
+      if(r_bd-l_bd+1 > nmax_map_){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+            << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
+              "' larger than maximum allowed " << nmax_map_;
+            ATHENA_ERROR(msg);
+
+      }      
+
+      if(rad_fre_order == 1){
+        SplitFrequencyBinConstant(l_bd, r_bd, nu_shift, nu_l, nu_r, 
+                                             &(split_ratio_(ifr,n)));
+      }else if(rad_fre_order == 2){
+        Real dim_slope = ir_slope_(ifr,n);
+        if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
+          dim_slope /= ir_cm(ifr*nang+n);
+        else
+          dim_slope = 0.0;
+        SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, 
+                                    dim_slope, &(split_ratio_(ifr,n)));          
+
+      }// end rad_fre_order=2
+    }// end n  
   }// end ifr=nfreq-2
-
+  //-----------------------------------------------------
   // now the last frequency bin
-  Real nu_l = pmy_rad->nu_grid(nfreq-1);
+
+
   for(int n=0; n<nang; ++n){
     Real *nu_shift = &(nu_shift_(n,0));
-    if(cm_nu[n] < 1.0){
-      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n);
-      ir_shift_((nfreq-1)*nang+n) = ir_cm((nfreq-1)*nang+n);
-    }else if(cm_nu[n] >= 1.0){
-
+    Real &nu_l = pmy_rad->nu_grid(nfreq-1);
+    if(cm_nu[n] <= 1.0){
+      split_ratio_(nfreq-1,n,0) = 1.0;
+    }else if(cm_nu[n] > 1.0){
       int r_bd = nfreq-1;
       int l_bd = nfreq-2;// it will always be <= current bin
       while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--;   
-        // This frequency bin now maps to l_bd to r_bd 
       // nu_l/kt
       Real nu_tr = pmy_rad->EffectiveBlackBody(ir_cm((nfreq-1)*nang+n), nu_l);
+      // FitBlackBody is integral _0 to nu_tr
+      // the integral we need is 1 - ori_norm
       Real ori_norm = pmy_rad->FitBlackBody(nu_tr);
+      Real div_ori = 0.0;
+      if(1.0 - ori_norm > TINY_NUMBER)
+        div_ori = 1.0/(1.0 - ori_norm);
 
       // the first bin
+      // the effective temperature 1/T = nu_tr/nu_l
       Real ratio = pmy_rad->FitBlackBody(nu_tr*nu_shift[l_bd+1]/nu_l);
-      delta_i_(nfreq-1,n,0) = ir_cm((nfreq-1)*nang+n) * (ratio - ori_norm)/(1.0 - ori_norm);
-      ir_shift_(l_bd*nang+n) += delta_i_(nfreq-1,n,0);
+      
+      // the difference is (1 - ori_norm) - (1 - ratio)
+      split_ratio_(nfreq-1,n,0) = (ratio - ori_norm) * div_ori;
+      Real sum = split_ratio_(nfreq-1,n,0);
 
       for(int m=l_bd+1; m<r_bd; ++m){
         Real ratio_r = pmy_rad->FitBlackBody(nu_tr*nu_shift[m+1]/nu_l);
         Real ratio_l = pmy_rad->FitBlackBody(nu_tr*nu_shift[m]/nu_l);
-        delta_i_(nfreq-1,n,m-l_bd) = ir_cm((nfreq-1)*nang+n) * (ratio_r - ratio_l)/(1.0 - ori_norm);
-        ir_shift_(m*nang+n) += delta_i_(nfreq-1,n,m-l_bd);
+        split_ratio_(nfreq-1,n,m-l_bd) = (ratio_r - ratio_l) * div_ori;
+        sum += split_ratio_(nfreq-1,n,m-l_bd);
       }
-      // the last r_bd
-      ratio = pmy_rad->FitBlackBody(nu_tr*nu_shift[r_bd]/nu_l);
-      delta_i_(nfreq-1,n,r_bd-l_bd) = ir_cm((nfreq-1)*nang+n) * (1.0 - ratio)/(1.0 - ori_norm);
-      ir_shift_(r_bd*nang+n) += delta_i_(nfreq-1,n,r_bd-l_bd);
 
+      split_ratio_(nfreq-1,n,r_bd-l_bd) = 1.0 - sum;
 
     }
 
-  }
+  }// end loop for n
+
+
+  // now map the array based on the ratio
+  MapIrcmFrequency(ir_cm, ir_shift_, delta_ratio_, 0);
 
   //transform from ir_shift to ir_lab
   for(int ifr=0; ifr<nfreq; ++ifr){
