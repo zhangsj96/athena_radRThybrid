@@ -214,7 +214,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
 
       if(rad_fre_order == 1){
         SplitFrequencyBinConstant(l_bd, r_bd, nu_lab, nu_l, nu_r, 
-                                             &(split_ratio(ifr,n)));
+                                             &(split_ratio(ifr,n,0)));
       }else if(rad_fre_order == 2){
         Real dim_slope = slope(ifr,n);
         if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
@@ -222,7 +222,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
         else
           dim_slope = 0.0;
         SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, 
-                                 dim_slope, &(split_ratio(ifr,n)));          
+                                 dim_slope, &(split_ratio(ifr,n,0)));          
 
       }// end rad_fre_order=2
 
