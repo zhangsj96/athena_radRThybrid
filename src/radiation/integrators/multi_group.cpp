@@ -161,7 +161,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
   if(nfreq < 2){
 
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+    msg << "### FATAL ERROR in function [ForwardSplitting]"
         << std::endl << "nfreq '" << nfreq << 
           "' is smaller than 2! ";
     ATHENA_ERROR(msg);
@@ -202,7 +202,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
 
       if(r_bd-l_bd+1 > nmax_map_){
         std::stringstream msg;
-        msg << "### FATAL ERROR in function [MapIrcmFrequency]"
+        msg << "### FATAL ERROR in function [ForwardSplitting]"
             << std::endl << "Frequency shift '" << r_bd-l_bd+1 << 
             "' larger than maximum allowed " << nmax_map_;
         ATHENA_ERROR(msg);

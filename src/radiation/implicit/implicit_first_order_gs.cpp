@@ -74,28 +74,26 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
     for (int j=js; j<=je; ++j) {
       pco->CenterWidth1(k,j,is-1,ie+1,dxw1_);
       for(int i=is; i<=ie+1; ++i){
-        Real taul = 0.0;
-        Real taur = 0.0;
         for(int ifr=0; ifr<nfreq; ++ifr){
+          // use the signal speed in each frequency group 
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          taul += dxw1_(i-1) * sigmal;
-          taur += dxw1_(i) * sigmar;
+          Real taul = dxw1_(i-1) * sigmal;
+          Real taur = dxw1_(i) * sigmar;
+
+          Real f_l = 1.0;
+          Real f_r = 1.0;
+          taul *= taufact(k,j,i-1);
+          taur *= taufact(k,j,i);
+          GetTaufactor(taul+taur,f_r,1);
+          GetTaufactor(taul+taur,f_l,-1);
+        
+          Real *s1n = &(sfac1_x_(i,ifr*nang));
+          Real *s2n = &(sfac2_x_(i,ifr*nang));
+          Real *velxn = &(velx_(k,j,i,ifr*nang));
+          Real adv = adv_vel(0,k,j,i);
+          SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
         }// end ifr
-        Real f_l = 1.0;
-        Real f_r = 1.0;
-        taul *= taufact(k,j,i-1);
-        taur *= taufact(k,j,i);
-        GetTaufactor(taul+taur,f_r,1);
-        GetTaufactor(taul+taur,f_l,-1);
-
-        Real *s1n = &(sfac1_x_(i,0));
-        Real *s2n = &(sfac2_x_(i,0));
-        Real *velxn = &(velx_(k,j,i,0));
-        Real adv =  adv_vel(0,k,j,i);
-
-        SignalSpeed(adv, f_l, f_r, velxn, s1n, s2n);
-
       }// end i
       // calculate x1-flux divergence 
       pco->Face1Area(k,j,is,ie+1,x1area);
@@ -183,29 +181,25 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         pco->CenterWidth2(k,j-1,is,ie,dxw1_);
         pco->CenterWidth2(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real taul = 0.0;
-          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += dxw1_(i) * sigmal;
-            taur += dxw2_(i) * sigmar;
-          }
+            Real taul = dxw1_(i) * sigmal;
+            Real taur = dxw2_(i) * sigmar;
 
-          Real f_l = 1.0;
-          Real f_r = 1.0;
-          taul *= taufact(k,j-1,i);
-          taur *= taufact(k,j,i); 
-          GetTaufactor(taul+taur,f_r,1);
-          GetTaufactor(taul+taur,f_l,-1);
-
-          Real *s1n = &(sfac1_y_(j,i,0));
-          Real *s2n = &(sfac2_y_(j,i,0));
-          Real *velyn = &(vely_(k,j,i,0));
-          Real adv =  adv_vel(1,k,j,i);
-
-          SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
-
+            Real f_l = 1.0;
+            Real f_r = 1.0;
+            taul *= taufact(k,j-1,i);
+            taur *= taufact(k,j,i);
+            GetTaufactor(taul+taur,f_r,1);
+            GetTaufactor(taul+taur,f_l,-1);
+        
+            Real *s1n = &(sfac1_y_(j,i,ifr*nang));
+            Real *s2n = &(sfac2_y_(j,i,ifr*nang));
+            Real *velyn = &(vely_(k,j,i,ifr*nang));
+            Real adv = adv_vel(1,k,j,i);
+            SignalSpeed(adv, f_l, f_r, velyn, s1n, s2n);
+          }// end frequency  
         }// end i
       }// end j
 
@@ -297,30 +291,25 @@ void RadIntegrator::FirstOrderGSFluxDivergence(const Real wght,
         pco->CenterWidth3(k-1,j,is,ie,dxw1_);
         pco->CenterWidth3(k,j,is,ie,dxw2_);
         for(int i=is; i<=ie; ++i){
-          Real taul = 0.0;
-          Real taur = 0.0;
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            taul += dxw1_(i) * sigmal;
-            taur += dxw2_(i) * sigmar;
-          }
-
-          Real f_l = 1.0;
-          Real f_r = 1.0;
-          taul *= taufact(k-1,j,i);
-          taur *= taufact(k,j,i);
-          GetTaufactor(taul+taur,f_r,1);
-          GetTaufactor(taul+taur,f_l,-1);
-
-          Real *s1n = &(sfac1_z_(k,j,i,0));
-          Real *s2n = &(sfac2_z_(k,j,i,0));
-          Real *velzn = &(velz_(k,j,i,0));
-          Real adv =  adv_vel(2,k,j,i);
-
-          SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
-
+            Real taul = dxw1_(i) * sigmal;
+            Real taur = dxw2_(i) * sigmar;
           
+            Real f_l = 1.0;
+            Real f_r = 1.0;
+            taul *= taufact(k-1,j,i);
+            taur *= taufact(k,j,i);
+            GetTaufactor(taul+taur,f_r,1);
+            GetTaufactor(taul+taur,f_l,-1);
+        
+            Real *s1n = &(sfac1_z_(k,j,i,ifr*nang));
+            Real *s2n = &(sfac2_z_(k,j,i,ifr*nang));
+            Real *velzn = &(velz_(k,j,i,ifr*nang));
+            Real adv = adv_vel(2,k,j,i);
+            SignalSpeed(adv, f_l, f_r, velzn, s1n, s2n);
+          }// end frequency             
         }// end i
       }// end j
     }// end k
