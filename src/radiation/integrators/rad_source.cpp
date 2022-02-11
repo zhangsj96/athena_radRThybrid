@@ -197,7 +197,9 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           // calculate the shift ratio
           ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
                                          map_bin_start_,map_bin_end_);
-          MapIrcmFrequency(ir_cm,ir_shift_, delta_ratio_, 1);
+          MapIrcmFrequency(ir_cm,ir_shift_);
+          
+          DetermineShiftRatio(ir_cm,ir_shift_,delta_ratio_);
 
           // calculate the source term 
           tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,

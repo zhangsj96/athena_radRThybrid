@@ -256,7 +256,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
 
 
   // now map the array based on the ratio
-  MapIrcmFrequency(ir_cm, ir_shift_, delta_ratio_, 0);
+  MapIrcmFrequency(ir_cm, ir_shift_);
 
   //transform from ir_shift to ir_lab
   for(int ifr=0; ifr<nfreq; ++ifr){

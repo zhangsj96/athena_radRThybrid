@@ -108,8 +108,13 @@ public:
 
 
   void MapIrcmFrequency(AthenaArray<Real> &input_array, 
-     AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio, 
-                                                     int save_ratio);
+                        AthenaArray<Real> &shift_array);
+
+
+  void DetermineShiftRatio( AthenaArray<Real> &input_array, 
+              AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio);
+
+
   void InverseMapFrequency(AthenaArray<Real> &input_array, 
                                      AthenaArray<Real> &shift_array);
 

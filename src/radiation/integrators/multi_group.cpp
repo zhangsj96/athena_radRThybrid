@@ -289,8 +289,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
 // interpolate co-moving frame specific intensity over frequency grid
 // every bin is 
 void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array, 
-     AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio, 
-                                                     int save_ratio)
+                                      AthenaArray<Real> &shift_array)
 {
 
   int &nfreq = pmy_rad->nfreq;
@@ -326,33 +325,37 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
 
   }// end ifr=nfreq-1
 
-   //-----------------------------------------------------
-  // Now determine the ratio
-  if(save_ratio > 0){
-    for(int ifr=0; ifr<nfreq; ++ifr){
-      Real *ir_input = &(input_array(ifr*nang));
-      for(int n=0; n<nang; ++n){
-        int start_fre = map_bin_start_(ifr,n);
-        int end_fre=map_bin_end_(ifr,n);
-        for(int m=start_fre; m<=end_fre; ++m){
-          if(shift_array(m*nang+n) < TINY_NUMBER)
-            delta_ratio(ifr,n,m-start_fre) = 0.0;
-          else
-            delta_ratio(ifr,n,m-start_fre) = ir_input[n] * 
-                               split_ratio_(ifr,n,m-start_fre)
-                                          /shift_array(m*nang+n);
-        }//end m
-      }// end n
-    }// end ifr  
-
-
-  }// end save_ratio 
-   //-----------------------------------------------------
 
   return;
 
 }// end map function
 
+
+void RadIntegrator::DetermineShiftRatio( AthenaArray<Real> &input_array, 
+     AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio)
+{
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+
+  for(int ifr=0; ifr<nfreq; ++ifr){
+    Real *ir_input = &(input_array(ifr*nang));
+    for(int n=0; n<nang; ++n){
+      int start_fre = map_bin_start_(ifr,n);
+      int end_fre=map_bin_end_(ifr,n);
+      for(int m=start_fre; m<=end_fre; ++m){
+        if(shift_array(m*nang+n) < TINY_NUMBER)
+          delta_ratio(ifr,n,m-start_fre) = 0.0;
+        else
+          delta_ratio(ifr,n,m-start_fre) = ir_input[n] * 
+                               split_ratio_(ifr,n,m-start_fre)
+                                          /shift_array(m*nang+n);
+      }//end m
+    }// end n
+  }// end ifr 
+
+  return;
+
+}
 
 // interpolate co-moving frame specific intensity over frequency grid
 // from the default frequency grid back to the shifted frequency grid
