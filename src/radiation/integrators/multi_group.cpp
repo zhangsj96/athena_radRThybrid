@@ -312,8 +312,6 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
   // map intensity to the desired bin
   for(int ifr=0; ifr<nfreq; ++ifr){
    // map shifted intensity to the nu_grid
-    int *map_start = &(map_bin_start_(ifr,0));
-    int *map_end = &(map_bin_end_(ifr,0));
     Real *ir_input = &(input_array(ifr*nang));
 
     for(int n=0; n<nang; ++n){
@@ -332,8 +330,6 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
   // Now determine the ratio
   if(save_ratio > 0){
     for(int ifr=0; ifr<nfreq; ++ifr){
-      int *map_start = &(map_bin_start_(ifr,0));
-      int *map_end = &(map_bin_end_(ifr,0));
       Real *ir_input = &(input_array(ifr*nang));
       for(int n=0; n<nang; ++n){
         int start_fre = map_bin_start_(ifr,n);
@@ -344,7 +340,7 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
           else
             delta_ratio(ifr,n,m-start_fre) = ir_input[n] * 
                                split_ratio_(ifr,n,m-start_fre)
-                                          /ir_shift_(m*nang+n);
+                                          /shift_array(m*nang+n);
         }//end m
       }// end n
     }// end ifr  
@@ -372,8 +368,6 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &input_array,
 
 
   for(int ifr=0; ifr<nfreq; ++ifr){
-    int *map_start = &(map_bin_start_(ifr,0));
-    int *map_end = &(map_bin_end_(ifr,0));
     Real *ir_output = &(shift_array(ifr*nang));
     for(int n=0; n<nang; ++n){
       int start_fre = map_bin_start_(ifr,n);

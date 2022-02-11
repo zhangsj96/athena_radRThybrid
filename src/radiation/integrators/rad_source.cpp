@@ -170,7 +170,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           for(int n=0; n<nang; n++){
             implicit_coef_(n+ifr*nang) = 1.0;
             if(IM_RADIATION_ENABLED){
-              implicit_coef_(n+ifr*nang) += const_coef_(k,j,i,n);
+              implicit_coef_(n+ifr*nang) += const_coef_(k,j,i,n+ifr*nang);
               if(prad->angle_flag == 1){
                 implicit_coef_(n+ifr*nang) += imp_ang_coef_(k,j,i,n);
               }
