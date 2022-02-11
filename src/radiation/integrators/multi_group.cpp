@@ -286,6 +286,8 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
 }// end function forward splitting
 
 
+
+
 // interpolate co-moving frame specific intensity over frequency grid
 // every bin is 
 void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array, 
@@ -356,6 +358,7 @@ void RadIntegrator::DetermineShiftRatio( AthenaArray<Real> &input_array,
   return;
 
 }
+
 
 // interpolate co-moving frame specific intensity over frequency grid
 // from the default frequency grid back to the shifted frequency grid
