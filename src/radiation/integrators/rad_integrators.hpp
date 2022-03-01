@@ -65,8 +65,7 @@ public:
 
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,  
        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
-  void AddIMSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
-       AthenaArray<Real> &rad_source);
+
 
   Real AbsorptionScattering(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
