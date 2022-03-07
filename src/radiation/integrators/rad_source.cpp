@@ -179,12 +179,12 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
         }// End frequency
         
-        Real jr_new = 0.0;
         if(nfreq == 1){
 
          // Add absorption and scattering opacity source
-          tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_cm);
+          tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, 
+                             sigma_aer, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
+                             implicit_coef_,ir_cm);
         
          // Add compton scattering
           if(compton_flag_ > 0)
@@ -206,7 +206,8 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
                               sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
 
           // Add compton scattering 
-          if(compton_flag_ > 0)
+          // Compton scattering for implicit scheme is added separately
+          if(compton_flag_ > 0 && (!IM_RADIATION_ENABLED))
             MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
 
           // inverseshift
@@ -227,6 +228,111 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
     }// end j
   }// end k
 
+}
+
+
+
+void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt, 
+        AthenaArray<Real> &u, AthenaArray<Real> &ir)
+{
+
+  // need to transform lab frame ir to co-moving frame
+  Radiation *prad=pmb->prad;
+  Coordinates *pco = pmb->pcoord;
+  
+  Real& prat = prad->prat;
+  Real invcrat = 1.0/prad->crat;
+
+
+  Real *lab_ir;
+  
+  int &nang =prad->nang;
+  int &nfreq=prad->nfreq;
+
+  // only apply for multi-grou case
+  if((nfreq > 1) && (compton_flag_ > 0)){
+  
+  
+  // Get the temporary array
+    AthenaArray<Real> &wmu_cm = wmu_cm_;
+    AthenaArray<Real> &tran_coef = tran_coef_;
+    AthenaArray<Real> &ir_cm = ir_cm_;
+    AthenaArray<Real> &cm_to_lab = cm_to_lab_;
+
+
+    int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+    int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+ 
+    for(int k=ks; k<=ke; ++k){
+      for(int j=js; j<=je; ++j){
+        for(int i=is; i<=ie; ++i){
+
+          Real rho = u(IDN,k,j,i);
+          Real vx = vel_source_(k,j,i,0);
+          Real vy = vel_source_(k,j,i,1);
+          Real vz = vel_source_(k,j,i,2);
+          Real vel = vx*vx + vy*vy + vz*vz;
+        
+        
+          Real lorzsq = 1.0/(1.0 - vel  * invcrat * invcrat);
+          Real lorz = sqrt(lorzsq);
+        
+
+
+         // Prepare the transformation coefficients
+          Real numsum = 0.0;
+
+          for(int n=0; n<nang; ++n){
+             Real vdotn = vx * prad->mu(0,k,j,i,n) + vy * prad->mu(1,k,j,i,n)
+                        + vz * prad->mu(2,k,j,i,n);
+             Real vnc = 1.0 - vdotn * invcrat;
+             tran_coef(n) = lorz * vnc;
+             wmu_cm(n) = prad->wmu(n)/(tran_coef(n) * tran_coef(n));
+             numsum += wmu_cm(n);
+             cm_to_lab(n) = tran_coef(n)*tran_coef(n)*tran_coef(n)*tran_coef(n);
+           
+          }
+           // Normalize weight in co-moving frame to make sure the sum is one
+          numsum = 1.0/numsum;
+#pragma omp simd
+          for(int n=0; n<nang; ++n){
+            wmu_cm(n) *= numsum;
+          }
+                
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            lab_ir=&(ir(k,j,i,ifr*nang));
+            for(int n=0; n<nang; ++n)
+              ir_cm(n+ifr*nang) = std::max(lab_ir[n] * cm_to_lab(n), TINY_NUMBER);
+          }// End frequency
+
+
+          GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_slope_);
+          // calculate the shift ratio
+          ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
+                                         map_bin_start_,map_bin_end_);
+          MapIrcmFrequency(ir_cm,ir_shift_);
+          
+          DetermineShiftRatio(ir_cm,ir_shift_,delta_ratio_);
+
+
+          // Add compton scattering 
+          MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
+
+          // inverseshift
+          InverseMapFrequency(ir_shift_,ir_cm);
+
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            lab_ir = &(ir(k,j,i,nang*ifr));
+            for(int n=0; n<nang; ++n){
+              lab_ir[n] = std::max(ir_cm(n+ifr*nang)/cm_to_lab(n), TINY_NUMBER);
+            }
+          }// end ifr
+
+
+        }// end i
+      }// end j
+    }// end k
+  }// end nfreq > 1
 }
 
 // ir_ini and ir only differ by the source term for explicit scheme

@@ -46,6 +46,7 @@ IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
 
   pimraditlist = new IMRadITTaskList(pm);
   pimradhylist = new IMRadHydroTaskList(pm);
+  pimradcomptlist = new IMRadComptTaskList(pm);
 }
 
 
