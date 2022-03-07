@@ -51,7 +51,7 @@ public:
 
   void ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefr, Real zeta_coefl);
-  void ImplicitPsiFlux(int k, int j, int i, int n_zeta, AthenaArray<Real> &ir);
+  void ImplicitPsiFlux(int k, int j, int i, int ifr, int n_zeta, AthenaArray<Real> &ir);
   void ImplicitPsiFluxCenter(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefr, Real zeta_coefl, Real f_l, Real f_r, 
             AthenaArray<Real> &ir);
@@ -198,6 +198,7 @@ private:
   int planck_flag_; // flag to add additional Planck absorption opacity
   int adv_flag_; // flag used to indicate whether separate
                  // advection flux from diffustion flux or not.
+  int imp_ang_flx_;
 
   int flux_correct_flag_; // flag to do second order flux crrection or not.
   AthenaArray<Real> x1face_area_, x2face_area_, x3face_area_;

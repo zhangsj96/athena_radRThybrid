@@ -165,6 +165,8 @@ void RadIntegrator::ImplicitAngularFluxes(AthenaArray<Real> &ir_ini)
 
   int &nzeta = prad->nzeta;
   int &npsi = prad->npsi;
+  int &nang = prad->nang;
+  int &nfreq = prad->nfreq;
 
   AthenaArray<Real> &area_zeta = zeta_area_, &ang_vol = ang_vol_;
 
@@ -176,38 +178,42 @@ void RadIntegrator::ImplicitAngularFluxes(AthenaArray<Real> &ir_ini)
   for(int k=ks; k<=ke; ++k)
     for(int j=js; j<=je; ++j)
       for(int i=is; i<=ie; ++i){
-        if(prad->npsi == 0){
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          if(prad->npsi == 0){
           // the angle 2*nzeta-1 does not contribute to ang_flx_
-          Real *p_angflx = &(ang_flx_(k,j,i,0));
-          Real *coef_r = &(imp_ang_coef_r_(k,j,i,0));
-          Real *p_ir = &(ir_ini(k,j,i,0));
-          for(int n=0; n<2*nzeta-1; ++n){
-            p_angflx[n] = -coef_r[n] * p_ir[n+1];
-          }// end nzeta
+            Real *p_angflx = &(ang_flx_(k,j,i,ifr*nang));
+            Real *coef_r = &(imp_ang_coef_r_(k,j,i,0));
+            Real *p_ir = &(ir_ini(k,j,i,ifr*nang));
+            for(int n=0; n<2*nzeta-1; ++n){
+              p_angflx[n] = -coef_r[n] * p_ir[n+1];
+            }// end nzeta
         ///////////////////////////////////////////////////////////////////////////////
-        }else{//end npsi ==0
-          // now go from 2*nzeta-2 to 0
-          for(int n=0; n<2*nzeta; ++n){
-            ImplicitPsiFlux(k,j,i, n, ir_ini);
-          }// end n
-        }// end npsi > 0
+          }else{//end npsi ==0
+            // now go from 2*nzeta-2 to 0
+            for(int n=0; n<2*nzeta; ++n){
+              ImplicitPsiFlux(k,j,i, ifr, n, ir_ini);
+            }// end n
+          }// end npsi > 0
+        }// end ifr
       }// end k,j,i
 
 }// end calculate_flux
 
 
-void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, AthenaArray<Real> &ir_ini)
+void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int ifr, 
+                            int n_zeta, AthenaArray<Real> &ir_ini)
 {
   
   Radiation *prad=pmy_rad;
   int &npsi = prad->npsi;
   //m=0
   int ang_num = n_zeta*2*npsi;
+  int &nang = prad->nang;
 
   Real *psi_l = &(imp_ang_psi_l_(k,j,i,ang_num));
   Real *psi_r = &(imp_ang_psi_r_(k,j,i,ang_num));
-  Real *p_ir = &(ir_ini(k,j,i,ang_num));
-  Real *p_angflx = &(ang_flx_(k,j,i,ang_num));
+  Real *p_ir = &(ir_ini(k,j,i,ifr*nang+ang_num));
+  Real *p_angflx = &(ang_flx_(k,j,i,ifr*nang+ang_num));
 
 
 
@@ -220,7 +226,7 @@ void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int n_zeta, AthenaArray
     //m=2*npsi-1
     p_angflx[2*npsi-1] = -(psi_l[2*npsi-1] * p_ir[2*npsi-2] + psi_r[2*npsi-1] * p_ir[0]);
   }else{//end nzeta=2*prad->nzeta-1
-    Real *p_ir_zetar = &(ir_ini(k,j,i,(n_zeta+1)*2*npsi));
+    Real *p_ir_zetar = &(ir_ini(k,j,i,ifr*nang+(n_zeta+1)*2*npsi));
     Real *zeta_r = &(imp_ang_coef_r_(k,j,i,ang_num));
 
     p_angflx[0] = -(psi_l[0] * p_ir[2*npsi-1] + psi_r[0] * p_ir[1])

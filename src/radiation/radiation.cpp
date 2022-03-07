@@ -219,7 +219,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   nu_min = pin->GetOrAddReal("radiation","frequency_min",0);  
 
   // maximum frequency 
-  nu_max = pin->GetOrAddReal("radiation","frequency_max",0);  
+  nu_max = pin->GetOrAddReal("radiation","frequency_max",1);  
 
   // log frequency space ratio
   fre_ratio= pin->GetOrAddReal("radiation","frequency_ratio",1.0); 

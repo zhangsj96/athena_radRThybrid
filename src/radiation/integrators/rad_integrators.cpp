@@ -63,6 +63,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
+  imp_ang_flx_ = pin->GetOrAddInteger("radiation","implicit_ang_flux",0);
 
 
   // multi-group iteration
@@ -151,18 +152,11 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       const_coef3_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     }
     divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
-
   
     left_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-    ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    imp_ang_coef_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);   
-    imp_ang_psi_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang); 
-    imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
 
@@ -232,7 +226,12 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
         taufact(k,j,i) = taucell;
       }
 
-
+  // The angular grid coefficients
+  ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);    
+  imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+  imp_ang_coef_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);   
+  imp_ang_psi_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang); 
+  imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
 
   if(prad->angle_flag == 1){
     int &nzeta = prad->nzeta;

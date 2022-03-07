@@ -285,7 +285,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
                 if(prad->angle_flag == 1){
                   ir_weight += ang_flx_(k,j,i,ifr*nang+n);
-                  ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
+                  ir_weight -= ((imp_ang_coef_(k,j,i,n)) 
                            * ir(k,j,i,ifr*nang+n));
                 }
                 ir_weight -= (const_coef_(k,j,i,ifr*nang+n) 
@@ -302,7 +302,7 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
                 ir_weight += divflx_(k,j,i,ifr*nang+n);
                 if(prad->angle_flag == 1){
                   ir_weight += ang_flx_(k,j,i,ifr*nang+n);
-                  ir_weight -= ((imp_ang_coef_(k,j,i,ifr*nang+n)) 
+                  ir_weight -= ((imp_ang_coef_(k,j,i,n)) 
                            * ir(k,j,i,ifr*nang+n));                  
                 }
                 ir_weight -= (const_coef_(k,j,i,ifr*nang+n) 

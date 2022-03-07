@@ -289,7 +289,7 @@ void HydroOuterX1(
           prim(IVX,k,j,ie+i) = 0.0;
           prim(IVY,k,j,ie+i) = 0.0;
           prim(IVZ,k,j,ie+i) = 0.0;
-          prim(IPR,k,j,ie+i) = 0.0;
+          prim(IPR,k,j,ie+i) = 1.e-12;
 
         }
       }

@@ -357,7 +357,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   }// end k direction
 
   // calculate flux along angular direction
-  if(prad->angle_flag == 1 && prad->nzeta > 0){
+  if((prad->angle_flag == 1) && (prad->nzeta > 0) && (imp_ang_flx_ == 0)){
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
@@ -419,7 +419,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
 
   // Now calculate psi flux
-  if(prad->angle_flag == 1 && prad->npsi > 0){
+  if((prad->angle_flag == 1) && (prad->npsi > 0) && (imp_ang_flx_ == 0)){
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
@@ -479,9 +479,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
       }
     }
 
-
   }// end ang_flag==1 and npsi > 0
-
   
 }// end calculate_flux
 
@@ -813,7 +811,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
       }
 
       // add angular flux
-      if(prad->angle_flag == 1){
+      if((prad->angle_flag == 1) && (imp_ang_flx_ == 0)){
         for(int i=is; i<=ie; ++i){
           for(int ifr=0; ifr<nfreq; ++ifr){
             for(int n=0; n<prad->nang; ++n)
@@ -870,9 +868,31 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
           }// end ifr
         }// end i
       }// end if angle_flag == 1
- 
     }// end j
   }// End k
+
+  if(prad->angle_flag == 1 && (imp_ang_flx_ == 1)){
+    ImplicitAngularFluxesCoef(wght); 
+    ImplicitAngularFluxes(ir_out);
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        for(int i=is; i<=ie; ++i){
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real *p_angflx  = &(ang_flx_(k,j,i,ifr*nang));
+            Real *iro = &(ir_out(k,j,i,ifr*nang));
+            Real *ang_coef = &(imp_ang_coef_(k,j,i,0));
+            for(int n=0; n<nang; ++n){
+              iro[n] += p_angflx[n];
+              iro[n] /= (1.0 + ang_coef[n]);
+            }
+          }// end ifr
+        }// end i
+      }// end j
+    }// end k
+
+
+  }// implicit angular flux
+
   
 }
 
