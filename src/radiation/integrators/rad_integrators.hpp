@@ -145,8 +145,7 @@ public:
 
   Real QuasiEqSol(Real &tgas, Real &tot_n);
   Real ComptCorrection(Real &tgas);
-  void DownScatteringCorrection(Real *nu_grid, Real &tgas, 
-                                         Real *com_correct_coef);
+
 
   
   //====================================
@@ -191,7 +190,6 @@ private:
   AthenaArray<Real> com_b_coef_l_, com_b_coef_r_;
   AthenaArray<Real> com_d_coef_l_, com_d_coef_r_;
   AthenaArray<Real> nf_rhs_, nf_n0_, new_j_nu_;
-  AthenaArray<Real> com_correct_coef_;
 
                                     
  // temporary 1D array with size of nang

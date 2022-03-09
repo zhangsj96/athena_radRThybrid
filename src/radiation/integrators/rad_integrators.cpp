@@ -208,7 +208,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     nf_rhs_.NewAthenaArray(nfreq);
     nf_n0_.NewAthenaArray(nfreq);
     new_j_nu_.NewAthenaArray(nfreq);
-    com_correct_coef_.NewAthenaArray(nfreq);
   }
 
   sum_nu3_.NewAthenaArray(nfreq);
@@ -538,7 +537,6 @@ RadIntegrator::~RadIntegrator()
     nf_rhs_.DeleteAthenaArray();
     nf_n0_.DeleteAthenaArray();
     new_j_nu_.DeleteAthenaArray();
-    com_correct_coef_.DeleteAthenaArray();
 
   }
 

@@ -159,7 +159,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real *nu_grid = &(pmy_rad->nu_grid(0));
   Real *nu_cen = &(pmy_rad->nu_cen(0));
   Real *delta_nu = &(pmy_rad->delta_nu(0));
-  Real *com_correct_coef = &(com_correct_coef_(0));
+
 
 
   //--------------------------------------------------------------------
@@ -244,7 +244,6 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   pmy_rad->ConvertBBJWien2(j_nu[nfreq-1], nu_grid[nfreq-1], tgas_new, 
                           n_nusq_last_bin,  nf_last);
 
-  DownScatteringCorrection(nu_grid, tgas_new, com_correct_coef); 
 
   //-------------------------------------------------------------------------
   // now solve the Kompaneets equation
@@ -311,8 +310,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   com_d_face_coef[0] = 0.0;
   // the face coefficient: comp_t_coef * nu_f^4 * (T/((d\nu))+(1+n)(1-\delta))
   for(int ifr=1; ifr<nfreq-1; ++ifr){
-    Real a_coef = compt_coef*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]
-                                                        *com_correct_coef[ifr];
+    Real a_coef = compt_coef*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr]*nu_grid[ifr];
     Real n_face = (1-delta_coef[ifr]) * n_nu[ifr]+delta_coef[ifr]*n_nu[ifr-1];
     Real tdnu_face=tgas_new/(nu_cen[ifr]-nu_cen[ifr-1]);
     com_b_face_coef[ifr] = a_coef*(tdnu_face+(1.0+n_face)*(1.0-delta_coef[ifr]));
@@ -364,7 +362,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // for the flux at the last face, we calculate the flux explicitly
 //  Real nf_last=1.0/(\lambda exp(nu_tr)-1.0);
   Real a_coef_last = compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
-                    *nu_grid[nfreq-1]*nu_grid[nfreq-1]*com_correct_coef[nfreq-1]
+                    *nu_grid[nfreq-1]*nu_grid[nfreq-1]
                      /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
   Real flux_last_explicit=a_coef_last*(nf_last*(1.0+nf_last)
                          +tgas_new*nf_last*2.0/delta_nu[nfreq-2]);
@@ -457,24 +455,5 @@ Real RadIntegrator::ComptCorrection(Real &tgas)
   return f_theta;
 }
 
-//correction factor for generalized Kompaneets equation
-//We can take high order relativistic corrections based on 
-// Callinor & Lasenby, 1998, ApJ, 499, 1
-void RadIntegrator::DownScatteringCorrection(Real *nu_grid, Real &tgas, 
-                                         Real *com_correct_coef)
-{
-
-  int &nfreq = pmy_rad->nfreq;
-
-  Real theta=tgas/pmy_rad->telectron;
-
-  for(int i=0; i<nfreq; ++i){
-
-    Real x=nu_grid[i]/tgas;
-//    com_correct_coef[i] = 1.0+0.7*theta*x*x;
-    com_correct_coef[i] = 1.0;
-  }
-
-}
 
 
