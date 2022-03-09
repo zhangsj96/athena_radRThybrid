@@ -155,12 +155,6 @@ void IMRadiation::Iteration(Mesh *pm,
       std::cout << "Iteration stops at niter: " << niter
       << " relative error: " << sum_diff_/sum_full_ << std::endl;
 
-    // Multi-group Compton scattering source term, 
-    // update boundary condition for radiation
-    // This is separated from transport flux and other source terms
-    if(pm->my_blocks(0)->prad->nfreq > 1)
-      pimradcomptlist->DoTaskListOneStage(wght);
-
 
     // After iteration,
     // add radiation source term to hydro

@@ -119,31 +119,6 @@ class IMRadHydroTaskList : public IMRadTaskList{
 
 };
 
-// task list for separate compton scattering
-// need to update boundary condition
-class IMRadComptTaskList : public IMRadTaskList {
- public:
-  IMRadComptTaskList(Mesh *pm); 
-
-
-  // functions
-
-  TaskStatus ClearRadBoundary(MeshBlock *pmb);
-  TaskStatus SendRadBoundary(MeshBlock *pmb);
-  TaskStatus ReceiveRadBoundary(MeshBlock *pmb);
-  TaskStatus SetRadBoundary(MeshBlock *pmb);
-  TaskStatus SendRadBoundaryShear(MeshBlock *pmb);
-  TaskStatus ReceiveRadBoundaryShear(MeshBlock *pmb);
-  TaskStatus CalComptTerms(MeshBlock *pmb);
-
-  
-
-
- private:
-  void StartupTaskList(MeshBlock *pmb) override;
-  void AddTask(const TaskID& id, const TaskID& dep) override;
-};
-
 
 //----------------------------------------------------------------------------------------
 //! 64-bit integers with "1" in different bit positions used to ID each Multigrid task.
@@ -179,19 +154,5 @@ const TaskID UPD_OPA(9);      // check residual
 const TaskID ADD_RAD_SCR(10); // add radiation source term
 const TaskID CONS_TO_PRIM(11);// convert conservative to primitive variables
 } // namespace IMRadTaskNames
-
-namespace IMRadComptTaskNames {
-const TaskID NONE(0);
-const TaskID CLEAR_RAD(1);     // clear radiation boundary
-const TaskID SEND_RAD_BND(2);  // send radiation boundary
-const TaskID RECV_RAD_BND(3); // receive radiation boundary
-const TaskID SETB_RAD_BND(4); // set radiation physical boundary
-const TaskID RAD_PHYS_BND(5);// radiation physical boundary
-const TaskID PRLN_RAD_BND(6); // prolongation 
-const TaskID SEND_RAD_SH(7); // send shearing box boundary
-const TaskID RECV_RAD_SH(8); // receive shearing box boundary
-const TaskID CAL_COMPT(9); // add flux divergence term
-
-} // namespace IMRadITTaskNames
 
 #endif // TASK_LIST_MG_TASK_LIST_HPP_

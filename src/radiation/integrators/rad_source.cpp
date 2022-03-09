@@ -207,7 +207,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
           // Add compton scattering 
           // Compton scattering for implicit scheme is added separately
-          if(compton_flag_ > 0 && (!IM_RADIATION_ENABLED))
+          if(compton_flag_ > 0)
             MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
 
           // inverseshift

@@ -51,7 +51,7 @@ public:
 
   IMRadITTaskList *pimraditlist;
   IMRadHydroTaskList *pimradhylist;
-  IMRadComptTaskList *pimradcomptlist;
+
 
 private:
 
