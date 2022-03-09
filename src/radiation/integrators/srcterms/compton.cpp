@@ -364,10 +364,15 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   Real a_coef_last = compt_coef*nu_grid[nfreq-1]*nu_grid[nfreq-1]
                     *nu_grid[nfreq-1]*nu_grid[nfreq-1]
                      /(nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
-  Real flux_last_explicit=a_coef_last*(nf_last*(1.0+nf_last)
-                         +tgas_new*nf_last*2.0/delta_nu[nfreq-2]);
-  Real flux_last_im_coef=a_coef_last*tgas_new*2.0/delta_nu[nfreq-2];
 
+  Real flux_last_explicit = 0.0;
+  Real flux_last_im_coef = 0.0;
+
+  if(nf_last < n_nu[nfreq-2]){
+    flux_last_explicit=a_coef_last*(nf_last*(1.0+nf_last)
+                         +tgas_new*nf_last*2.0/delta_nu[nfreq-2]);
+    flux_last_im_coef=a_coef_last*tgas_new*2.0/delta_nu[nfreq-2];
+  }
 
   // We use the bin nfreq-2 to get the solution
   Real n0_coef = (1.0+com_b_coef_l[nfreq-2]+flux_last_im_coef)
@@ -384,6 +389,8 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // update n_nusq in the last bin
   n_nusq_last_bin -= flux_last *
                      (nu_cen[nfreq-2]*nu_cen[nfreq-2]*delta_nu[nfreq-2]);
+
+  n_nusq_last_bin = std::max(n_nusq_last_bin,TINY_NUMBER);
  
   //-------------------------------------------------------------------------
   // now go from update n_nu to new_j_nu
