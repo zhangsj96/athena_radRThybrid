@@ -197,7 +197,7 @@ private:
   int tau_flag_;
   // flag to add simple Compton scattering
   // compton_t_ flag to estimate gas temperature or not for Compton scattering
-  int compton_flag_, compton_t_; 
+  int compton_flag_, compton_t_, split_compton_; 
   int planck_flag_; // flag to add additional Planck absorption opacity
   int adv_flag_; // flag used to indicate whether separate
                  // advection flux from diffustion flux or not.

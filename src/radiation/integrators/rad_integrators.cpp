@@ -60,6 +60,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
+  split_compton_=pin->GetOrAddInteger("radiation","Split_compton",0);
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);

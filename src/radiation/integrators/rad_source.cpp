@@ -207,7 +207,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
           // Add compton scattering 
           // Compton scattering for implicit scheme is added separately
-          if(compton_flag_ > 0)
+          if((compton_flag_ > 0) && (split_compton_ == 0))
             MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
 
           // inverseshift
@@ -250,7 +250,7 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
   int &nfreq=prad->nfreq;
 
   // only apply for multi-grou case
-  if((nfreq > 1) && (compton_flag_ > 0)){
+  if((nfreq > 1) && (compton_flag_ > 0) && (split_compton_ > 0)){
   
   
   // Get the temporary array

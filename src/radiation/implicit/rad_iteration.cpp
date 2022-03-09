@@ -156,6 +156,12 @@ void IMRadiation::Iteration(Mesh *pm,
       << " relative error: " << sum_diff_/sum_full_ << std::endl;
 
 
+    if((pm->my_blocks(0)->prad->nfreq > 1) && 
+      (pm->my_blocks(0)->prad->pradintegrator->compton_flag_ > 0) &&
+       pm->my_blocks(0)->prad->pradintegrator->split_compton_ > 0)
+      pimradcomptlist->DoTaskListOneStage(wght);
+
+
     // After iteration,
     // add radiation source term to hydro
     // update hydro boundary
