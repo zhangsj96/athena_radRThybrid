@@ -63,8 +63,10 @@ public:
   void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
-  void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,  
-       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
+  void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u);
+
+  void GetHydroSourceTerms(MeshBlock *pmb, 
+                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
 
   Real AbsorptionScattering(AthenaArray<Real> &wmu_cm,
@@ -166,8 +168,8 @@ public:
   int rad_xorder, rad_fre_order; 
   AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
   AthenaArray<Real> taufact;
-  AthenaArray<Real> rad_source; // store the radiation source terms
-
+  AthenaArray<Real> rad_source; // store the radiation source terms 
+  AthenaArray<Real> compt_source;
 
 
   

@@ -100,7 +100,7 @@ void IMRadiation::Iteration(Mesh *pm,
       }
 
       // always use initial guess from last step to keep the balance
-      if(stage == 2)
+      if((stage == 2) && (prad->pradintegrator->split_compton_ > 0))
         prad->ir = ir_ini;
 
       prad->ir_old = prad->ir;
@@ -159,6 +159,13 @@ void IMRadiation::Iteration(Mesh *pm,
       std::cout << "Iteration stops at niter: " << niter
       << " relative error: " << sum_diff_/sum_full_ << std::endl;
 
+    // now calculate the rad source terms
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
+      Radiation *prad = pmb->prad;
+      if(prad->set_source_flag > 0)
+        prad->pradintegrator->GetHydroSourceTerms(pmb, prad->ir1, prad->ir);
+    }
 
     if((pm->my_blocks(0)->prad->nfreq > 1) && 
       (pm->my_blocks(0)->prad->pradintegrator->compton_flag_ > 0) &&

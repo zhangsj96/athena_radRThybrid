@@ -242,6 +242,8 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
   
   Real& prat = prad->prat;
   Real invcrat = 1.0/prad->crat;
+  Real invredfactor = prad->crat/prad->reduced_c;
+
 
 
   Real *lab_ir;
@@ -329,6 +331,24 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           }// end ifr
 
 
+          if(prad->set_source_flag > 0){
+
+            Real er = 0.0;
+
+        
+            for(int ifr=0; ifr<nfreq; ++ifr){
+              Real *p_ir =  &(ir(k,j,i,ifr*nang));
+              Real er_fr = 0.0;
+              for(int n=0; n<nang; ++n){
+                Real ir_weight = p_ir[n] * prad->wmu(n);
+                er_fr  += ir_weight;
+              }
+              er += er_fr;
+            }// end ifr
+
+            compt_source(k,j,i) = (-prat*(er - compt_source(k,j,i)) * invredfactor);  
+          }// end the compton source term
+
         }// end i
       }// end j
     }// end k
@@ -338,7 +358,7 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
 // ir_ini and ir only differ by the source term for explicit scheme
 // for implicit scheme, ir also includes the flux divergence term
 
-void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u, 
+void RadIntegrator::GetHydroSourceTerms(MeshBlock *pmb, 
                        AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir)
 {
 
@@ -349,13 +369,6 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
   Real invcrat = 1.0/prad->crat;
   Real invredc = 1.0/prad->reduced_c;
   Real invredfactor = invredc/invcrat;
-
-  Real gm1 = pmb->peos->GetGamma() - 1.0;
-
-  Real rho_floor = pmb->peos->GetDensityFloor();
-  
-  
-  Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
 
   
   int &nang =prad->nang;
@@ -472,12 +485,41 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           frz += frz_fr;
         }// end ifr
 
+        if(nfreq > 1 && compton_flag_ > 0 && split_compton_ > 0)
+          compt_source(k,j,i) = er;
+
         
         // Now apply the radiation source terms to gas with energy and
         // momentum conservation
-        u(IM1,k,j,i) += (-prat*(frx- frx0) * invredc);
-        u(IM2,k,j,i) += (-prat*(fry- fry0) * invredc);
-        u(IM3,k,j,i) += (-prat*(frz- frz0) * invredc);
+        rad_source(0,k,j,i) = (-prat*(er - er0 ) * invredfactor);  
+        rad_source(1,k,j,i) = (-prat*(frx- frx0) * invredc);
+        rad_source(2,k,j,i) = (-prat*(fry- fry0) * invredc);
+        rad_source(3,k,j,i) = (-prat*(frz- frz0) * invredc);
+
+      }// end i
+    }// end j
+  }// end k
+}
+
+
+void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u)
+{
+
+  Radiation *prad=pmb->prad;
+  Real invcrat = 1.0/prad->crat;
+  Field *pfield = pmb->pfield;
+
+  Real gm1 = pmb->peos->GetGamma() - 1.0;
+
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+ 
+  for(int k=ks; k<=ke; ++k){
+    for(int j=js; j<=je; ++j){
+      for(int i=is; i<=ie; ++i){
+        u(IM1,k,j,i) += rad_source(1,k,j,i);
+        u(IM2,k,j,i) += rad_source(2,k,j,i);
+        u(IM3,k,j,i) += rad_source(3,k,j,i);
 
         //limit the velocity by speed of light
         Real vx = u(IM1,k,j,i)/u(IDN,k,j,i);
@@ -505,7 +547,9 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
           Real eint = tgas_new_(k,j,i) * u(IDN,k,j,i)/gm1;
           u(IEN,k,j,i) = eint + pb + ekin;         
         }else{
-          Real e_source = (-prat*(er - er0 ) * invredfactor);  
+          Real e_source = rad_source(0,k,j,i);
+          if(compton_flag_ > 0 && split_compton_ > 0)
+            e_source += compt_source(k,j,i);
           // first check that gas internal energy will not become negative
           Real eint = u(IEN,k,j,i) + e_source - ekin - pb;
           Real tgas = eint * gm1/u(IDN,k,j,i);
@@ -519,40 +563,10 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u,
             u(IEN,k,j,i) += e_source;   
           }       
         }// end source_flag
-
       }// end i
     }// end j
   }// end k
-        
-        // check internal energy
-//        Real ekin=0.5 * (u(IM1,k,j,i) * u(IM1,k,j,i)
-//                       + u(IM2,k,j,i) * u(IM2,k,j,i)
-//                       + u(IM3,k,j,i) * u(IM3,k,j,i))/u(IDN,k,j,i);
-//        Real pb=0.0;
-//        if(MAGNETIC_FIELDS_ENABLED){
-//          if(step==1){
-//            const Real& bcc1 = pmb->pfield->bcc1(IB1,k,j,i);
-//            const Real& bcc2 = pmb->pfield->bcc1(IB2,k,j,i);
-//            const Real& bcc3 = pmb->pfield->bcc1(IB3,k,j,i);
-//            pb=0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
-//          }else{
-//            const Real& bcc1 = pmb->pfield->bcc(IB1,k,j,i);
-//            const Real& bcc2 = pmb->pfield->bcc(IB2,k,j,i);
-//            const Real& bcc3 = pmb->pfield->bcc(IB3,k,j,i);
-//            pb=0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
-//          }
-//        }
-//        Real eint=u(IEN,k,j,i) - pb - ekin;
-//        if(eint < 0.0){
-//          Real gm1 = pmb->phydro->peos->GetGamma() - 1.0;
-//          eint = u(IDN,k,j,i) * tgas /gm1;
-//          u(IEN,k,j,i) = eint  + pb + ekin;
-//        }
-        
 
 }
-
-
-
 
 

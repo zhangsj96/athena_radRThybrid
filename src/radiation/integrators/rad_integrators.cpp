@@ -61,6 +61,9 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
   split_compton_=pin->GetOrAddInteger("radiation","Split_compton",0);
+  if((!IM_RADIATION_ENABLED) || (compton_flag_ == 0))
+    split_compton_ = 0;
+
   planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
@@ -160,6 +163,9 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
+    if((nfreq > 1) && (split_compton_ > 0))
+      compt_source.NewAthenaArray(ncells3,ncells2,ncells1);
+
 
   }// end implicit
 
@@ -169,6 +175,9 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   tgas_new_.NewAthenaArray(ncells3,ncells2,ncells1);
   vel_source_.NewAthenaArray(ncells3,ncells2,ncells1,3); 
   taufact.NewAthenaArray(ncells3,ncells2,ncells1);
+
+
+  rad_source.NewAthenaArray(4,ncells3,ncells2,ncells1);
 
 
   vel_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
@@ -479,6 +488,9 @@ RadIntegrator::~RadIntegrator()
     imp_ang_psi_l_.DeleteAthenaArray();
     imp_ang_psi_r_.DeleteAthenaArray();
     adv_flx_.DeleteAthenaArray();
+
+    if((pmy_rad->nfreq > 1) && (split_compton_ > 0))
+      compt_source.DeleteAthenaArray();
     
   }
   implicit_coef_.DeleteAthenaArray();
@@ -490,6 +502,7 @@ RadIntegrator::~RadIntegrator()
   vel_source_.DeleteAthenaArray();
   dxw1_.DeleteAthenaArray();
   dxw2_.DeleteAthenaArray();
+  rad_source.DeleteAthenaArray();
 
 
   if(pmy_rad->angle_flag == 1){

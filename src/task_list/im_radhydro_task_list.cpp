@@ -210,8 +210,7 @@ TaskStatus IMRadHydroTaskList::UpdateOpacity(MeshBlock *pmb) {
 
 TaskStatus IMRadHydroTaskList::AddRadSource(MeshBlock *pmb) {
   if(pmb->prad->set_source_flag > 0)
-    pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
-                                       pmb->prad->ir1, pmb->prad->ir);
+    pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u);
   return TaskStatus::success;
 }
 
