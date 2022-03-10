@@ -99,6 +99,10 @@ void IMRadiation::Iteration(Mesh *pm,
         prad->pradintegrator->ImplicitAngularFluxesCoef(wght);  
       }
 
+      // always use initial guess from last step to keep the balance
+      if(stage == 2)
+        prad->ir = ir_ini;
+
       prad->ir_old = prad->ir;
 
     }
