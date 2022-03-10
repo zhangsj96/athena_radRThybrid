@@ -202,8 +202,9 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           DetermineShiftRatio(ir_cm,ir_shift_,delta_ratio_);
 
           // calculate the source term 
-          tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, sigma_aer,
-                              sigma_s, dt, lorz, rho, tgas_(k,j,i), implicit_coef_,ir_shift_);
+          tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, 
+                             sigma_aer, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
+                             implicit_coef_,ir_shift_);
 
           // Add compton scattering 
           // Compton scattering for implicit scheme is added separately
@@ -333,8 +334,6 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
 
           if(prad->set_source_flag > 0){
 
-            Real er = 0.0;
-
         
             for(int ifr=0; ifr<nfreq; ++ifr){
               Real *p_ir =  &(ir(k,j,i,ifr*nang));
@@ -343,10 +342,10 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
                 Real ir_weight = p_ir[n] * prad->wmu(n);
                 er_fr  += ir_weight;
               }
-              er += er_fr;
+              compt_source(k,j,i,ifr) = (-prat*(er_fr-compt_source(k,j,i,ifr))
+                                        *invredfactor);  
             }// end ifr
 
-            compt_source(k,j,i) = (-prat*(er - compt_source(k,j,i)) * invredfactor);  
           }// end the compton source term
 
         }// end i
@@ -394,6 +393,7 @@ void RadIntegrator::GetHydroSourceTerms(MeshBlock *pmb,
           Real frx_fr = 0.0;
           Real fry_fr = 0.0;
           Real frz_fr = 0.0;
+
 
           if(IM_RADIATION_ENABLED){
 
@@ -454,16 +454,14 @@ void RadIntegrator::GetHydroSourceTerms(MeshBlock *pmb,
               frz_fr += ir_weight * prad->mu(2,k,j,i,n);
             }
           }
-          er0 += er_fr;
-          frx0 += frx_fr;
-          fry0 += fry_fr;
-          frz0 += frz_fr;
+          delta_source(0,ifr) = er_fr;
+          delta_source(1,ifr) = frx_fr;
+          delta_source(2,ifr) = fry_fr;
+          delta_source(3,ifr) = frz_fr;
+
         }
 
-        Real er = 0.0;
-        Real frx = 0.0;
-        Real fry = 0.0;
-        Real frz = 0.0;
+
         
         for(int ifr=0; ifr<nfreq; ++ifr){
           Real *p_ir =  &(ir(k,j,i,ifr*nang));
@@ -479,22 +477,34 @@ void RadIntegrator::GetHydroSourceTerms(MeshBlock *pmb,
             fry_fr += ir_weight * prad->mu(1,k,j,i,n);
             frz_fr += ir_weight * prad->mu(2,k,j,i,n);
           }
-          er += er_fr;
-          frx += frx_fr;
-          fry += fry_fr;
-          frz += frz_fr;
+
+          if(compton_flag_ > 0 && split_compton_ > 0)
+            compt_source(k,j,i,ifr) = er_fr;
+
+          delta_source(0,ifr) = er_fr  - delta_source(0,ifr);
+          delta_source(1,ifr) = frx_fr - delta_source(1,ifr);
+          delta_source(2,ifr) = fry_fr - delta_source(2,ifr);
+          delta_source(3,ifr) = frz_fr - delta_source(3,ifr);
+
         }// end ifr
 
-        if(nfreq > 1 && compton_flag_ > 0 && split_compton_ > 0)
-          compt_source(k,j,i) = er;
+        Real delta_er = 0.0, delta_frx=0.0, delta_fry = 0.0, delta_frz = 0.0;
+
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          delta_er  += delta_source(0,ifr);
+          delta_frx += delta_source(1,ifr);
+          delta_fry += delta_source(2,ifr);
+          delta_frz += delta_source(3,ifr);
+
+        }
 
         
         // Now apply the radiation source terms to gas with energy and
         // momentum conservation
-        rad_source(0,k,j,i) = (-prat*(er - er0 ) * invredfactor);  
-        rad_source(1,k,j,i) = (-prat*(frx- frx0) * invredc);
-        rad_source(2,k,j,i) = (-prat*(fry- fry0) * invredc);
-        rad_source(3,k,j,i) = (-prat*(frz- frz0) * invredc);
+        rad_source(0,k,j,i) = (-prat*delta_er  * invredfactor);  
+        rad_source(1,k,j,i) = (-prat*delta_frx * invredc);
+        rad_source(2,k,j,i) = (-prat*delta_fry * invredc);
+        rad_source(3,k,j,i) = (-prat*delta_frz * invredc);
 
       }// end i
     }// end j
@@ -548,8 +558,12 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u)
           u(IEN,k,j,i) = eint + pb + ekin;         
         }else{
           Real e_source = rad_source(0,k,j,i);
-          if(compton_flag_ > 0 && split_compton_ > 0)
-            e_source += compt_source(k,j,i);
+          Real e_compt = 0.0;
+          if(compton_flag_ > 0 && split_compton_ > 0){
+            for(int ifr=0; ifr<prad->nfreq; ++ifr)
+              e_compt += compt_source(k,j,i,ifr);
+          }
+          e_source += e_compt;
           // first check that gas internal energy will not become negative
           Real eint = u(IEN,k,j,i) + e_source - ekin - pb;
           Real tgas = eint * gm1/u(IDN,k,j,i);

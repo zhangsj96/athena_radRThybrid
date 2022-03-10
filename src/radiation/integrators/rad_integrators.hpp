@@ -170,6 +170,8 @@ public:
   AthenaArray<Real> taufact;
   AthenaArray<Real> rad_source; // store the radiation source terms 
   AthenaArray<Real> compt_source;
+  AthenaArray<Real> delta_source; // calculate delta E, delta Fr per frequency
+                                   // then sum the different across fre
 
 
   
