@@ -47,14 +47,10 @@ public:
 
   void ImplicitAngularFluxesCoef(const Real wght);
   void ImplicitAngularFluxes(AthenaArray<Real> &ir);
-  void ImplicitAngularFluxesCenter(const Real wght, AthenaArray<Real> &ir);
 
   void ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefr, Real zeta_coefl);
   void ImplicitPsiFlux(int k, int j, int i, int ifr, int n_zeta, AthenaArray<Real> &ir);
-  void ImplicitPsiFluxCenter(int k, int j, int i, int n_zeta, Real wght, 
-            Real zeta_coefr, Real zeta_coefl, Real f_l, Real f_r, 
-            AthenaArray<Real> &ir);
     
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
