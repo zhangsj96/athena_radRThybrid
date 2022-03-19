@@ -48,7 +48,7 @@ void Radiation::FrequencyGrid()
     nu_max = nu_max * h_planck/(k_b * tunit);
 
 
-  if(nu_max <= nu_min){
+  if((nu_max <= nu_min) && (nfreq > 2)){
     std::stringstream msg;
     msg << "### FATAL ERROR in Radiation Class" << std::endl
         << "frequency_max needs to be larger than frequency_min!";
