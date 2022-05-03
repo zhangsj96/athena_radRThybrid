@@ -83,19 +83,16 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     suma2[ifr]=0.0;
     suma3[ifr]=0.0;
 
-    Real dtcsigmat = ct * sigma_a[ifr];
+    Real dtcsigmar = ct * sigma_a[ifr];
     Real dtcsigmae = ct * sigma_ae[ifr];
     Real dtcsigmas = ct * sigma_s[ifr];
-    Real rdtcsigmat = redfactor * dtcsigmat;
+    Real dtcsigmap = ct * sigma_p[ifr];
+
+    Real rdtcsigmar = redfactor * dtcsigmar;
     Real rdtcsigmae = redfactor * dtcsigmae;
     Real rdtcsigmas = redfactor * dtcsigmas;
-    Real dtcsigmap = 0.0;
-    Real rdtcsigmap = 0.0;
+    Real rdtcsigmap = redfactor * dtcsigmap;
     
-    if(planck_flag_ > 0){
-      dtcsigmap = ct * sigma_p[ifr];
-      rdtcsigmap = redfactor * dtcsigmap;
-    }
 
     Real *ircm = &(ir_cm(ifr*nang));
     Real *vn2 = &(vncsigma2(ifr*nang));
@@ -104,16 +101,16 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     Real *imcoef = &(implicit_coef(ifr*nang));   
 //#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       Real vn = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
+       Real vn = 1.0/(imcoef[n] + (rdtcsigmar + rdtcsigmas) * tcoef[n]);
        vn2[n] = tcoef[n] * vn;
        Real ir_weight = ircm[n] * wmu[n];
        suma1[ifr] += (wmu[n] * vn2[n]);
        suma2[ifr] += (ir_weight * vn);
     }
-    suma3[ifr] = suma1[ifr] * (rdtcsigmas - rdtcsigmap);
-    suma1[ifr] *= (rdtcsigmat + rdtcsigmap);
+    suma3[ifr] = suma1[ifr] * (rdtcsigmas + rdtcsigmar - rdtcsigmae);
+    suma1[ifr] *= (rdtcsigmap);
     
-    coef[0] += - (dtcsigmae + dtcsigmap) * lorz * prat * suma2[ifr] 
+    coef[0] += - dtcsigmae * lorz * prat * suma2[ifr] 
                * (gamma - 1.0)/(rho*(1.0-suma3[ifr]));
 
   }// end frequency groups
@@ -129,23 +126,18 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     pmy_rad->UserEmissionSpec(pmy_rad,tgasnew);
   
     for(int ifr=0; ifr<nfreq; ++ifr){
-      Real dtcsigmat = ct * sigma_a[ifr];
+      Real dtcsigmar = ct * sigma_a[ifr];
       Real dtcsigmae = ct * sigma_ae[ifr];
 //      Real dtcsigmas = ct * sigma_s[ifr];
-      Real rdtcsigmat = redfactor * dtcsigmat;
+      Real rdtcsigmar = redfactor * dtcsigmar;
       Real rdtcsigmae = redfactor * dtcsigmae;
 //      Real rdtcsigmas = redfactor * dtcsigmas;
-      Real dtcsigmap = 0.0;
-      Real rdtcsigmap = 0.0;
+      Real dtcsigmap = ct * sigma_p[ifr];
+      Real rdtcsigmap = redfactor * dtcsigmap;
     
-      if(planck_flag_ > 0){
-        dtcsigmap = ct * sigma_p[ifr];
-        rdtcsigmap = redfactor * dtcsigmap;
-      }
 
       // No need to do this if already in thermal equilibrium
-      coef[1] += lorz * prat * (dtcsigmat + dtcsigmap 
-                 - (dtcsigmae + dtcsigmap) * suma1[ifr]/(1.0-suma3[ifr]))
+      coef[1] += lorz * prat * (dtcsigmap - dtcsigmae * suma1[ifr]/(1.0-suma3[ifr]))
                  * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
 
     }// end frequency nfreq
@@ -176,20 +168,17 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     Real emission = tgasnew * tgasnew * tgasnew * tgasnew;
 
     for(int ifr=0; ifr<nfreq; ++ifr){
-      Real dtcsigmat = ct * sigma_a[ifr];
+      Real dtcsigmar = ct * sigma_a[ifr];
       Real dtcsigmae = ct * sigma_ae[ifr];
       Real dtcsigmas = ct * sigma_s[ifr];
-      Real rdtcsigmat = redfactor * dtcsigmat;
+      Real dtcsigmap = ct * sigma_p[ifr];
+
+
+      Real rdtcsigmar = redfactor * dtcsigmar;
       Real rdtcsigmae = redfactor * dtcsigmae;
       Real rdtcsigmas = redfactor * dtcsigmas;
-      Real dtcsigmap = 0.0;
-      Real rdtcsigmap = 0.0;
-    
-      if(planck_flag_ > 0){
-        dtcsigmap = ct * sigma_p[ifr];
-        rdtcsigmap = redfactor * dtcsigmap;
-      }
-      
+      Real rdtcsigmap = redfactor * dtcsigmap;
+          
       Real emi_nu = emission * pmy_rad->emission_spec(ifr);
       
       // get update jr_cm
@@ -202,8 +191,8 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
-        irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emi_nu
-                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
+        irn[n] +=  ((rdtcsigmas + rdtcsigmar - rdtcsigmap) * jr_cm + rdtcsigmap * emi_nu
+                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmar) * irn[n]) * vn2[n];
       }
     }// end badcell
 

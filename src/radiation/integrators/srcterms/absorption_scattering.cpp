@@ -72,47 +72,42 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     Real suma1=0.0, suma2=0.0, suma3=0.0;
     Real jr_cm=0.0;
     
-    Real dtcsigmat = ct * sigma_a[ifr];
-    Real dtcsigmae = ct * sigma_ae[ifr];
-    Real dtcsigmas = ct * sigma_s[ifr];
-    Real rdtcsigmat = redfactor * dtcsigmat;
+    Real dtcsigmar = ct * sigma_a[ifr]; //Rosseland mean absorption
+    Real dtcsigmae = ct * sigma_ae[ifr]; // Energy (planck) mean absorption
+    Real dtcsigmas = ct * sigma_s[ifr]; // scattering
+    Real dtcsigmap = ct * sigma_p[ifr];// planck mean absorption
+
+    Real rdtcsigmar = redfactor * dtcsigmar;
     Real rdtcsigmae = redfactor * dtcsigmae;
     Real rdtcsigmas = redfactor * dtcsigmas;
-    Real dtcsigmap = 0.0;
-    Real rdtcsigmap = 0.0;
+    Real rdtcsigmap = redfactor * dtcsigmap;
     
-    if(planck_flag_ > 0){
-      dtcsigmap = ct * sigma_p[ifr];
-      rdtcsigmap = redfactor * dtcsigmap;
-    }
 
     Real *ircm = &(ir_cm(nang*ifr));
-    Real *vn = &(vncsigma(0));
     Real *vn2 = &(vncsigma2(0));
     Real *tcoef = &(tran_coef(0));
     Real *wmu = &(wmu_cm(0));  
     Real *imcoef = &(implicit_coef(0));   
-#pragma omp simd reduction(+:jr_cm,suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
+#pragma omp simd reduction(+:suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
-       vn[n] = 1.0/(imcoef[n] + (rdtcsigmae + rdtcsigmas) * tcoef[n]);
-       vn2[n] = tcoef[n] * vn[n];
+       Real vn = 1.0/(imcoef[n] + (rdtcsigmar + rdtcsigmas) * tcoef[n]);
+       vn2[n] = tcoef[n] * vn;
        Real ir_weight = ircm[n] * wmu[n];
-       jr_cm += ir_weight;
+
        suma1 += (wmu[n] * vn2[n]);
-       suma2 += (ir_weight * vn[n]);
+       suma2 += (ir_weight * vn);
     }
-    suma3 = suma1 * (rdtcsigmas - rdtcsigmap);
-    suma1 *= (rdtcsigmat + rdtcsigmap);
+    suma3 = suma1 * (rdtcsigmas + rdtcsigmar - rdtcsigmae);
+    suma1 *= (rdtcsigmap);
     
     // Now solve the equation
     // rho dT/gamma-1=-\gamma Prat c(sigma T^4 - sigma(a1 T^4 + a2)/(1-a3))
-    // make sure jr_cm is positive
-    jr_cm = std::max(jr_cm, TINY_NUMBER);
+
     
     // No need to do this if already in thermal equilibrium
-    coef[1] = lorz * prat * (dtcsigmat + dtcsigmap - (dtcsigmae + dtcsigmap) * suma1/(1.0-suma3))
+    coef[1] = lorz * prat * (dtcsigmap - dtcsigmae * suma1/(1.0-suma3))
                    * (gamma - 1.0)/rho;
-    coef[0] = -tgas - (dtcsigmae + dtcsigmap) * lorz * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
+    coef[0] = -tgas - dtcsigmae * lorz * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
     
     if(fabs(coef[1]) > TINY_NUMBER){
       int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);
@@ -140,8 +135,8 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
       Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
-        irn[n] +=  ((rdtcsigmas - rdtcsigmap) * jr_cm + (rdtcsigmat + rdtcsigmap) * emission
-                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmae) * irn[n]) * vn2[n];
+        irn[n] +=  ((rdtcsigmas + rdtcsigmar - rdtcsigmae) * jr_cm + rdtcsigmap * emission
+                      - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmar) * irn[n]) * vn2[n];
       }
     }// end badcell
   }// End Frequency

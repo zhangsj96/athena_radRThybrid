@@ -148,12 +148,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           prad->sigma_s(k,j,i,0) = 0.0;
           prad->sigma_a(k,j,i,0) = sigma0 * rho_min* rho_min* pow(T_min, -3.5);
           prad->sigma_ae(k,j,i,0) = prad->sigma_a(k,j,i,0);
-
+          prad->sigma_planck(k,j,i,0) = prad->sigma_a(k,j,i,0);
 
           // the last frequency group
           prad->sigma_a(k,j,i,1) = 0.0;
           prad->sigma_s(k,j,i,1) = sigma0 * phydro->u(IDN,k,j,i);
-          prad->sigma_ae(k,j,i,1) = 0.0;          
+          prad->sigma_ae(k,j,i,1) = 0.0;     
+          prad->sigma_planck(k,j,i,1) = 0.0;     
 
           for(int n=0; n<prad->n_fre_ang; ++n){
               prad->ir(k,j,i,n) = 0.0;

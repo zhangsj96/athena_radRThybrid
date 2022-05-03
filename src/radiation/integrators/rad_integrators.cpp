@@ -64,7 +64,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   if((!IM_RADIATION_ENABLED) || (compton_flag_ == 0))
     split_compton_ = 0;
 
-  planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
   imp_ang_flx_ = pin->GetOrAddInteger("radiation","implicit_ang_flux",0);

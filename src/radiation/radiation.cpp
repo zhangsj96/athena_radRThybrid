@@ -342,7 +342,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"Vmax          %4.2e \n",vmax);
     fprintf(pfile,"Tunit         %4.2e \n",tunit);
     fprintf(pfile,"Compt         %d  \n",pradintegrator->compton_flag_);
-    fprintf(pfile,"Planck        %d  \n",pradintegrator->planck_flag_);
     fprintf(pfile,"rotate_theta  %d  \n",rotate_theta);
     fprintf(pfile,"rotate_phi    %d  \n",rotate_phi);
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
