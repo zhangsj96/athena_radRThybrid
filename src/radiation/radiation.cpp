@@ -237,7 +237,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   n_fre_ang = nang * nfreq;
  //co-moving frame frequency grid depends on angels
   
-  pmb->RegisterMeshBlockData(ir);
+ // do not add radiation to vars_cc, which needs to be done in different order for 
+ // restriction/prolongation in AMR
+//  pmb->RegisterMeshBlockData(ir);
 
   // If user-requested time integrator is type 3S*, allocate additional memory registers
   std::string integrator = pin->GetOrAddString("time", "integrator", "vl2");

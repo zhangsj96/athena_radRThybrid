@@ -40,7 +40,7 @@ IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
   // read in the parameters
   // maximum number of iterations
   nlimit_ = pin->GetOrAddInteger("radiation","nlimit",100);
-  error_limit_ =  pin->GetOrAddReal("radiation","error_limit",1.e-3);
+  error_limit_ =  pin->GetOrAddReal("radiation","error_limit",1.e-6);
   cfl_rad = pin->GetOrAddReal("radiation","cfl_rad",1.0);
   ite_scheme = pin->GetOrAddInteger("radiation","iteration",2);
 

@@ -41,6 +41,7 @@ enum {OPAS=0, OPAA=1, OPAP=2}; // scattering, absorption, Planck, opacity
 
 class Radiation {
   friend class RadIntegrator;
+  friend class Mesh;
 public:
   Radiation(MeshBlock *pmb, ParameterInput *pin);
 //  ~Radiation();
