@@ -46,6 +46,9 @@ static Real amp = 1.e-6;
 static Real v_r, v_i, p_r, p_i, er_r, er_i, fr_r, fr_i;
 static Real omegareal, omegaimg;
 
+// AMR refinement condition
+int RefinementCondition(MeshBlock *pmb);
+
 //======================================================================================
 /*! \file beam.cpp
  *  \brief Beam test for the radiative transfer module
@@ -453,5 +456,29 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   return;
 }
 
+void Mesh::InitUserMeshData(ParameterInput *pin) {
+
+  if (adaptive)
+    EnrollUserRefinementCondition(RefinementCondition);
+
+}
+
+
+// refinement condition: density curvature
+int RefinementCondition(MeshBlock *pmb) {
+  AthenaArray<Real> &w = pmb->phydro->w;
+  Real dmax = 0.0, dmin = 2.0;  // max and min densities
+  for (int k=pmb->ks; k<=pmb->ke; k++) {
+    for (int j=pmb->js; j<=pmb->je; j++) {
+      for (int i=pmb->is; i<=pmb->ie; i++) {
+        if (w(IDN,k,j,i) > dmax) dmax = w(IDN,k,j,i);
+        if (w(IDN,k,j,i) < dmin) dmin = w(IDN,k,j,i);
+      }
+    }
+  }
+  // refine : delta rho > 0.9*amp
+  if (dmax-1.0 > 0.9*amp) return 1;
+  return -1;
+}
 
 
