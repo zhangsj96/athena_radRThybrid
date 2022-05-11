@@ -40,6 +40,8 @@
 static int ang;
 static int octnum;
 
+int RefinementCondition(MeshBlock *pmb);
+
 //======================================================================================
 /*! \file beam.cpp
  *  \brief Beam test for the radiative transfer module
@@ -57,6 +59,10 @@ void TwoBeamHydro(
 
 void Mesh::InitUserMeshData(ParameterInput *pin)
 {
+
+  if (adaptive)
+    EnrollUserRefinementCondition(RefinementCondition);
+
   EnrollUserBoundaryFunction(BoundaryFace::inner_x2, TwoBeamHydro);
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
     EnrollUserRadBoundaryFunction(BoundaryFace::inner_x2, TwoBeams);
@@ -199,4 +205,22 @@ void TwoBeamHydro(
   }
 
 }
+
+// refinement condition: density curvature
+int RefinementCondition(MeshBlock *pmb) {
+
+  Coordinates *pco = pmb->pcoord;
+
+  Real xmin = pco->x1f(pmb->is);
+  Real xmax = pco->x1f(pmb->ie+1);
+  Real ymin = pco->x2f(pmb->js);
+  Real ymax = pco->x2f(pmb->je+1);
+  Real zmin = pco->x3f(pmb->ks);
+  Real zmax = pco->x3f(pmb->ke+1);
+  // refine : delta rho > 0.9*amp
+  if (ymin > -1 && ymax < 1) return 1;
+  return 0;
+}
+
+
 

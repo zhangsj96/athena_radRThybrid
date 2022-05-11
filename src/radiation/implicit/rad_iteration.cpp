@@ -155,9 +155,17 @@ void IMRadiation::Iteration(Mesh *pm,
 
     }// end iteration
 
-    if(Globals::my_rank == 0)
-      std::cout << "Iteration stops at niter: " << niter
-      << " relative error: " << sum_diff_/sum_full_ << std::endl;
+    if(Globals::my_rank == 0){
+      int output_info = 0;
+      if(pm->ncycle_out != 0){
+        if(pm->ncycle%pm->ncycle_out == 0)
+          output_info = 1;
+      }
+      if( output_info > 0)
+        std::cout << "Iteration stops at niter: " << niter
+        << " relative error: " << sum_diff_/sum_full_ << std::endl;
+
+    }
 
     // now calculate the rad source terms
     for(int nb=0; nb<pm->nblocal; ++nb){
