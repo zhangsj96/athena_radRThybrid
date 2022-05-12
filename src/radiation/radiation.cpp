@@ -266,6 +266,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     rad_mom_cm_nu.NewAthenaArray(4*nfreq,nc3,nc2,nc1); 
   }
 
+  // the equation is
+  // (sigma_s+sigma_a)(J-I)  // Rosseland mean
+  // + sigma_planck * a_rT^4 - sigma_ae * J // Planck mean
 
   sigma_s.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
