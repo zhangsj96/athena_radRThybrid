@@ -56,7 +56,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
   
       // factor to separate the diffusion and advection part
-  Real taucell = pin->GetOrAddReal("radiation","taucell",4);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
   compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
