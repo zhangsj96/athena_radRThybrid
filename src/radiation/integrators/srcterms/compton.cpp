@@ -281,13 +281,24 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
 
   // now determine the delta_coefficient at the frequency interface
   Real *delta_coef = &(sum_nu3_(0));
+  // use the weight based on frequency grid
   delta_coef[0] = 0.5;
-  for(int ifr=1; ifr<nfreq-1; ++ifr){
-    Real dndnu = (eq_sol[ifr]-eq_sol[ifr-1])
+  // for nearly 0 photon case
+  // assuming linear slope
+  if(eq_sol_c > 1.e16){
+    for(int ifr=1; ifr<nfreq-1; ++ifr){
+      delta_coef[ifr] = (nu_cen[ifr]-nu_grid[ifr])/(nu_cen[ifr]-nu_cen[ifr-1]);
+
+    }
+
+  }else{
+    for(int ifr=1; ifr<nfreq-1; ++ifr){
+      Real dndnu = (eq_sol[ifr]-eq_sol[ifr-1])
                  /(nu_cen[ifr]-nu_cen[ifr-1]);
-    Real eq_n_coef = 1-4.0*tgas_new*dndnu;
-    Real eq_n_face = 0.5*(sqrt(eq_n_coef) - 1.0);
-    delta_coef[ifr] = (eq_n_face - eq_sol[ifr])/(eq_sol[ifr-1]-eq_sol[ifr]);
+      Real eq_n_coef = 1-4.0*tgas_new*dndnu;
+      Real eq_n_face = 0.5*(sqrt(eq_n_coef) - 1.0);
+      delta_coef[ifr] = std::max(0.0,(eq_n_face - eq_sol[ifr])/(eq_sol[ifr-1]-eq_sol[ifr]));
+    }
   }
   delta_coef[nfreq-1] = 0.5;
 
