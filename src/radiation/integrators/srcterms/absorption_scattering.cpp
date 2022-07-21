@@ -88,7 +88,7 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
     Real *tcoef = &(tran_coef(0));
     Real *wmu = &(wmu_cm(0));  
     Real *imcoef = &(implicit_coef(0));   
-#pragma omp simd reduction(+:suma1,suma2) aligned(vn,vn2,tcoef,ircm,wmu:ALI_LEN)
+//#pragma omp simd reduction(+:suma1,suma2) aligned(vn2,tcoef,ircm,wmu:ALI_LEN)
     for(int n=0; n<nang; n++){
        Real vn = 1.0/(imcoef[n] + (rdtcsigmar + rdtcsigmas) * tcoef[n]);
        vn2[n] = tcoef[n] * vn;

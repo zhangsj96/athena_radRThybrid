@@ -129,6 +129,8 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
           Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm)
 {
 
+  int bd_cell_flag = 0;
+
   Real& prat = pmy_rad->prat;
   Real ct = dt * pmy_rad->crat;
   Real redfactor=pmy_rad->reduced_c/pmy_rad->crat;
@@ -366,6 +368,11 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
     Real ef = (1.0-com_d_coef_r[ifr]+com_b_coef_l[ifr]);
     Real new_ef = 1.0 + com_d_coef_l[ifr] * nf_n0[ifr-1]/ef;
     nf_rhs[ifr] = n_nu[ifr]/ef-com_d_coef_l[ifr] * nf_rhs[ifr-1]/ef;
+    if(std::fabs(new_ef) < TINY_NUMBER){
+      bd_cell_flag = 1;
+      break;
+    }
+
     nf_rhs[ifr] /= new_ef;
     nf_n0[ifr] = com_b_coef_r[ifr]/(ef*new_ef);
   }
@@ -390,6 +397,12 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
                  +com_d_coef_l[nfreq-2]*nf_n0[nfreq-3];
   Real rhs_coef = n_nu[nfreq-2]+flux_last_explicit
                  -com_d_coef_l[nfreq-2]*nf_rhs[nfreq-3];
+
+  if(std::fabs(n0_coef) < TINY_NUMBER){
+    bd_cell_flag = 1;
+    return;
+  }
+
   // update new solution at nfreq-2
   n_nu[nfreq-2] = rhs_coef/n0_coef;
   for(int ifr=nfreq-3; ifr>=0; --ifr){
@@ -405,23 +418,24 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
  
   //-------------------------------------------------------------------------
   // now go from update n_nu to new_j_nu
+  if(bd_cell_flag == 0){
 
-  Real *new_j_nu = &(new_j_nu_(0));
-  for(int ifr=0; ifr<nfreq-1; ++ifr){
-    new_j_nu[ifr] = 15.0*ONE_PI_FOUR_POWER*n_nu[ifr]*nu_cen[ifr]
+    Real *new_j_nu = &(new_j_nu_(0));
+    for(int ifr=0; ifr<nfreq-1; ++ifr){
+      new_j_nu[ifr] = 15.0*ONE_PI_FOUR_POWER*n_nu[ifr]*nu_cen[ifr]
                 *nu_cen[ifr]*nu_cen[ifr]*delta_nu[ifr];
-  }
+    }
 
 
 
-  new_j_nu[nfreq-1] = pmy_rad->InverseConvertBBJNNu2Wien(n_nusq_last_bin, 
+    new_j_nu[nfreq-1] = pmy_rad->InverseConvertBBJNNu2Wien(n_nusq_last_bin, 
                       nu_grid[nfreq-1], tgas_new);
 
   //now calculate the total j
-  Real sum_new_jnu = 0.0;
-  sum_new_jnu = new_j_nu[nfreq-1];
-  for(int ifr=0; ifr<nfreq-1; ++ifr)
-    sum_new_jnu += new_j_nu[ifr];
+    Real sum_new_jnu = 0.0;
+    sum_new_jnu = new_j_nu[nfreq-1];
+    for(int ifr=0; ifr<nfreq-1; ++ifr)
+      sum_new_jnu += new_j_nu[ifr];
 
   // now apply energy conservation
 
@@ -430,22 +444,24 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
   // rho * tgas_new/(gamma-1) + (prat/redfactor) * sum_new_jnu
 
   // now update tgas_new via energy conservation
-  Real tgas_test = (prat/redfactor)*(sum_jnu-sum_new_jnu)
+    Real tgas_test = (prat/redfactor)*(sum_jnu-sum_new_jnu)
             *((gamma-1.0)/rho) + tgas;
 
-  if(tgas_test < TINY_NUMBER)
-    tgas_test = tgas_new;
+    if(tgas_test < TINY_NUMBER)
+      tgas_test = tgas_new;
 
-  tgas = tgas_test;
+    tgas = tgas_test;
 
   // now update intensity isotropically
-  Real *tcoef = &(tran_coef(0));
-  for(int ifr=0; ifr<nfreq; ++ifr){
-    Real *irn = &(ir_cm(nang*ifr));
-    for(int n=0; n<nang; n++){
-      irn[n] += tcoef[n]* (new_j_nu[ifr] - j_nu[ifr]);
+    Real *tcoef = &(tran_coef(0));
+    for(int ifr=0; ifr<nfreq; ++ifr){
+      Real *irn = &(ir_cm(nang*ifr));
+      for(int n=0; n<nang; n++){
+        irn[n] += tcoef[n]* (new_j_nu[ifr] - j_nu[ifr]);
+      }
     }
-  }
+
+  }// end bad_cell_flag
 
 }
 
