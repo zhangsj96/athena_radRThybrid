@@ -52,17 +52,29 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       ATHENA_ERROR(msg);
     }
   }
+  rad_fre_order = pin->GetOrAddInteger("radiation","rad_fre_order",1);
 
   
       // factor to separate the diffusion and advection part
-  Real taucell = pin->GetOrAddReal("radiation","taucell",4);
+  Real taucell = pin->GetOrAddReal("radiation","taucell",5);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
-  planck_flag_=pin->GetOrAddInteger("radiation","Planck",0);
+  compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
+  split_compton_=pin->GetOrAddInteger("radiation","Split_compton",0);
+  if((!IM_RADIATION_ENABLED) || (compton_flag_ == 0))
+    split_compton_ = 0;
+
   adv_flag_=pin->GetOrAddInteger("radiation","Advection",1);
   flux_correct_flag_ = pin->GetOrAddInteger("radiation","CorrectFlux",0);
+  imp_ang_flx_ = pin->GetOrAddInteger("radiation","implicit_ang_flux",0);
 
 
+  // multi-group iteration
+  // iterations < iterative_tgas_
+  iteration_tgas_  = pin->GetOrAddInteger("radiation","iterative_tgas",5);
+  tgas_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
+  // maximum number of bins each frequency bin will map to, default is nfreq/2
+  nmax_map_ = pin->GetOrAddInteger("radiation","max_map_bin",0);
 
 
   int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
@@ -143,19 +155,16 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
       const_coef3_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     }
     divflx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
-
   
     left_coef1_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef2_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
     left_coef3_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-    ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    imp_ang_coef_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);   
-    imp_ang_psi_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang); 
-    imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
+    if(split_compton_ > 0)
+      compt_source.NewAthenaArray(ncells3,ncells2,ncells1,nfreq);
+
 
   }// end implicit
 
@@ -167,13 +176,17 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   taufact.NewAthenaArray(ncells3,ncells2,ncells1);
 
 
+  rad_source.NewAthenaArray(4,ncells3,ncells2,ncells1);
+  delta_source.NewAthenaArray(4,nfreq);
+
+
   vel_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   velx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   vely_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   velz_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
   
   vncsigma_.NewAthenaArray(nang);
-  vncsigma2_.NewAthenaArray(nang);
+  vncsigma2_.NewAthenaArray(prad->n_fre_ang);
   wmu_cm_.NewAthenaArray(nang);
   tran_coef_.NewAthenaArray(nang);
   cm_to_lab_.NewAthenaArray(nang);
@@ -181,6 +194,39 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   dxw1_.NewAthenaArray(ncells1);
   dxw2_.NewAthenaArray(ncells1);
 
+  //----------------------------------------------------
+  // array for multi-group 
+  if(nfreq > 1){
+    ir_cen_.NewAthenaArray(nfreq, nang);
+    ir_slope_.NewAthenaArray(nfreq, nang);
+    ir_face_.NewAthenaArray(nfreq,nang);
+    ir_shift_.NewAthenaArray(prad->n_fre_ang);
+    if(nmax_map_ == 0)  nmax_map_ = nfreq/2+1;
+    split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    map_bin_start_.NewAthenaArray(nfreq,nang);
+    map_bin_end_.NewAthenaArray(nfreq,nang);
+    nu_shift_.NewAthenaArray(nang,nfreq);
+
+    com_b_face_coef_.NewAthenaArray(nfreq);
+    com_d_face_coef_.NewAthenaArray(nfreq);
+    com_b_coef_l_.NewAthenaArray(nfreq);
+    com_b_coef_r_.NewAthenaArray(nfreq);
+    com_d_coef_l_.NewAthenaArray(nfreq);
+    com_d_coef_r_.NewAthenaArray(nfreq);
+
+    nf_rhs_.NewAthenaArray(nfreq);
+    nf_n0_.NewAthenaArray(nfreq);
+    new_j_nu_.NewAthenaArray(nfreq);
+  }
+
+  sum_nu3_.NewAthenaArray(nfreq);
+  sum_nu2_.NewAthenaArray(nfreq);
+  sum_nu1_.NewAthenaArray(nfreq);
+  eq_sol_.NewAthenaArray(nfreq);
+
+  //----------------------------------------------------
+  // array for multi-group 
 
   // set the default taufact
   for(int k=0; k<ncells3; ++k)
@@ -189,7 +235,12 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
         taufact(k,j,i) = taucell;
       }
 
-
+  // The angular grid coefficients
+  ang_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);    
+  imp_ang_coef_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+  imp_ang_coef_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);   
+  imp_ang_psi_r_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang); 
+  imp_ang_psi_l_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);  
 
   if(prad->angle_flag == 1){
     int &nzeta = prad->nzeta;
@@ -437,6 +488,9 @@ RadIntegrator::~RadIntegrator()
     imp_ang_psi_l_.DeleteAthenaArray();
     imp_ang_psi_r_.DeleteAthenaArray();
     adv_flx_.DeleteAthenaArray();
+
+    if((pmy_rad->nfreq > 1) && (split_compton_ > 0))
+      compt_source.DeleteAthenaArray();
     
   }
   implicit_coef_.DeleteAthenaArray();
@@ -448,6 +502,8 @@ RadIntegrator::~RadIntegrator()
   vel_source_.DeleteAthenaArray();
   dxw1_.DeleteAthenaArray();
   dxw2_.DeleteAthenaArray();
+  rad_source.DeleteAthenaArray();
+  delta_source.DeleteAthenaArray();
 
 
   if(pmy_rad->angle_flag == 1){
@@ -472,8 +528,38 @@ RadIntegrator::~RadIntegrator()
     }
     dflx_ang_.DeleteAthenaArray();
     ang_vol_.DeleteAthenaArray();
-  }  
-  
+  }
+
+  // multi-group array
+
+  if(pmy_rad->nfreq > 1){
+    delta_ratio_.DeleteAthenaArray();
+    ir_cen_.DeleteAthenaArray();
+    ir_slope_.DeleteAthenaArray();
+    ir_shift_.DeleteAthenaArray();
+    ir_face_.DeleteAthenaArray();
+    map_bin_start_.DeleteAthenaArray();
+    map_bin_end_.DeleteAthenaArray();
+    nu_shift_.DeleteAthenaArray();
+
+    com_b_face_coef_.DeleteAthenaArray();
+    com_d_face_coef_.DeleteAthenaArray();
+    com_b_coef_l_.DeleteAthenaArray();
+    com_b_coef_r_.DeleteAthenaArray();
+    com_d_coef_l_.DeleteAthenaArray();
+    com_d_coef_r_.DeleteAthenaArray();
+
+    nf_rhs_.DeleteAthenaArray();
+    nf_n0_.DeleteAthenaArray();
+    new_j_nu_.DeleteAthenaArray();
+
+  }
+
+  sum_nu3_.DeleteAthenaArray();
+  sum_nu2_.DeleteAthenaArray();
+  sum_nu1_.DeleteAthenaArray();
+  eq_sol_.DeleteAthenaArray();
+
 }
 
 
@@ -538,7 +624,6 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
            for(int n=0; n<nang; ++n){
              er_freq += weight[n] * irn[n];
            }
-           er_freq *= prad->wfreq(ifr);
            er += er_freq;
          }   
 
@@ -589,7 +674,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
           sigmal *= taufact(k,j,i-1);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
           sigmar *= taufact(k,j,i);
-          tau += prad->wfreq(ifr)*(dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
+          tau += (dxw1_(i-1) * sigmal + dxw1_(i) * sigmar);
         }// end ifr
 
         Real factor = 0.0;
@@ -616,7 +701,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
             sigmal *= taufact(k,j-1,i);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
             sigmar *= taufact(k,j,i);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            tau += (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
 
           Real factor = 0.0;
@@ -645,7 +730,7 @@ void RadIntegrator::GetTgasVel(MeshBlock *pmb, const Real dt,
             sigmal *= taufact(k-1,j,i);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
             sigmar *= taufact(k,j,i);
-            tau += prad->wfreq(ifr) * (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
+            tau += (dxw1_(i) * sigmal + dxw2_(i) * sigmar);
           }
 
           Real factor = 0.0;
@@ -839,16 +924,7 @@ void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i,
         pr23_f += irweight * cosy[n] * cosz[n];
         pr33_f += irweight * cosz[n] * cosz[n];
       }
-      er_f *= prad->wfreq(ifr);
-      fr1_f *= prad->wfreq(ifr);
-      fr2_f *= prad->wfreq(ifr);
-      fr3_f *= prad->wfreq(ifr);
-      pr11_f *= prad->wfreq(ifr);
-      pr12_f *= prad->wfreq(ifr);
-      pr13_f *= prad->wfreq(ifr);
-      pr22_f *= prad->wfreq(ifr);
-      pr23_f *= prad->wfreq(ifr);
-      pr33_f *= prad->wfreq(ifr);
+
 
       er   += er_f;
       fr1  += fr1_f;
@@ -867,8 +943,8 @@ void RadIntegrator::PredictVel(AthenaArray<Real> &ir, int k, int j, int i,
     Real grey_sigma_a = 0.0;
 
     for(int ifr=0; ifr<nfreq; ++ifr){
-      grey_sigma_s += prad->wfreq(ifr) * prad->sigma_s(k,j,i,ifr);
-      grey_sigma_a += prad->wfreq(ifr) * prad->sigma_a(k,j,i,ifr);
+      grey_sigma_s += prad->sigma_s(k,j,i,ifr);
+      grey_sigma_a += prad->sigma_a(k,j,i,ifr);
 
     }
   

@@ -54,6 +54,8 @@ class TaskID {  // POD but not aggregate (there is a user-provided ctor)
 
   friend class TaskList;
   friend class MultigridTaskList;
+  friend class IMRadTaskList;
+  friend class IMRadHydroTaskList;
 };
 
 
@@ -206,6 +208,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus CalculateRadFlux(MeshBlock *pmb, int stage);
   TaskStatus IntegrateRad(MeshBlock *pmb, int stage);
   TaskStatus AddSourceTermsRad(MeshBlock *pmb, int stage);
+  TaskStatus AddSourceTermsIMRad(MeshBlock *pmb, int stage);
   TaskStatus SendRadFlux(MeshBlock *pmb, int stage);
   TaskStatus ReceiveAndCorrectRadFlux(MeshBlock *pmb, int stage);
   TaskStatus SendRad(MeshBlock *pmb, int stage);
@@ -387,6 +390,8 @@ const TaskID SEND_RADFLXSH(71);
 const TaskID RECV_RADFLXSH(72);
 const TaskID SEND_RADSH(73);
 const TaskID RECV_RADSH(74);
+
+const TaskID SRCTERM_IMRAD(75);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

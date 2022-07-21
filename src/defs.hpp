@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "ssheet_rad"
+#define PROBLEM_GENERATOR "beam"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
@@ -84,7 +84,7 @@
 #define NOT_OPENMP_PARALLEL
 
 // HDF5 output (HDF5OUTPUT or NO_HDF5OUTPUT)
-#define HDF5OUTPUT
+#define NO_HDF5OUTPUT
 
 // debug build macros (DEBUG or NOT_DEBUG)
 #define NOT_DEBUG
@@ -98,7 +98,7 @@
 // compiler options
 #define COMPILED_WITH "g++"
 #define COMPILER_COMMAND "mpicxx"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11  " // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)
@@ -128,6 +128,8 @@
 #define HUGE_NUMBER 1.0e+36
 #define SQR(x) ( (x)*(x) )
 #define SIGN(x) ( ((x) < 0.0) ? -1.0 : 1.0 )
+#define PI_FOUR_POWER 97.409091034002415
+#define ONE_PI_FOUR_POWER 0.010265982254684
 
 #ifdef ENABLE_EXCEPTIONS
 #define ATHENA_ERROR(x) throw std::runtime_error(x.str().c_str())

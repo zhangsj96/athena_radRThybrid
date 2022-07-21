@@ -41,6 +41,7 @@ enum {OPAS=0, OPAA=1, OPAP=2}; // scattering, absorption, Planck, opacity
 
 class Radiation {
   friend class RadIntegrator;
+  friend class Mesh;
 public:
   Radiation(MeshBlock *pmb, ParameterInput *pin);
 //  ~Radiation();
@@ -48,13 +49,12 @@ public:
   AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments
   AthenaArray<Real> rad_mom_cm; // co-moving frame Er, Frx, Fry, Frz
-  AthenaArray<Real> rad_mom_nu, rad_mom_nu_cm; // multi_group radiation moments
-  AthenaArray<Real> sigma_s, sigma_a, sigma_ae; //   opacity
-                       //sigma_a T and sigma_ae I
-  AthenaArray<Real> sigma_planck; // absorption opacity to account for
-                                 // the difference between Planck
-                                // mean and Rosseland mean
-  AthenaArray<Real> grey_sigma; // frequency integrated opacity
+  AthenaArray<Real> rad_mom_nu, rad_mom_cm_nu; // multi_group radiation moments
+  AthenaArray<Real> sigma_s, sigma_a; //   opacity
+                  //scattering and fluxes weighted Rosseland mean
+  AthenaArray<Real> sigma_planck, sigma_ae; 
+                  // Planck mean and radiation energy weighted mean
+  AthenaArray<Real> output_sigma; // frequency integrated opacity
   AthenaArray<Real> mu, wmu; // angles and weight
 
   
@@ -82,13 +82,21 @@ public:
   AthenaArray<Real> coszeta_v, zeta_v_full, zeta_f_full, dzeta_v, dzeta_f, 
                     coszeta_f, len_zeta;
   AthenaArray<Real> psi_v, psi_f, len_psi, psi_v_full, psi_f_full, 
-                    dpsi_v, dpsi_f;
+                    dpsi_v, dpsi_f, sin_psi_f, cot_theta;
 
   // The frequency grid
   Real nu_min, nu_max; 
   // mininum and maximum frequencies, and number of frequency bins
-  int nfreq, fre_log; // flag to indicate whether using log frequency bins or not
-  AthenaArray<Real> nu_grid, nu_cm_grid, wfreq;  // frequency grid, weight of each frequency bins
+  int nfreq; // number of frequency bins
+  Real fre_ratio; // ratio between neighboring frequency bins
+  // frequency grid, center of each frequency bin
+  AthenaArray<Real> nu_grid, nu_cen, delta_nu;  
+  //gas emission term in each frequency bin relative to a_rT^4
+  AthenaArray<Real> emission_spec; 
+  FrequencyFunc UserFrequency; // user defined frequency grid
+  void EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction);
+  EmissionFunc UserEmissionSpec; 
+  void EnrollEmissionFunction(EmissionFunc MyEmissionSpec);
 
 //  int ir_output; // the number of specific intensity to dump
 //  AthenaArray<int> ir_index; // the array
@@ -103,7 +111,9 @@ public:
     // The function pointer for the opacity
   OpacityFunc UpdateOpacity;
 
-  FrequencyFunc UserFrequency; // us
+  Real kappa_es; // the frequency independent electron scattering opacity
+
+
   
   int rotate_theta; // flag to rotate the boundary
   int rotate_phi;  
@@ -125,12 +135,45 @@ public:
 
   void FrequencyGrid();
 
+  Real FitBlackBody(Real nu_t);
+
+  Real BlackBodySpec(Real nu_min, Real nu_max);
+  Real EffectiveBlackBody(Real intensity, Real nu);
+  Real EffectiveBlackBodyNNu2(Real n_nu2, Real nu);
+  Real IntegrateBBNuJ(Real nu_t); // integral of 
+  Real IntegrateBBJONuSq(Real nu_t); //\integral of (j/\nu)^2d\nu
+  Real IntegrateBBNNu2(Real nu_t); // ingral of n\nu^2d\nu
+  Real ConvertBBJNNu2(Real &bb_j, Real &nu_f);
+  // Convert from n\nu^2 dnu to J
+  Real InverseConvertBBJNNu2(Real &nnu2, Real &nu_f); 
+  // Convert J to \int (J/nu)^2
+  Real BBJToJONuSq(Real &bb_j, Real &nu_f);
+  // Convert J to n(nu_f)
+  Real BBJtoNnu(Real &bb_j, Real &nu_f); 
+  // Convert J to \int J\nu
+  Real BBJtoJnu(Real &bb_j, Real &nu_f); 
+  Real DBBjDNNu2(Real &bb_j, Real &nu_f);
+
+  // convert j to different quantities assuming Wien spectrum
+  void ConvertBBJWien(Real &bb_j, Real &nu_f, Real &tgas,
+                                 Real &nuj, Real &jonusq);
+  void ConvertBBJWien2(Real &bb_j, Real &nu_f, Real &tgas,
+                                 Real &nnu2, Real &n_nuf);
+  Real InverseConvertBBJNNu2Wien(Real &nnu2, Real &nu_f, Real &tgas);
+
+
   AthenaArray<Real> t_floor_, t_ceiling_; // temperature floor
 
 private:
 
   int user_unit_;
+  // temporary arrays for co-moving moments
+  AthenaArray<Real> cosx_cm_, cosy_cm_, cosz_cm_; 
+
   friend class BoundaryValues;
+
+  // to use log frequency spaceing or not
+  int log_fre_; 
   
 
 };

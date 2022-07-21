@@ -31,6 +31,7 @@
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
+#include "../coordinates/coordinates.hpp"
 #include "integrators/rad_integrators.hpp"
 #include "implicit/radiation_implicit.hpp"
 
@@ -38,10 +39,37 @@
 
 // The default opacity function.
 // Do nothing. Keep the opacity as the initial value
+inline void DefaultFrequency(Radiation *prad)
+{
+  return;
+}
+
+// The default opacity function.
+// Do nothing. Keep the opacity as the initial value
+inline void DefaultEmission(Radiation *prad, Real tgas)
+{
+  int &nfreq = prad->nfreq;
+  if(nfreq > 1){
+    for(int ifr=0; ifr<nfreq-1; ++ifr)
+      prad->emission_spec(ifr) =  
+            prad->BlackBodySpec(prad->nu_grid(ifr)/tgas, prad->nu_grid(ifr+1)/tgas);
+
+      prad->emission_spec(nfreq-1) = 1.0 - prad->FitBlackBody(prad->nu_grid(nfreq-1)/tgas);
+  }
+
+  
+
+  return;
+}
+
+
+// The default opacity function.
+// Do nothing. Keep the opacity as the initial value
 inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &prim)
 {
-  
+  return;
 }
+
 
 
 Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
@@ -59,6 +87,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
               AthenaArray<Real>::DataStatus::empty)),
     rad_bvar(pmb, &ir, &coarse_ir_, flux){
+
+  //universal constants we need
+  // https://physics.info/constants/
+  // arad = 4 * sigma/c
+  Real arad = 7.565733250033928e-15; 
+  Real c_speed = 2.99792458e10;  // speed of light
+
   // read in the parameters
   int nmu = pin->GetInteger("radiation","nmu");
   // total number of polar angles covering 0 to pi/2
@@ -66,11 +101,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   // total number of azimuthal angles covering 0 to pi
   npsi = pin->GetOrAddInteger("radiation","npsi",0); 
   angle_flag = pin->GetOrAddInteger("radiation","angle_flag",0);
-  user_unit_ = pin->GetOrAddInteger("radiation","unit",0);
-  if(user_unit_ == 0){  
-    prat = pin->GetReal("radiation","Prat");
-    crat = pin->GetReal("radiation","Crat");
-  }
+
   rotate_theta=pin->GetOrAddInteger("radiation","rotate_theta",0);
   rotate_phi=pin->GetOrAddInteger("radiation","rotate_phi",0);
 
@@ -80,14 +111,16 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rhounit = pin->GetOrAddReal("radiation","density_unit",1.0);
   lunit = pin->GetOrAddReal("radiation","length_unit",1.0);
   mol_weight = pin->GetOrAddReal("radiation","molecular_weight",0.6);
+  kappa_es = pin->GetOrAddReal("radiation","electron_scattering",0.34);
 
-  if(user_unit_ == 1){
+  kappa_es = kappa_es * rhounit * lunit; // dimensionless electron scattering
+  
+  if(user_unit_ == 0){  
+    prat = pin->GetReal("radiation","Prat");
+    crat = pin->GetReal("radiation","Crat");
+  }else if(user_unit_ == 1){
    // calculate prat and crat based on user provided unit
-    // https://physics.info/constants/
-    // arad = 4 * sigma/c
-    Real arad = 7.565733250033928e-15; 
     Real r_ideal = 8.314462618e7/mol_weight;
-    Real c_speed = 2.99792458e10;
     prat = arad * tunit * tunit * tunit/(rhounit * r_ideal);
     Real cs_iso = std::sqrt(r_ideal * tunit);
     crat = c_speed/cs_iso;
@@ -100,15 +133,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   reduced_c  = crat * pin->GetOrAddReal("radiation","reduced_factor",1.0);  
 
-  // frequency grid
-  nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);   // the number of frequeny bins
-  nu_min = pin->GetOrAddReal("radiation","frequency_min",0);   // minimum frequency
-  nu_max = pin->GetOrAddReal("radiation","frequency_max",1);  // maximum frequency
-  fre_log= pin->GetOrAddInteger("radiation","log_frequency",0); // use log in frequency space
-  
-  nu_grid.NewAthenaArray(nfreq+1);
-  wfreq.NewAthenaArray(nfreq);
-
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
 
   Mesh *pm = pmb->pmy_mesh;
@@ -116,8 +140,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 //  ir_output=pin->GetOrAddInteger("radiation","ir_output",0);
   
   set_source_flag = pin->GetOrAddInteger("radiation","source_flag",1);
-
-
 
   // number of cells for three dimensions
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;  
@@ -134,6 +156,13 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     if(ndim == 1){
       noct = 2;
       n_ang = nzeta;
+      if(npsi > 1){
+        std::stringstream msg;
+        msg << "### FATAL ERROR in radiation class" << std::endl
+        << "1D problem cannot have npsi > 1"   << std::endl;
+        ATHENA_ERROR(msg);
+      }
+
     }else if(ndim == 2){
       if(npsi <= 1){
         n_ang = nzeta;
@@ -176,25 +205,41 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   }
   
   nang = n_ang * noct;
+
+
+  // frequency grid
+  //frequency grid covers -infty to infty, default nfreq=1, means gray 
+  // integrated over all frequency
+
+   // the number of frequeny bins
+  nfreq  = pin->GetOrAddInteger("radiation","n_frequency",1);  
+  // when the emission spectrum depends on tgas, we perform 
+
+  // minimum frequency
+  nu_min = pin->GetOrAddReal("radiation","frequency_min",0);  
+
+  // maximum frequency 
+  nu_max = pin->GetOrAddReal("radiation","frequency_max",1);  
+
+  // log frequency space ratio
+  fre_ratio= pin->GetOrAddReal("radiation","frequency_ratio",1.0); 
+
+  log_fre_ = pin->GetOrAddInteger("radiation","log_frequency_spacing",1);
+
+  // setup the frequency grid
+  FrequencyGrid();  
+
+
+  UserFrequency = DefaultFrequency;
+  UserEmissionSpec = DefaultEmission;
+
   
   n_fre_ang = nang * nfreq;
  //co-moving frame frequency grid depends on angels
-  nu_cm_grid.NewAthenaArray(nfreq+1,nang);
-
-//  if(ir_output > n_fre_ang){
-
-//    std::stringstream msg;
-//    msg << "### FATAL ERROR in Radiation Class" << std::endl
-//        << "number of output specific intensity is too large!";
-//    throw std::runtime_error(msg.str().c_str());
-//  }
   
-//  if(ir_output > 0){
-//    ir_index.NewAthenaArray(ir_output);
-//    dump_ir.NewAthenaArray(ir_output,nc3,nc2,nc1);
-//  }
-  
-  pmb->RegisterMeshBlockData(ir);
+ // do not add radiation to vars_cc, which needs to be done in different order for 
+ // restriction/prolongation in AMR
+//  pmb->RegisterMeshBlockData(ir);
 
   // If user-requested time integrator is type 3S*, allocate additional memory registers
   std::string integrator = pin->GetOrAddString("time", "integrator", "vl2");
@@ -215,8 +260,15 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   rad_mom.NewAthenaArray(13,nc3,nc2,nc1);
   rad_mom_cm.NewAthenaArray(4,nc3,nc2,nc1);
   // dump the moments in each frequency groups
-  rad_mom_nu.NewAthenaArray(nfreq,13,nc3,nc2,nc1);    
-  rad_mom_nu_cm.NewAthenaArray(nfreq,4,nc3,nc2,nc1);
+  if(nfreq > 1){
+    // moments in different frequency bins
+    rad_mom_nu.NewAthenaArray(13*nfreq,nc3,nc2,nc1); 
+    rad_mom_cm_nu.NewAthenaArray(4*nfreq,nc3,nc2,nc1); 
+  }
+
+  // the equation is
+  // (sigma_s+sigma_a)(J-I)  // Rosseland mean
+  // + sigma_planck * a_rT^4 - sigma_ae * J // Planck mean
 
   sigma_s.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
@@ -226,7 +278,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   t_floor_.NewAthenaArray(nc3,nc2,nc1);
   t_ceiling_.NewAthenaArray(nc3,nc2,nc1);
   
-  grey_sigma.NewAthenaArray(3,nc3,nc2,nc1);
+  output_sigma.NewAthenaArray(3*nfreq,nc3,nc2,nc1);
 
   
   mu.NewAthenaArray(3,nc3,nc2,nc1,nang);
@@ -234,16 +286,16 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
 
 
-
   
-  if(angle_flag == 1)
+  if(angle_flag == 1){
     AngularGrid(angle_flag, nzeta, npsi);
+    cot_theta.NewAthenaArray(nc2);
+    for(int i=0; i<nc2; ++i)
+      cot_theta(i) = cos(pmb->pcoord->x2v(i))/sin(pmb->pcoord->x2v(i));
+  }
   else
     AngularGrid(angle_flag, nmu);    
 
-  
-  // Initialize the frequency weight
-  FrequencyGrid();
   
   // set a default opacity function
   UpdateOpacity = DefaultOpacity;
@@ -257,6 +309,18 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   if(RADIATION_ENABLED){
     pmb->pbval->bvars_main_int.push_back(&rad_bvar);
   }
+
+
+  //------------------------------------------
+  // temporary arrays for multi-group moments
+  cosx_cm_.NewAthenaArray(nang);
+  cosy_cm_.NewAthenaArray(nang);
+  cosz_cm_.NewAthenaArray(nang);
+ 
+
+
+
+  //------------------------------------------
 
   // set the default t_floor and t_ceiling
   for(int k=0; k<nc3; ++k)
@@ -283,7 +347,6 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"Vmax          %4.2e \n",vmax);
     fprintf(pfile,"Tunit         %4.2e \n",tunit);
     fprintf(pfile,"Compt         %d  \n",pradintegrator->compton_flag_);
-    fprintf(pfile,"Planck        %d  \n",pradintegrator->planck_flag_);
     fprintf(pfile,"rotate_theta  %d  \n",rotate_theta);
     fprintf(pfile,"rotate_phi    %d  \n",rotate_phi);
     fprintf(pfile,"adv_flag:     %d  \n",pradintegrator->adv_flag_);
@@ -291,6 +354,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"npsi:         %d  \n",npsi);
     fprintf(pfile,"taucell:      %e  \n",taucell);
     fprintf(pfile,"source_flag:  %d  \n",set_source_flag);    
+    fprintf(pfile,"nfreq      :  %d  \n",nfreq);  
+    fprintf(pfile,"fre_ratio:    %e  \n",fre_ratio);  
+    fprintf(pfile,"nu_min:       %e  \n",nu_min);  
+    fprintf(pfile,"nu_max:       %e  \n",nu_max);  
     if(IM_RADIATION_ENABLED){
     fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme);
     fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
@@ -302,7 +369,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
       fprintf(pfile,"%2d   %e   %e   %e    %e\n",n,mu(0,0,0,0,n),mu(1,0,0,0,n),
              mu(2,0,0,0,n), wmu(n));
     }
-
+    if(nfreq > 1){
+      fprintf(pfile,"fre   spec\n");
+      for(int ifr=0; ifr<nfreq; ++ifr){
+        fprintf(pfile,"%e   %e\n",nu_grid(ifr),emission_spec(ifr)); 
+      }
+    }
     
     fclose(pfile);
   
@@ -355,5 +427,17 @@ void Radiation::EnrollOpacityFunction(OpacityFunc MyOpacityFunction)
 }
 
 
+void Radiation::EnrollFrequencyFunction(FrequencyFunc MyFrequencyFunction)
+{
+  UserFrequency = MyFrequencyFunction;
+  
+}
+
+
+void Radiation::EnrollEmissionFunction(EmissionFunc MyEmissionSpec)
+{
+  UserEmissionSpec = MyEmissionSpec;
+  
+}
 
 

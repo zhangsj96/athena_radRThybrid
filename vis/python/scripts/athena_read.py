@@ -532,6 +532,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
             else:
                 raise AthenaError('Coordinates not recognized')
 
+
         # Check output level compared to max level in file
         if level < max_level and not subsample and not fast_restrict:
             warnings.warn('Exact restriction being used: performance severely affected;'
@@ -576,6 +577,8 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
         quantities = [str(q) for q in quantities if q not in coord_quantities
                       and q not in attr_quantities and q not in other_quantities]
 
+
+
         # Store file attribute metadata
         for key in attr_quantities:
             data[str(key)] = f.attrs[key]
@@ -608,6 +611,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
         x2p = f['x2f'][fine_block, 1]
         x3m = f['x3f'][fine_block, 0]
         x3p = f['x3f'][fine_block, 1]
+
 
         # Populate coordinate arrays
         face_funcs = (face_func_1, face_func_2, face_func_3)
@@ -656,6 +660,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
             data[xv] = np.empty(nx, dtype=dtype)
             for i in range(nx):
                 data[xv][i] = center_func(data[xf][i], data[xf][i+1])
+
 
         # Account for selection
         x1_select = False
@@ -839,6 +844,8 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
                                                         jl_s+o2:ju_s:s, il_s+o1:iu_s:s]
 
                 # Apply fast (uniform Cartesian) restriction
+
+                # Apply fast (uniform Cartesian) restriction
                 elif fast_restrict:
                     # Calculate fine-level offsets
                     io_vals = range(s) if nx1 > 1 else (0,)
@@ -860,6 +867,9 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
                         data[q][kl_d:ku_d, jl_d:ju_d, il_d:iu_d] /= s ** num_extended_dims
 
                 # Apply exact (volume-weighted) restriction
+
+
+
                 else:
                     # Calculate sets of indices
                     i_s_vals = range(il_s, iu_s)
@@ -939,12 +949,20 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
                                     for q in quantities:
                                         data[q][k, j, i] /= vol
 
+
+
     # Return dictionary containing requested data arrays
     if check_nan_flag:
         for key, val in data.items():
             if key in quantities:
                 check_nan(val)
 
+
+
+
+
+
+ 
     return data
 
 

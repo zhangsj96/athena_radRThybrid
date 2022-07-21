@@ -29,18 +29,18 @@ variable   = prim
 <time>
 cfl_number = 0.4       # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = 100000    # cycle limit
-tlim       = 10.0      # time limit
+tlim       = 1.0      # time limit
 rad_xorder = 2
 <mesh>
-nx1        = 256       # Number of zones in X1-direction
+nx1        = 512       # Number of zones in X1-direction
 x1min      = -0.5      # minimum value of X1
 x1max      =  0.5      # maximum value of X1
 ix1_bc     = user  # inner-X1 boundary flag
 ox1_bc     = user  # inner-X1 boundary flag
 
 nx2        = 256       # Number of zones in X2-direction
-x2min      = -0.5      # minimum value of X2
-x2max      = 0.5       # maximum value of X2
+x2min      = -0.3      # minimum value of X2
+x2max      = 0.3       # maximum value of X2
 ix2_bc     = periodic # inner-X2 boundary flag
 ox2_bc     = periodic  # inner-X2 boundary flag
 
@@ -62,9 +62,15 @@ gamma           = 1.6666666666667       # gamma = C_p/C_v
 <radiation>
 nmu             = 4
 Prat            = 0
-Crat            = 100
+Crat            = 1.9e5
 error_limit     = 1.e-7
-nlimit          = 200
-cfl_rad         = 1
+nlimit          = 500
+cfl_rad         = 0.2
+taucell         = 1
+iteration       = 0
+source_flag     = 0
+n_frequency     = 2
+frequency_min   = -5
+
 <problem>
 

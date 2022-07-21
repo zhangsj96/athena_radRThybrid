@@ -251,7 +251,7 @@ void RadBoundaryVariable::SetShearingBoxBoundaryBuffers() {
   AthenaArray<Real> &var = *var_cc;
   AthenaArray<Real> &pflux = pflux_;
   int &xgh = pbval_->xgh_;
-  int &xorder = pbval_->xorder_;
+  int &xorder = pmb->prad->pradintegrator->rad_xorder;
   int ib[2]{pmb->is - NGHOST, pmb->ie + 1};
   int js = pmb->js, je = pmb->je;
   int kl = pmb->ks, ku = pmb->ke;

@@ -210,9 +210,12 @@ void TCIntegrator::CalculateFluxes(AthenaArray<Real> &w,
       // get the optical depth across the cell
 #pragma omp simd
       for(int i=is; i<=ie+1; ++i){
-        vdiff_l_(i) = -vdiff_(0,k,j,i-1);
-        vdiff_r_(i) = vdiff_(0,k,j,i);
+        vdiff_l_(i) = -0.5*(vdiff_(0,k,j,i-1)+vdiff_(0,k,j,i));
       }
+#pragma omp simd
+      for(int i=is; i<=ie+1; ++i){
+        vdiff_r_(i) = -vdiff_l_(i);
+      }      
 
       // calculate the flux
       TCFlux(TCF1, is, ie+1, utc_l_, utc_r_, vdiff_l_, vdiff_r_, dflx_);
@@ -263,8 +266,11 @@ void TCIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         // get the optical depth across the cell
 #pragma omp simd
         for(int i=il; i<=iu; ++i){
-          vdiff_l_(i) = -vdiff_(1,k,j-1,i);
-          vdiff_r_(i) = vdiff_(1,k,j,i);
+          vdiff_l_(i) = -0.5*(vdiff_(1,k,j-1,i)+vdiff_(1,k,j,i));
+        }
+#pragma omp simd
+        for(int i=il; i<=iu; ++i){
+          vdiff_r_(i) = -vdiff_l_(i);
         }
       // calculate the flux
         TCFlux(TCF2, il, iu, utc_l_, utc_r_, vdiff_l_, vdiff_r_, dflx_);        
@@ -310,8 +316,11 @@ void TCIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
 #pragma omp simd
         for(int i=il; i<=iu; ++i){
-          vdiff_l_(i) = -vdiff_(2,k-1,j,i);
-          vdiff_r_(i) = vdiff_(2,k,j,i);
+          vdiff_l_(i) = -0.5*(vdiff_(2,k-1,j,i)+vdiff_(2,k,j,i));
+        }
+#pragma omp simd
+        for(int i=il; i<=iu; ++i){
+          vdiff_r_(i) = -vdiff_l_(i);
         }
       // calculate the flux
         TCFlux(TCF3, il, iu, utc_l_, utc_r_, vdiff_l_, vdiff_r_, dflx_);   

@@ -63,6 +63,8 @@ gamma           = 1.6666666666667       # gamma = C_p/C_v
 nmu             = 1
 Prat            = 1
 Crat            = 1
+n_frequency     = 2
+frequency_min   = 2.0837e+17
 
 <problem>
 

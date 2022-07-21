@@ -89,8 +89,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           // use the signal speed in each frequency group 
           Real sigmal = prad->sigma_a(k,j,i-1,ifr) + prad->sigma_s(k,j,i-1,ifr);
           Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-          Real taul = prad->wfreq(ifr)*dxw1_(i-1) * sigmal;
-          Real taur = prad->wfreq(ifr)*dxw1_(i) * sigmar;
+          Real taul = dxw1_(i-1) * sigmal;
+          Real taur = dxw1_(i) * sigmar;
 
           Real f_l = 1.0;
           Real f_r = 1.0;
@@ -170,8 +170,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k,j-1,i,ifr) + prad->sigma_s(k,j-1,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            Real taul = prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            Real taur = prad->wfreq(ifr) * dxw2_(i) * sigmar;
+            Real taul = dxw1_(i) * sigmal;
+            Real taur = dxw2_(i) * sigmar;
 
             Real f_l = 1.0;
             Real f_r = 1.0;
@@ -265,8 +265,8 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real sigmal = prad->sigma_a(k-1,j,i,ifr) + prad->sigma_s(k-1,j,i,ifr);
             Real sigmar = prad->sigma_a(k,j,i,ifr) + prad->sigma_s(k,j,i,ifr);
-            Real taul = prad->wfreq(ifr) * dxw1_(i) * sigmal;
-            Real taur = prad->wfreq(ifr) * dxw2_(i) * sigmar;
+            Real taul = dxw1_(i) * sigmal;
+            Real taur = dxw2_(i) * sigmar;
           
             Real f_l = 1.0;
             Real f_r = 1.0;
@@ -357,7 +357,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   }// end k direction
 
   // calculate flux along angular direction
-  if(prad->angle_flag == 1 && prad->nzeta > 0){
+  if((prad->angle_flag == 1) && (prad->nzeta > 0) && (imp_ang_flx_ == 0)){
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
@@ -419,7 +419,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
 
   // Now calculate psi flux
-  if(prad->angle_flag == 1 && prad->npsi > 0){
+  if((prad->angle_flag == 1) && (prad->npsi > 0) && (imp_ang_flx_ == 0)){
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
@@ -479,9 +479,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
       }
     }
 
-
   }// end ang_flag==1 and npsi > 0
-
   
 }// end calculate_flux
 
@@ -813,7 +811,7 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
       }
 
       // add angular flux
-      if(prad->angle_flag == 1){
+      if((prad->angle_flag == 1) && (imp_ang_flx_ == 0)){
         for(int i=is; i<=ie; ++i){
           for(int ifr=0; ifr<nfreq; ++ifr){
             for(int n=0; n<prad->nang; ++n)
@@ -870,9 +868,31 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
           }// end ifr
         }// end i
       }// end if angle_flag == 1
- 
     }// end j
   }// End k
+
+  if(prad->angle_flag == 1 && (imp_ang_flx_ == 1)){
+    ImplicitAngularFluxesCoef(wght); 
+    ImplicitAngularFluxes(ir_out);
+    for (int k=ks; k<=ke; ++k) { 
+      for (int j=js; j<=je; ++j) {
+        for(int i=is; i<=ie; ++i){
+          for(int ifr=0; ifr<nfreq; ++ifr){
+            Real *p_angflx  = &(ang_flx_(k,j,i,ifr*nang));
+            Real *iro = &(ir_out(k,j,i,ifr*nang));
+            Real *ang_coef = &(imp_ang_coef_(k,j,i,0));
+            for(int n=0; n<nang; ++n){
+              iro[n] += p_angflx[n];
+              iro[n] /= (1.0 + ang_coef[n]);
+            }
+          }// end ifr
+        }// end i
+      }// end j
+    }// end k
+
+
+  }// implicit angular flux
+
   
 }
 
