@@ -168,7 +168,7 @@ enum CoordinateDirection {X1DIR=0, X2DIR=1, X3DIR=2};
 enum class BoundaryQuantity {cc, fc, cc_flcor, fc_flcor, mggrav,
                              mggrav_f, orbital_cc, orbital_fc};
 enum class HydroBoundaryQuantity {cons, prim};
-enum class BoundaryCommSubset {mesh_init, gr_amr, all, orbital, radiation,poisson};
+enum class BoundaryCommSubset {mesh_init, gr_amr, all, orbital, radiation,poisson,radhydro};
 // TODO(felker): consider generalizing/renaming to QuantityFormulation
 enum class FluidFormulation {evolve, background, disabled}; // rename background -> fixed?
 enum class TaskType {op_split_before, main_int, op_split_after};
@@ -219,6 +219,7 @@ using RadBoundaryFunc = void (*)(
      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 using OpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &prim);
 using FrequencyFunc = void (*)(Radiation *prad);
+using EmissionFunc = void(*)(Radiation *prad, Real tgas);
 using CROpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
                       AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
 using CRBoundaryFunc = void (*)(

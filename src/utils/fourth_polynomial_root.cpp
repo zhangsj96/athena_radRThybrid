@@ -42,7 +42,7 @@ int FouthPolyRoot(const Real coef4, const Real tconst, Real &root)
                pow(-0.5 + delta1, 1.0/3.0));
   }
 
-  if(zroot < 0.0) return -1;
+  if((zroot < 0.0) || (zroot != zroot)) return -1;
 
   zroot *= pow(coef4,-2.0/3.0);
   
@@ -51,7 +51,7 @@ int FouthPolyRoot(const Real coef4, const Real tconst, Real &root)
   if(delta2 < 0.0) return -1;
   else delta2 = sqrt(delta2);
   root = 0.5 * (delta2 - rcoef);
-  if(root < 0.0) return -1;
+  if((root < 0.0) || (root != root)) return -1;
 
   return 0;
 }

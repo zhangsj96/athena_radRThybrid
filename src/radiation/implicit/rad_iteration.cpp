@@ -76,6 +76,7 @@ void IMRadiation::Iteration(Mesh *pm,
       // use the current stage velocity for advection
       prad->pradintegrator->GetTgasVel(pmb,wght,ph->u,ph->w,pf->bcc,ir_ini);
 
+
       // Calculate advection flux due to flow velocity explicitly
       // advection velocity uses the partially updated velocity and ir from half 
       // time step 
@@ -98,6 +99,10 @@ void IMRadiation::Iteration(Mesh *pm,
         prad->pradintegrator->ImplicitAngularFluxesCoef(wght);  
       }
 
+      // always use initial guess from last step to keep the balance
+      if((stage == 2) && (prad->pradintegrator->split_compton_ > 0))
+        prad->ir = ir_ini;
+
       prad->ir_old = prad->ir;
 
     }
@@ -112,111 +117,17 @@ void IMRadiation::Iteration(Mesh *pm,
       sum_full_ = 0.0;
       sum_diff_ = 0.0;
 
-       // we need to go through all meshblocks for each iteration
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Hydro *ph = pmb->phydro;
-        Radiation *prad = pmb->prad;
-        if(ite_scheme == 0 || ite_scheme == 2)
-          prad->pradintegrator->FirstOrderFluxDivergence(prad->ir);
-        else if(ite_scheme == 1)
-          prad->pradintegrator->FirstOrderGSFluxDivergence(wght, prad->ir);  
-        else{
-          msg << "### FATAL ERROR in function [Iteration]"
-          << std::endl << "ite_scheme_ '" << ite_scheme << "' not allowed!";
-          ATHENA_ERROR(msg);
-
-        }             
-        // calculate the coefficients and angular part before the source term
-        if(prad->angle_flag == 1){
-          prad->pradintegrator->ImplicitAngularFluxes(prad->ir);  
-        }
-
-     // the source term, ir1 is the ir_ini
-        // the source term will combine everything together
-        prad->pradintegrator->CalSourceTerms(pmb, wght, ph->u, prad->ir1, prad->ir);
-
-        // add the angular flux
-        // this is added separately with other terms
-        // but included in the iterative process
-
-
-        prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-        if(pm->shear_periodic){
-          prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
-        }
-
-
-      }// end nb
-
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        pmb->prad->rad_bvar.SendBoundaryBuffers();
-      }
-
-      // set boundary condition
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        Radiation *prad = pmb->prad;
-        prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
-
-      }
-      // finish normal boundary
-      // then shearing periodic part
-      if(pm->shear_periodic){
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          pmb->prad->rad_bvar.SendShearingBoxBoundaryBuffers();
-        }
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          bool ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers();  
-          while(!ret) 
-            ret = pmb->prad->rad_bvar.ReceiveShearingBoxBoundaryBuffers(); 
-
-          if(ret)
-            pmb->prad->rad_bvar.SetShearingBoxBoundaryBuffers();     
-
-        }
-      }// end shearing periodic 
-
-      for(int nb=0; nb<pm->nblocal; ++nb){
-        pmb = pm->my_blocks(nb);
-        pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);
-      }
- 
-      if(pm->multilevel){
-        
-        for(int nb=0; nb<pm->nblocal; ++nb){
-          pmb = pm->my_blocks(nb);
-          Real t_end_stage = pmb->pmy_mesh->time + wght;
-          pmb->pbval->ProlongateBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-        }
-
-
-      }
-
+      // using TaskList to handle 
+      // operations during each iteration
+      pimraditlist->DoTaskListOneStage(wght);
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);
         Radiation *prad = pmb->prad;
-        // apply physical boundaries
-        prad->rad_bvar.var_cc = &(prad->ir);
-        Real t_end_stage = pmb->pmy_mesh->time + wght;
-        pmb->pbval->ApplyPhysicalBoundaries(t_end_stage, wght,pmb->pbval->bvars_main_int);
-
-         // calculate residual
-        CheckResidual(pmb,prad->ir_old,prad->ir);
-
-         // update boundary condition for ir_new
-
          // copy the solution over
         prad->ir_old = prad->ir;
-
         sum_full_ += prad->sum_full;
         sum_diff_ += prad->sum_diff;
-
 
       }// end while pmb
 
@@ -242,25 +153,41 @@ void IMRadiation::Iteration(Mesh *pm,
       if((niter > nlimit_) || tot_res < error_limit_)
         iteration = false;
 
+    }// end iteration
+
+    if(Globals::my_rank == 0){
+      int output_info = 0;
+      if(pm->ncycle_out != 0){
+        if(pm->ncycle%pm->ncycle_out == 0)
+          output_info = 1;
+      }
+      if( output_info > 0)
+        std::cout << "Iteration stops at niter: " << niter
+        << " relative error: " << sum_diff_/sum_full_ << std::endl;
+
     }
 
-    if(Globals::my_rank == 0)
-      std::cout << "Iteration stops at niter: " << niter
-      << " relative error: " << sum_diff_/sum_full_ << std::endl;
+    // now calculate the rad source terms
+    for(int nb=0; nb<pm->nblocal; ++nb){
+      pmb = pm->my_blocks(nb);
+      Radiation *prad = pmb->prad;
+      if(prad->set_source_flag > 0)
+        prad->pradintegrator->GetHydroSourceTerms(pmb, prad->ir1, prad->ir);
+    }
+
+    if((pm->my_blocks(0)->prad->nfreq > 1) && 
+      (pm->my_blocks(0)->prad->pradintegrator->compton_flag_ > 0) &&
+       pm->my_blocks(0)->prad->pradintegrator->split_compton_ > 0)
+      pimradcomptlist->DoTaskListOneStage(wght);
 
 
     // After iteration,
-    //update the hydro source term
-    for(int nb=0; nb<pm->nblocal; ++nb){
-      pmb = pm->my_blocks(nb);
-      if(pmb->prad->set_source_flag  > 0)
-        pmb->prad->pradintegrator->AddSourceTerms(pmb, pmb->phydro->u,  
-                                          pmb->prad->ir1, pmb->prad->ir);
-
-    }
+    // add radiation source term to hydro
+    // update hydro boundary
+    // update opacity
+    pimradhylist->DoTaskListOneStage(wght);
 
   }// end stage
-
 
 }// end func
 

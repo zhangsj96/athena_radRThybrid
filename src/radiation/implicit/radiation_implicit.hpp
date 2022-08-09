@@ -19,6 +19,7 @@
 // Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
+#include "../../task_list/im_rad_task_list.hpp"
 
 
 
@@ -48,6 +49,9 @@ public:
 
   int ite_scheme;
 
+  IMRadITTaskList *pimraditlist;
+  IMRadHydroTaskList *pimradhylist;
+  IMRadComptTaskList *pimradcomptlist;
 
 private:
 

@@ -204,7 +204,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
              prad->sigma_s(k,j,i,ifr) = 0.0;
              prad->sigma_a(k,j,i,ifr) = 577.4;
              prad->sigma_ae(k,j,i,ifr) = 577.4;
-
+             prad->sigma_planck(k,j,i,ifr) = 577.4;
           }
 
       }

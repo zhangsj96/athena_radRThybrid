@@ -1,5 +1,5 @@
 src/radiation/integrators/.DS_Store
-.DS_Store
+.DS_Store/
 src/.DS_Store
 src/bvals/.DS_Store
 src/bvals/cc/.DS_Store
@@ -14,4 +14,6 @@ tst/.DS_Store
 configure.log
 src/bvals/cc/radiation/.DS_Store
 src/mesh/.DS_Store
+src/task_list/.DS_Store
 src/task_list/.Rapp.history
+inputs/.DS_Store

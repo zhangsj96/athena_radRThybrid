@@ -500,6 +500,7 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
     if(npsi > 0){
       psi_v.NewAthenaArray(2*npsi);
       psi_f.NewAthenaArray(2*npsi+1);
+      sin_psi_f.NewAthenaArray(2*npsi+1);
       len_psi.NewAthenaArray(2*npsi);
       psi_v_full.NewAthenaArray(2*npsi+2*NGHOST);
       psi_f_full.NewAthenaArray(2*npsi+1+2*NGHOST);
@@ -519,6 +520,9 @@ void Radiation::AngularGrid(int angle_flag, int nzeta, int npsi)
       for(int i=1; i<2*npsi; ++i)
         psi_f(i)=2*psi_v(i-1) - psi_f(i-1);
       psi_f(2*npsi) = 2*PI;
+
+      for(int i=0; i<2*npsi+1; ++i)
+        sin_psi_f(i) = sin(psi_f(i));
 
       for(int i=0; i<2*npsi; ++i)
         len_psi(i) = psi_f(i+1) - psi_f(i);

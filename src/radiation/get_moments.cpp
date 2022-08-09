@@ -55,7 +55,8 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
 #pragma omp simd aligned(i_mom:ALI_LEN)
         for(int i=0; i<n1z; ++i){
           i_mom[i] = 0.0;
-        }}
+        }
+      }
   
   for(int k=0; k<n3z; ++k){
     for(int j=0; j<n2z; ++j){
@@ -83,33 +84,23 @@ void Radiation::CalculateMoment(AthenaArray<Real> &ir_in)
             pryz += irweight * cosy[n] * cosz[n];
           }
           // assign the moments for each frequency group
-          rad_mom_nu(ifr,IER,k,j,i) = er;
-          rad_mom_nu(ifr,IFR1,k,j,i) = frx;
-          rad_mom_nu(ifr,IFR2,k,j,i) = fry;
-          rad_mom_nu(ifr,IFR3,k,j,i) = frz;
-          rad_mom_nu(ifr,IPR11,k,j,i) = prxx;
-          rad_mom_nu(ifr,IPR22,k,j,i) = pryy;
-          rad_mom_nu(ifr,IPR33,k,j,i) = przz;
-          rad_mom_nu(ifr,IPR12,k,j,i) = prxy;
-          rad_mom_nu(ifr,IPR13,k,j,i) = prxz;
-          rad_mom_nu(ifr,IPR23,k,j,i) = pryz;
-          rad_mom_nu(ifr,IPR21,k,j,i) = prxy;
-          rad_mom_nu(ifr,IPR31,k,j,i) = prxz;
-          rad_mom_nu(ifr,IPR32,k,j,i) = pryz;
+          if(nfreq > 1){
+            rad_mom_nu(ifr*13+IER,k,j,i) = er;
+            rad_mom_nu(ifr*13+IFR1,k,j,i) = frx;
+            rad_mom_nu(ifr*13+IFR2,k,j,i) = fry;
+            rad_mom_nu(ifr*13+IFR3,k,j,i) = frz;
+            rad_mom_nu(ifr*13+IPR11,k,j,i) = prxx;
+            rad_mom_nu(ifr*13+IPR22,k,j,i) = pryy;
+            rad_mom_nu(ifr*13+IPR33,k,j,i) = przz;
+            rad_mom_nu(ifr*13+IPR12,k,j,i) = prxy;
+            rad_mom_nu(ifr*13+IPR13,k,j,i) = prxz;
+            rad_mom_nu(ifr*13+IPR23,k,j,i) = pryz;
+            rad_mom_nu(ifr*13+IPR21,k,j,i) = prxy;
+            rad_mom_nu(ifr*13+IPR31,k,j,i) = prxz;
+            rad_mom_nu(ifr*13+IPR32,k,j,i) = pryz;
 
-
-          //multiply the frequency weight
-          er *= wfreq(ifr);
-          frx *= wfreq(ifr);
-          fry *= wfreq(ifr);
-          frz *= wfreq(ifr);
-          prxx *= wfreq(ifr);
-          pryy *= wfreq(ifr);
-          przz *= wfreq(ifr);
-          prxy *= wfreq(ifr);
-          prxz *= wfreq(ifr);
-          pryz *= wfreq(ifr);
-          
+          }
+       
 
           
           //assign the moments
@@ -158,12 +149,18 @@ void Radiation::CalculateComMoment()
   if(n2z > 1) n2z += (2*(NGHOST));
   if(n3z > 1) n3z += (2*(NGHOST));
   
-  Real *weight = &(wmu(0));
   
   AthenaArray<Real> &i_mom = rad_mom_cm;
-  
-  Real *ir_lab;
-
+  Real *weight = &(wmu(0));
+  Real *ir_output;
+  // Get the temporary array
+  AthenaArray<Real> &wmu_cm = pradintegrator->wmu_cm_;
+  AthenaArray<Real> &tran_coef = pradintegrator->tran_coef_;
+  AthenaArray<Real> &ir_cm = pradintegrator->ir_cm_;
+  AthenaArray<Real> &cm_to_lab = pradintegrator->cm_to_lab_;
+  AthenaArray<Real> &cosx_cm = cosx_cm_;
+  AthenaArray<Real> &cosy_cm = cosy_cm_;
+  AthenaArray<Real> &cosz_cm = cosz_cm_;
   
   // reset the moment arrays to be zero
   // There are 4 3D arrays
@@ -180,64 +177,102 @@ void Radiation::CalculateComMoment()
     for(int j=0; j<n2z; ++j){
       for(int i=0; i<n1z; ++i){
 
-          Real *ir_lab = &(ir(k,j,i,0));
-          Real *cosx = &(mu(0,k,j,i,0));
-          Real *cosy = &(mu(1,k,j,i,0));
-          Real *cosz = &(mu(2,k,j,i,0));
+
+        Real *cosx = &(mu(0,k,j,i,0));
+        Real *cosy = &(mu(1,k,j,i,0));
+        Real *cosz = &(mu(2,k,j,i,0));
         
-          Real vx = phydro->u(IM1,k,j,i)/phydro->u(IDN,k,j,i);
-          Real vy = phydro->u(IM2,k,j,i)/phydro->u(IDN,k,j,i);
-          Real vz = phydro->u(IM3,k,j,i)/phydro->u(IDN,k,j,i);
-          Real vel = vx * vx + vy * vy + vz * vz;
+        Real vx = phydro->u(IM1,k,j,i)/phydro->u(IDN,k,j,i);
+        Real vy = phydro->u(IM2,k,j,i)/phydro->u(IDN,k,j,i);
+        Real vz = phydro->u(IM3,k,j,i)/phydro->u(IDN,k,j,i);
+        Real vel = vx * vx + vy * vy + vz * vz;
         
-          Real ratio = sqrt(vel) * invcrat;
+        Real ratio = sqrt(vel) * invcrat;
          // Limit the velocity to be smaller than the speed of light
-         if(ratio > vmax){
-           Real factor = vmax/ratio;
-           vx *= factor;
-           vy *= factor;
-           vz *= factor;
+        if(ratio > vmax){
+          Real factor = vmax/ratio;
+          vx *= factor;
+          vy *= factor;
+          vz *= factor;
            
-           vel *= (factor*factor);
-         }
+          vel *= (factor*factor);
+        }
 
             // square of Lorentz factor
-          Real lorzsq = 1.0/(1.0 - vel * invcrat * invcrat);
-          Real lorz = sqrt(lorzsq);
- 
-        for(int ifr=0; ifr<nfreq; ++ifr){
-          er=0.0; frx=0.0; fry=0.0; frz=0.0;
-          Real numsum = 0.0;
-#pragma omp simd aligned(cosx,cosy,cosz:ALI_LEN) reduction(+:numsum,er,frx,fry,frz)
-          for(int n=0; n<nang; ++n){
-            Real vdotn = vx * cosx[n] + vy * cosy[n] + vz * cosz[n];
-            Real vnc = 1.0 - vdotn * invcrat;
-            Real coef = vnc * vnc * vnc * vnc * lorzsq * lorzsq;
-            Real wmu_cm = weight[n]/(lorzsq * vnc * vnc);
-            numsum += wmu_cm;
-            Real angcoef = lorz * invcrat * (1.0
+        Real lorzsq = 1.0/(1.0 - vel * invcrat * invcrat);
+        Real lorz = sqrt(lorzsq);
+
+        // first, get co-moving frame ir_cm
+        Real numsum = 0.0;
+        for(int n=0; n<nang; ++n){
+          Real vdotn = vx * cosx[n] + vy * cosy[n] + vz * cosz[n];
+          Real vnc = 1.0 - vdotn * invcrat;
+          tran_coef(n) = sqrt(lorzsq) * vnc;
+          wmu_cm(n) = weight[n]/(lorzsq * vnc * vnc);
+          numsum += wmu_cm(n);
+          cm_to_lab(n) = tran_coef(n)*tran_coef(n)*tran_coef(n)*tran_coef(n);
+          Real angcoef = lorz * invcrat * (1.0
                          - lorz * vdotn * invcrat/(1.0 + lorz));
-            Real incoef = 1.0/(lorz * vnc);
-            Real cosx_cm = (cosx[n] - vx * angcoef) * incoef;
-            Real cosy_cm = (cosy[n] - vy * angcoef) * incoef;
-            Real cosz_cm = (cosz[n] - vz * angcoef) * incoef;
-            
-            Real ir_weight = ir_lab[n] * coef * wmu_cm;
+          Real incoef = 1.0/(lorz * vnc);
+          cosx_cm(n) = (cosx[n] - vx * angcoef) * incoef;
+          cosy_cm(n) = (cosy[n] - vy * angcoef) * incoef;
+          cosz_cm(n) = (cosz[n] - vz * angcoef) * incoef;
+           
+        }// finish angular coefficient
+        numsum = 1.0/numsum;
+#pragma omp simd
+        for(int n=0; n<nang; ++n){
+           wmu_cm(n) *= numsum;
+        }
+
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          for(int n=0; n<nang; ++n){
+            ir_cm(n+ifr*nang) = ir(k,j,i,ifr*nang+n) * cm_to_lab(n); 
+          }// end n
+
+        }// end ifr
+        // in the case of multi-groups
+        if(nfreq > 1){
+          // shift intensity from shifted frequency bins
+
+         // get monochromatic specific intensity 
+
+          pradintegrator->GetCmMCIntensity(ir_cm, tran_coef, pradintegrator->ir_cen_, 
+                                           pradintegrator->ir_slope_);
+
+          pradintegrator->ForwardSplitting(tran_coef, ir_cm, pradintegrator->ir_slope_, 
+                            pradintegrator->split_ratio_,pradintegrator->map_bin_start_,
+                            pradintegrator->map_bin_end_);
+          pradintegrator->MapIrcmFrequency(ir_cm,pradintegrator->ir_shift_);
+
+          // copy back to ir_cm
+          ir_cm = pradintegrator->ir_shift_;
+
+        }
+           
+        Real *cm_weight = &(wmu_cm(0));
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          ir_output = &(ir_cm(ifr*nang));
+
+          er=0.0; frx=0.0; fry=0.0; frz=0.0;
+          for(int n=0; n<nang; ++n){
+            Real ir_weight = ir_output[n] * cm_weight[n];
     
             er   += ir_weight;
-            frx  += ir_weight * cosx_cm;
-            fry  += ir_weight * cosy_cm;
-            frz  += ir_weight * cosz_cm;
+            frx  += ir_weight * cosx_cm(n);
+            fry  += ir_weight * cosy_cm(n);
+            frz  += ir_weight * cosz_cm(n);
             
           }
-          // normalize weight
-          numsum = 1.0/numsum;
-          //multiply the frequency weight
-          er *= wfreq(ifr) * numsum;
-          frx *= wfreq(ifr) * numsum;
-          fry *= wfreq(ifr) * numsum;
-          frz *= wfreq(ifr) * numsum;
-          
+
+          // assign the moments for each frequency group
+          if(nfreq > 1){
+            rad_mom_cm_nu(ifr*4+IER,k,j,i) = er;
+            rad_mom_cm_nu(ifr*4+IFR1,k,j,i) = frx;
+            rad_mom_cm_nu(ifr*4+IFR2,k,j,i) = fry;
+            rad_mom_cm_nu(ifr*4+IFR3,k,j,i) = frz;
+          }
+
           i_mom(IER,k,j,i) += er;
           i_mom(IFR1,k,j,i) += frx;
           i_mom(IFR2,k,j,i) += fry;
@@ -245,21 +280,13 @@ void Radiation::CalculateComMoment()
           
         }// End frequency loop
         
-        // Now calculate frequency inetgrated opacity
-        Real sum_sigma_s=0.0, sum_sigma_a = 0.0, sum_planck = 0.0;
-        Real *sigmas=&(sigma_s(k,j,i,0));
-        Real *sigmaa=&(sigma_a(k,j,i,0));
-        Real *sigmap=&(sigma_planck(k,j,i,0));
+        // prepare the opacity array for output
         for(int ifr=0; ifr<nfreq; ++ifr){
-          sum_sigma_s += sigmas[ifr] * wfreq(ifr);
-          sum_sigma_a += sigmaa[ifr] * wfreq(ifr);
-          sum_planck  += sigmap[ifr] * wfreq(ifr);
-        }
-        grey_sigma(OPAS,k,j,i) = sum_sigma_s;
-        grey_sigma(OPAA,k,j,i) = sum_sigma_a;
-        grey_sigma(OPAP,k,j,i) = sum_planck;
-
-      }
+          output_sigma(3*ifr+OPAS,k,j,i) = sigma_s(k,j,i,ifr);
+          output_sigma(3*ifr+OPAA,k,j,i) = sigma_a(k,j,i,ifr);
+          output_sigma(3*ifr+OPAP,k,j,i) = sigma_planck(k,j,i,ifr);
+        }// end frquency
+      }// end i
     }
   }
 

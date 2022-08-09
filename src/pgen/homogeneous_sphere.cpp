@@ -40,13 +40,17 @@
 
 //void  LoadRadVariable(MeshBlock *pmb);
 
-void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void RadConstantFluxInnerX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
-void RadConstantFluxOuterX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void RadConstantFluxOuterX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void HydroOuterX1(
     MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
@@ -109,10 +113,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
             if (pcoord->x1v(i) < 1.0) {
                 prad->sigma_a(k,j,i,ifr) = 100.0;
                 prad->sigma_ae(k,j,i,ifr) = 100.0;
+                prad->sigma_planck(k,j,i,ifr) = 100.0;
+
             }
             else {
                 prad->sigma_a(k,j,i,ifr) = 0.0;
                 prad->sigma_ae(k,j,i,ifr) = 0.0;
+                prad->sigma_planck(k,j,i,ifr) = 0.0;
             }
           }
         }
@@ -181,9 +188,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 
-void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
+void RadConstantFluxInnerX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
 
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
@@ -220,9 +229,11 @@ void RadConstantFluxInnerX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 }
 
 
-void RadConstantFluxOuterX1(MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir, 
-      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
+void RadConstantFluxOuterX1(
+     MeshBlock *pmb, Coordinates *pco, Radiation *prad, 
+     const AthenaArray<Real> &w, FaceField &b, 
+     AthenaArray<Real> &ir,
+     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh) {
 
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
@@ -281,7 +292,7 @@ void HydroOuterX1(
           prim(IVX,k,j,ie+i) = 0.0;
           prim(IVY,k,j,ie+i) = 0.0;
           prim(IVZ,k,j,ie+i) = 0.0;
-          prim(IPR,k,j,ie+i) = 0.0;
+          prim(IPR,k,j,ie+i) = 1.e-12;
 
         }
       }

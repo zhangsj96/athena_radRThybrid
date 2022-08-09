@@ -792,7 +792,7 @@ void CellCenteredBoundaryVariable::ClearBoundary(BoundaryCommSubset phase) {
     if (nb.snb.rank != Globals::my_rank) {
       // Wait for Isend
       MPI_Wait(&(bd_var_.req_send[nb.bufid]), MPI_STATUS_IGNORE);
-      if ((phase == BoundaryCommSubset::all || phase == BoundaryCommSubset::radiation)  
+      if (phase == BoundaryCommSubset::all  
           && nb.ni.type == NeighborConnect::face) {
         if ((nb.shear && (nb.fid == BoundaryFace::inner_x1
                           || nb.fid == BoundaryFace::outer_x1)

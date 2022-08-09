@@ -1523,9 +1523,10 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
                                     pbval->bvars_main_int);
         if(IM_RADIATION_ENABLED){
           pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-          if(shear_periodic){
-            pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
-          }
+        // Do not start receiving shear for mesh initialization
+//          if(shear_periodic){
+//            pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
+//          }
         }
       }
 
@@ -1715,8 +1716,10 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         for (int i=0; i<nblocal; ++i){
           pmb = my_blocks(i); ph = pmb->phydro;
           Radiation *prad = pmb->prad;
+          prad->UserFrequency(prad);
           prad->CalculateMoment(prad->ir);
           prad->UpdateOpacity(pmb,ph->w);
+
         }
       }
  
@@ -1977,9 +1980,9 @@ void Mesh::CorrectMidpointInitialCondition() {
 
     if(IM_RADIATION_ENABLED){
       pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-      if(shear_periodic){
-        pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
-      }
+//     if(shear_periodic){
+//        pmb->prad->rad_bvar.StartReceivingShear(BoundaryCommSubset::radiation);
+//      }
     }
 
   }
