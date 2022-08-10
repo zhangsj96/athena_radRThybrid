@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "radiativesource"
+#define PROBLEM_GENERATOR "bulk_compton"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"

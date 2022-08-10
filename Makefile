@@ -3,7 +3,7 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = radiativesource.cpp
+PROBLEM_FILE = bulk_compton.cpp
 COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
