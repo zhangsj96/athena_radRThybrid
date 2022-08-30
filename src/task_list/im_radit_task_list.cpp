@@ -52,7 +52,7 @@ IMRadITTaskList::IMRadITTaskList(Mesh *pm) {
     }
     AddTask(CLEAR_RAD, RAD_PHYS_BND);
     // check residual does not need ghost zones
-    AddTask(CHK_RAD_RES,NONE);
+    AddTask(CHK_RAD_RES,CAL_RAD_SCR);
   } // end of using namespace block
 
 }
