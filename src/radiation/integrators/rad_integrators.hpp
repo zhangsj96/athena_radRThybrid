@@ -55,6 +55,9 @@ public:
   void CalculateFluxes(AthenaArray<Real> &w,
                        AthenaArray<Real> &ir, const int order);
   void CalculateFluxes(AthenaArray<Real> &ir, const int order);
+
+  void GetMatrixResidual(MeshBlock *pmb, AthenaArray<Real> &ir_new);
+
   
   void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
@@ -191,6 +194,7 @@ private:
   AthenaArray<Real> com_d_coef_l_, com_d_coef_r_;
   AthenaArray<Real> nf_rhs_, nf_n0_, new_j_nu_;
 
+
                                     
  // temporary 1D array with size of nang
 
@@ -208,6 +212,10 @@ private:
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
 
   AthenaArray<Real> adv_flx_;
+
+  // arrays to store off-diagonal terms during iteration
+  AthenaArray<Real> off_diagonal_, off_diagonal_new_;
+  AthenaArray<Real> matrix_residual_;
 
   AthenaArray<Real> const_coef_, exp_coef_;
   AthenaArray<Real> const_coef1_l_, const_coef1_r_;

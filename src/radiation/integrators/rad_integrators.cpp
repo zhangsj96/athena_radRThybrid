@@ -162,6 +162,10 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
+    off_diagonal_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+    off_diagonal_new_.NewAthenaArray(prad->n_fre_ang);
+    matrix_residual_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
+
     if(split_compton_ > 0)
       compt_source.NewAthenaArray(ncells3,ncells2,ncells1,nfreq);
 
@@ -488,6 +492,10 @@ RadIntegrator::~RadIntegrator()
     imp_ang_psi_l_.DeleteAthenaArray();
     imp_ang_psi_r_.DeleteAthenaArray();
     adv_flx_.DeleteAthenaArray();
+    off_diagonal_.DeleteAthenaArray();
+    off_diagonal_new_.DeleteAthenaArray();
+    matrix_residual_.DeleteAthenaArray();
+
 
     if((pmy_rad->nfreq > 1) && (split_compton_ > 0))
       compt_source.DeleteAthenaArray();

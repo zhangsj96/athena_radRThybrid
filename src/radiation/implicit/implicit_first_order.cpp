@@ -410,9 +410,11 @@ void RadIntegrator::FirstOrderFluxDivergence(AthenaArray<Real> &ir_ini)
         Real *exp_coefn = &(exp_coef_(k,j,i,0));
         Real *coef1ln = &(const_coef1_l_(k,j,i,0));
         Real *coef1rn = &(const_coef1_r_(k,j,i,0));
+        Real *off_diag = &(off_diagonal_(k,j,i,0));
         for(int n=0; n<prad->n_fre_ang; ++n){
           divn[n] = -(coef1ln[n] * irln[n] + coef1rn[n] * irrn[n] 
                       + exp_coefn[n] * irn[n]);
+          off_diag[n] = divn[n];
         }
         if(adv_flag_ > 0){
           Real *advn = &(adv_flx_(k,j,i,0));
@@ -426,7 +428,9 @@ void RadIntegrator::FirstOrderFluxDivergence(AthenaArray<Real> &ir_ini)
           Real *coef2ln = &(const_coef2_l_(k,j,i,0));
           Real *coef2rn = &(const_coef2_r_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            divn[n] += -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
+            Real temp = -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
+            divn[n] += temp;
+            off_diag[n] += temp;
           }
         }// end nx2
 
@@ -436,7 +440,10 @@ void RadIntegrator::FirstOrderFluxDivergence(AthenaArray<Real> &ir_ini)
           Real *coef3ln = &(const_coef3_l_(k,j,i,0));
           Real *coef3rn = &(const_coef3_r_(k,j,i,0));
           for(int n=0; n<prad->n_fre_ang; ++n){
-            divn[n] += -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
+            Real temp = -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
+            divn[n] += temp;
+            off_diag[n] += temp;
+
           }
         }// end nx2
 
