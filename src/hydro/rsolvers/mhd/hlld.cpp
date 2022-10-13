@@ -29,7 +29,7 @@ struct Cons1D {
   Real d, mx, my, mz, e, by, bz;
 };
 
-#define SMALL_NUMBER 1.0e-8
+#define SMALL_NUMBER 1.0e-4
 
 //----------------------------------------------------------------------------------------
 //! \fn void Hydro::RiemannSolver
