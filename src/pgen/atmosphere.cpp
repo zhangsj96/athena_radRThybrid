@@ -48,9 +48,14 @@ static Real eps0 = 1.e-4;
 
 void Inflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void Outflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
+      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 
 void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
+      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+void Outflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 //======================================================================================
 //! \fn void Mesh::TerminateUserMeshProperties(void)
@@ -60,9 +65,11 @@ void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 void Mesh::InitUserMeshData(ParameterInput *pin)
 {
 
-  EnrollUserBoundaryFunction(BoundaryFace::inner_x3, Inflow_X1);
+  EnrollUserBoundaryFunction(BoundaryFace::inner_x1, Inflow_X1);
+  EnrollUserBoundaryFunction(BoundaryFace::outer_x1, Outflow_X1);
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
-    EnrollUserRadBoundaryFunction(BoundaryFace::inner_x3, Inflow_rad_X1);
+    EnrollUserRadBoundaryFunction(BoundaryFace::inner_x1, Inflow_rad_X1);
+    EnrollUserRadBoundaryFunction(BoundaryFace::outer_x1, Outflow_rad_X1);
   }
 
 }
@@ -82,7 +89,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   Real rho0=1.e-3;
-  Real ztop = block_size.x3max;
+  Real ztop = block_size.x1max;
   
   Real gamma = peos->GetGamma();
   
@@ -90,7 +97,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   for(int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
-        Real x3 = pcoord->x3v(k);
+        Real x3 = pcoord->x1v(i);
         phydro->u(IDN,k,j,i) = rho0 * exp(fabs(x3-ztop));
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
@@ -138,6 +145,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
             prad->sigma_s(k,j,i,ifr) = (1-eps0) * phydro->u(IDN,k,j,i);
             prad->sigma_a(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
             prad->sigma_ae(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
+            prad->sigma_planck(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
             
           }
         }
@@ -158,7 +166,33 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
 void MeshBlock::UserWorkInLoop(void)
 {
-  // nothing to do
+  // reset the flow property to the initial condition
+  Real gamma = peos->GetGamma();
+  Real rho0=1.e-3;
+  Real tgas = 1.0;
+  Real ztop = block_size.x1max;
+    
+  for(int k=ks; k<=ke; k++) {
+    for(int j=js; j<=je; j++) {
+      for(int i=is; i<=ie; i++) {
+        Real x3 = pcoord->x1v(i);
+        phydro->u(IDN,k,j,i) = rho0 * exp(fabs(x3-ztop));
+        phydro->u(IM1,k,j,i) = 0.0;
+        phydro->u(IM2,k,j,i) = 0.0;
+        phydro->u(IM3,k,j,i) = 0.0;
+        if (NON_BAROTROPIC_EOS){
+
+          phydro->u(IEN,k,j,i) = tgas * phydro->u(IDN,k,j,i)/(gamma-1.0);
+          phydro->u(IEN,k,j,i) += 0.5*SQR(phydro->u(IM1,k,j,i))/phydro->u(IDN,k,j,i);
+          phydro->u(IEN,k,j,i) += 0.5*SQR(phydro->u(IM2,k,j,i))/phydro->u(IDN,k,j,i);
+          phydro->u(IEN,k,j,i) += 0.5*SQR(phydro->u(IM3,k,j,i))/phydro->u(IDN,k,j,i);
+        }
+
+
+      }
+    }
+  }
+
   return;
 }
 
@@ -169,44 +203,41 @@ void Inflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceFi
 {
 
   
-  for (int k=1; k<=ngh; ++k) {
+  for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-          prim(IDN,ks-k,j,i) = prim(IDN,ks,j,i);
-          prim(IVX,ks-k,j,i) = 0.0;
-          prim(IVY,ks-k,j,i) = prim(IVY,ks,j,i);
-          prim(IVZ,ks-k,j,i) = prim(IVZ,ks,j,i);
-          prim(IEN,ks-k,j,i) = prim(IEN,ks,j,i);
+      for (int i=1; i<=ngh; ++i) {
+          prim(IDN,k,j,is-i) = prim(IDN,k,j,is);
+          prim(IVX,k,j,is-i) = 0.0;
+          prim(IVY,k,j,is-i) = prim(IVY,k,j,is);
+          prim(IVZ,k,j,is-i) = prim(IVZ,k,j,is);
+          prim(IEN,k,j,is-i) = prim(IEN,k,j,is);
         
       }
     }
   }
-   // set magnetic field in inlet ghost zones
-  if (MAGNETIC_FIELDS_ENABLED) {
-    for(int k=1; k<=ngh; ++k){
-    for(int j=js; j<=je; ++j){
-#pragma omp simd
-      for(int i=is; i<=ie+1; ++i){
-        b.x1f(ks-k,j,i) = b.x1f(ks,j,i);
-      }
-    }}
 
-    for(int k=1; k<=ngh; ++k){
-    for(int j=js; j<=je+1; ++j){
-#pragma omp simd
-      for(int i=is; i<=ie; ++i){
-        b.x2f(ks-k,j,i) = b.x2f(ks,j,i);
-      }
-    }}
 
-    for(int k=1; k<=ngh; ++k){
-    for(int j=js; j<=je; ++j){
-#pragma omp simd
-      for(int i=is; i<=ie; ++i){
-        b.x3f(ks-k,j,i) = b.x3f(ks,j,i);
+  return;
+}
+
+
+
+void Outflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceField &b,
+      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
+{
+
+  
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=1; i<=ngh; ++i) {
+          prim(IDN,k,j,ie+i) = prim(IDN,k,j,ie);
+          prim(IVX,k,j,ie+i) = 0.0;
+          prim(IVY,k,j,ie+i) = 0.0 * prim(IVY,k,j,ie);
+          prim(IVZ,k,j,ie+i) = 0.0 * prim(IVZ,ke,j,ie);
+          prim(IEN,k,j,ie+i) = prim(IEN,k,j,ie);
+        
       }
-    }}
-    
+    }
   }
 
 
@@ -214,20 +245,49 @@ void Inflow_X1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim, FaceFi
 }
 
 void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
-     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, AthenaArray<Real> &ir,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
 {
 
 
-  for (int k=1; k<=ngh; ++k) {
+  for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+      for (int i=1; i<=ngh; ++i) {
  
          for(int ifr=0; ifr<prad->nfreq; ++ifr){
             for(int n=0; n<prad->nang; ++n){
-              ir(ks-k,j,i,ifr*prad->nang+n) = 1.0;
+              ir(k,j,is-i,ifr*prad->nang+n) = 1.0;
           }
 
+         }   
+
+      }//i
+    }//j
+  }//k
+
+
+  return;
+}
+
+void Outflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
+     const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
+      Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh)
+{
+
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=1; i<=ngh; ++i) { 
+         for(int ifr=0; ifr<prad->nfreq; ++ifr){
+            for(int n=0; n<prad->nang; ++n){
+              Real miux = prad->mu(0,k,j,ie+i,ifr*prad->nang+n);
+              if(miux > 0.0){
+                ir(k,j,ie+i,ifr*prad->nang+n) = ir(k,j,ie,ifr*prad->nang+n);
+              }else{
+              	ir(k,j,ie+i,ifr*prad->nang+n) = 0.0;
+              }
+
+            }
          }   
 
       }//i
