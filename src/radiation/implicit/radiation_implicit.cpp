@@ -42,7 +42,8 @@ IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
   nlimit_ = pin->GetOrAddInteger("radiation","nlimit",100);
   error_limit_ =  pin->GetOrAddReal("radiation","error_limit",1.e-6);
   cfl_rad = pin->GetOrAddReal("radiation","cfl_rad",1.0);
-  ite_scheme = pin->GetOrAddInteger("radiation","iteration",2);
+  ite_scheme = pin->GetOrAddInteger("radiation","iteration",1);
+  rb_or_not = pin->GetOrAddInteger("radiation","red_or_black",1);
 
   pimraditlist = new IMRadITTaskList(pm);
   pimradhylist = new IMRadHydroTaskList(pm);

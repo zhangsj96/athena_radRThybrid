@@ -31,11 +31,9 @@ IMRadITTaskList::IMRadITTaskList(Mesh *pm) {
   // Now assemble list of tasks for each stage of time integrator
   {using namespace IMRadITTaskNames; // NOLINT (build/namespace)
     // compute hydro fluxes, integrate hydro variables
-    AddTask(ADD_FLX_DIV,NONE);
-    AddTask(ADD_ANG_FLX,ADD_FLX_DIV);
-    AddTask(CAL_RAD_SCR,ADD_ANG_FLX);    
-    AddTask(SEND_RAD_BND,CAL_RAD_SCR);
-    AddTask(RECV_RAD_BND,CAL_RAD_SCR);
+    AddTask(FLX_AND_SCR,NONE); 
+    AddTask(SEND_RAD_BND,FLX_AND_SCR);
+    AddTask(RECV_RAD_BND,FLX_AND_SCR);
     AddTask(SETB_RAD_BND,(RECV_RAD_BND|SEND_RAD_BND));
     if(pm->shear_periodic){
       AddTask(SEND_RAD_SH,SETB_RAD_BND);
@@ -52,7 +50,7 @@ IMRadITTaskList::IMRadITTaskList(Mesh *pm) {
     }
     AddTask(CLEAR_RAD, RAD_PHYS_BND);
     // check residual does not need ghost zones
-    AddTask(CHK_RAD_RES,CAL_RAD_SCR);
+    AddTask(CHK_RAD_RES,FLX_AND_SCR);
   } // end of using namespace block
 
 }
@@ -103,18 +101,10 @@ void IMRadITTaskList::AddTask(const TaskID& id, const TaskID& dep) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*)>
         (&IMRadITTaskList::CheckResidual);
-  } else if (id == ADD_FLX_DIV) {
+  } else if (id == FLX_AND_SCR) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*)>
-        (&IMRadITTaskList::AddFluxDivergence);
-  } else if (id == ADD_ANG_FLX) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*)>
-        (&IMRadITTaskList::AddAngularFlux);
-  } else if (id == CAL_RAD_SCR) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (IMRadTaskList::*)(MeshBlock*)>
-        (&IMRadITTaskList::CalSourceTerms);
+        (&IMRadITTaskList::AddFluxAndSourceTerms);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in IMRadTaskList::AddTask" << std::endl
@@ -125,42 +115,86 @@ void IMRadITTaskList::AddTask(const TaskID& id, const TaskID& dep) {
   return;
 }
 
-TaskStatus IMRadITTaskList::AddFluxDivergence(MeshBlock *pmb) {
-  int &ite_scheme = pmy_mesh->pimrad->ite_scheme;
-  Radiation *prad = pmb->prad;
-  if(ite_scheme == 0 || ite_scheme == 2)
-    prad->pradintegrator->FirstOrderFluxDivergence(prad->ir);
-  else if(ite_scheme == 1)
-    prad->pradintegrator->FirstOrderGSFluxDivergence(dt, prad->ir);  
-  else{
-    std::stringstream msg;
-    msg << "### FATAL ERROR in function [Iteration]"
-        << std::endl << "ite_scheme_ '" << ite_scheme << "' not allowed!";
-    ATHENA_ERROR(msg);
-  }
-  return TaskStatus::success;
-  
-}
-
-TaskStatus IMRadITTaskList::AddAngularFlux(MeshBlock *pmb) {
-
-  Radiation *prad = pmb->prad;
-  if(prad->angle_flag == 1){
-    prad->pradintegrator->ImplicitAngularFluxes(prad->ir);  
-  }
-
-  return TaskStatus::success;
-  
-}
 
 
-TaskStatus IMRadITTaskList::CalSourceTerms(MeshBlock *pmb) {
+
+
+
+TaskStatus IMRadITTaskList::AddFluxAndSourceTerms(MeshBlock *pmb) {
 
   Radiation *prad = pmb->prad;
   Hydro *ph = pmb->phydro;
-  
-  prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir1, prad->ir);
+  int &rb_or_not = pmy_mesh->pimrad->rb_or_not;
 
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+
+  if(rb_or_not == 0){
+    for(int k=ks; k<=ke; ++k)
+      for(int j=js; j<=je; ++j)
+        for(int i=is; i<=ie; ++i){
+          prad->pradintegrator->FirstOrderFluxDivergence(k, j, i, 
+                                                   prad->ir_old);
+
+        // add angular flux
+          if(prad->angle_flag == 1){
+            prad->pradintegrator->ImplicitAngularFluxes(k,j,i,prad->ir);  
+          }// end angular flux
+
+        // add the source terms together
+          prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
+                                              prad->ir1, prad->ir);
+
+    }// end k,j,i
+  }else if(rb_or_not == 1){
+
+    // first the red points
+    for(int k=ks; k<=ke; ++k)
+      for(int j=js; j<=je; ++j)
+        for(int i=is; i<=ie; ++i){
+          if(((i-is)+(j-js)+(k-ks))%2 == 0){
+            prad->pradintegrator->FirstOrderFluxDivergence(k, j, i, 
+                                                       prad->ir);
+
+        // add angular flux
+            if(prad->angle_flag == 1){
+              prad->pradintegrator->ImplicitAngularFluxes(k,j,i,prad->ir);  
+            }// end angular flux
+
+        // add the source terms together
+            prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
+                                              prad->ir1, prad->ir);
+          }// end even number
+    }// end k,j,i
+    // now the black points
+    for(int k=ks; k<=ke; ++k)
+      for(int j=js; j<=je; ++j)
+        for(int i=is; i<=ie; ++i){
+          if(((i-is)+(j-js)+(k-ks))%2 == 1){
+            prad->pradintegrator->FirstOrderFluxDivergence(k, j, i, 
+                                                       prad->ir);
+
+        // add angular flux
+            if(prad->angle_flag == 1){
+              prad->pradintegrator->ImplicitAngularFluxes(k,j,i,prad->ir);  
+            }// end angular flux
+
+        // add the source terms together
+            prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
+                                              prad->ir1, prad->ir);
+
+          }// end odd number
+    }// end k,j,i
+
+
+  }else{
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [Iteration]"
+        << std::endl << "red_or_black '" << rb_or_not << "' not allowed!";
+    ATHENA_ERROR(msg);
+
+  }  
 
   return TaskStatus::success;
   

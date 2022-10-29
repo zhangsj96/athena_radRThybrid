@@ -2724,6 +2724,10 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
   Radiation *prad = pmb->prad;
   Field *pf = pmb->pfield;
 
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+
   if (stage <= nstages) {
     if(stage_wghts[stage-1].main_stage){
       Real t_start_stage = pmb->pmy_mesh->time
@@ -2735,7 +2739,16 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsRad(MeshBlock *pmb, int stage) 
     // Both u and ir are partially updated, only w is from the beginning of the step
 
       prad->ir_old = prad->ir;
-      prad->pradintegrator->CalSourceTerms(pmb, dt, ph->u, prad->ir, prad->ir);
+
+      for(int k=ks; k<=ke; ++k)
+        for(int j=js; j<=je; ++j)
+          for(int i=is; i<=ie; ++i){
+
+            prad->pradintegrator->CalSourceTerms(pmb, dt, k, j, i, ph->u, 
+                                                       prad->ir, prad->ir);
+          }
+
+
       if(prad->set_source_flag > 0){
         prad->pradintegrator->GetHydroSourceTerms(pmb, prad->ir_old, prad->ir);
         prad->pradintegrator->AddSourceTerms(pmb, ph->u);

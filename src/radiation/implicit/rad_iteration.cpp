@@ -67,6 +67,7 @@ void IMRadiation::Iteration(Mesh *pm,
       Hydro *ph = pmb->phydro;
       Field *pf = pmb->pfield;
 
+
       AthenaArray<Real> &ir_ini = prad->ir1;
 
       // prepare t_gas and vel
@@ -91,8 +92,7 @@ void IMRadiation::Iteration(Mesh *pm,
       }
 
       // prepare the coefficients
-      if(ite_scheme == 0 || ite_scheme == 2)
-        prad->pradintegrator->FirstOrderFluxDivergenceCoef(wght);      
+      prad->pradintegrator->FirstOrderFluxDivergenceCoef(wght);      
 
       // prepare coefficients for angular fluxes
       if(prad->angle_flag == 1){
@@ -103,6 +103,8 @@ void IMRadiation::Iteration(Mesh *pm,
       if((stage == 2) && (prad->pradintegrator->split_compton_ > 0))
         prad->ir = ir_ini;
 
+      // ir_old always store the value from last iteration
+      // ir1 store the value at the beginning of the step
       prad->ir_old = prad->ir;
 
     }
@@ -227,60 +229,5 @@ void IMRadiation::Iteration(Mesh *pm,
  }
 
 
- void RadIntegrator::GetMatrixResidual(MeshBlock *pmb, AthenaArray<Real> &ir_new)
- {
-
-  Radiation *prad=pmy_rad;
-
-  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
-  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
-
-  for (int k=ks; k<=ke; ++k) { 
-    for (int j=js; j<=je; ++j) {
-      for(int i=is; i<=ie; ++i){
-        Real *irn = &(ir_new(k,j,i,0));
-        Real *irln = &(ir_new(k,j,i-1,0));
-        Real *irrn = &(ir_new(k,j,i+1,0));
-        Real *exp_coefn = &(exp_coef_(k,j,i,0));
-        Real *coef1ln = &(const_coef1_l_(k,j,i,0));
-        Real *coef1rn = &(const_coef1_r_(k,j,i,0));
-        Real *off_diag = &(off_diagonal_(k,j,i,0));
-        Real *off_diag_new = &(off_diagonal_new_(0));
-        Real *matrix_res = &(matrix_residual_(k,j,i,0));
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          off_diag_new[n] = -(coef1ln[n] * irln[n] + coef1rn[n] * irrn[n] 
-                      + exp_coefn[n] * irn[n]);
-        }
-        if(pmb->block_size.nx2 > 1){
-          Real *irjln = &(ir_new(k,j-1,i,0));
-          Real *irjrn = &(ir_new(k,j+1,i,0));
-          Real *coef2ln = &(const_coef2_l_(k,j,i,0));
-          Real *coef2rn = &(const_coef2_r_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            off_diag_new[n] += -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
-          }
-        }// end nx2
-
-        if(pmb->block_size.nx3 > 1){
-          Real *irkln = &(ir_new(k-1,j,i,0));
-          Real *irkrn = &(ir_new(k+1,j,i,0));
-          Real *coef3ln = &(const_coef3_l_(k,j,i,0));
-          Real *coef3rn = &(const_coef3_r_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            off_diag_new[n] += -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
-          }
-        }// end nx2
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          matrix_res[n] = off_diag[n] - off_diag_new[n];
-        }
-
-
-      }// end i
-    }// end j
-  }// end k
-
-
-  
- }
 
 

@@ -392,63 +392,59 @@ void RadIntegrator::FirstOrderFluxDivergenceCoef(const Real wght)
 
 }// end function
 
-void RadIntegrator::FirstOrderFluxDivergence(AthenaArray<Real> &ir_ini)
+void RadIntegrator::FirstOrderFluxDivergence(const int k, const int j, const int i, 
+                                                          AthenaArray<Real> &ir_ini)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
 
-  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
-  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
 
-  for (int k=ks; k<=ke; ++k) { 
-    for (int j=js; j<=je; ++j) {
-      for(int i=is; i<=ie; ++i){
-        Real *divn = &(divflx_(k,j,i,0));
-        Real *irn = &(ir_ini(k,j,i,0));
-        Real *irln = &(ir_ini(k,j,i-1,0));
-        Real *irrn = &(ir_ini(k,j,i+1,0));
-        Real *exp_coefn = &(exp_coef_(k,j,i,0));
-        Real *coef1ln = &(const_coef1_l_(k,j,i,0));
-        Real *coef1rn = &(const_coef1_r_(k,j,i,0));
-        Real *off_diag = &(off_diagonal_(k,j,i,0));
-        for(int n=0; n<prad->n_fre_ang; ++n){
-          divn[n] = -(coef1ln[n] * irln[n] + coef1rn[n] * irrn[n] 
-                      + exp_coefn[n] * irn[n]);
-          off_diag[n] = divn[n];
-        }
-        if(adv_flag_ > 0){
-          Real *advn = &(adv_flx_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            divn[n] += advn[n];
-          }
-        }
-        if(pmb->block_size.nx2 > 1){
-          Real *irjln = &(ir_ini(k,j-1,i,0));
-          Real *irjrn = &(ir_ini(k,j+1,i,0));
-          Real *coef2ln = &(const_coef2_l_(k,j,i,0));
-          Real *coef2rn = &(const_coef2_r_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            Real temp = -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
-            divn[n] += temp;
-            off_diag[n] += temp;
-          }
-        }// end nx2
 
-        if(pmb->block_size.nx3 > 1){
-          Real *irkln = &(ir_ini(k-1,j,i,0));
-          Real *irkrn = &(ir_ini(k+1,j,i,0));
-          Real *coef3ln = &(const_coef3_l_(k,j,i,0));
-          Real *coef3rn = &(const_coef3_r_(k,j,i,0));
-          for(int n=0; n<prad->n_fre_ang; ++n){
-            Real temp = -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
-            divn[n] += temp;
-            off_diag[n] += temp;
+  Real *divn = &(divflx_(k,j,i,0));
+  Real *irn = &(ir_ini(k,j,i,0));
+  Real *irln = &(ir_ini(k,j,i-1,0));
+  Real *irrn = &(ir_ini(k,j,i+1,0));
+  Real *exp_coefn = &(exp_coef_(k,j,i,0));
+  Real *coef1ln = &(const_coef1_l_(k,j,i,0));
+  Real *coef1rn = &(const_coef1_r_(k,j,i,0));
 
-          }
-        }// end nx2
+  for(int n=0; n<prad->n_fre_ang; ++n){
+    divn[n] = -(coef1ln[n] * irln[n] + coef1rn[n] * irrn[n] 
+              + exp_coefn[n] * irn[n]);
 
-      }// end i
-    }// end j
-  }// end k
+  }
+  if(adv_flag_ > 0){
+    Real *advn = &(adv_flx_(k,j,i,0));
+    for(int n=0; n<prad->n_fre_ang; ++n){
+      divn[n] += advn[n];
+    }
+  }
+  if(pmb->block_size.nx2 > 1){
+    Real *irjln = &(ir_ini(k,j-1,i,0));
+    Real *irjrn = &(ir_ini(k,j+1,i,0));
+    Real *coef2ln = &(const_coef2_l_(k,j,i,0));
+    Real *coef2rn = &(const_coef2_r_(k,j,i,0));
+    for(int n=0; n<prad->n_fre_ang; ++n){
+      Real temp = -(coef2ln[n] * irjln[n] + coef2rn[n] * irjrn[n]);
+      divn[n] += temp;
+
+    }
+  }// end nx2
+
+  if(pmb->block_size.nx3 > 1){
+    Real *irkln = &(ir_ini(k-1,j,i,0));
+    Real *irkrn = &(ir_ini(k+1,j,i,0));
+    Real *coef3ln = &(const_coef3_l_(k,j,i,0));
+    Real *coef3rn = &(const_coef3_r_(k,j,i,0));
+    for(int n=0; n<prad->n_fre_ang; ++n){
+      Real temp = -(coef3ln[n] * irkln[n] + coef3rn[n] * irkrn[n]);
+      divn[n] += temp;
+    }
+  }// end nx3
+
 
 }
+
+
+
+

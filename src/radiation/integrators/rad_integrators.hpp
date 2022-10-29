@@ -39,14 +39,13 @@ public:
 
 
   void FirstOrderFluxDivergenceCoef(const Real wght);
-  void FirstOrderFluxDivergence(AthenaArray<Real> &ir);
+  void FirstOrderFluxDivergence(const int k, const int j, const int i, 
+                                 AthenaArray<Real> &ir);
 
-
-  void FirstOrderGSFluxDivergence(const Real wght, 
-                                AthenaArray<Real> &ir);
 
   void ImplicitAngularFluxesCoef(const Real wght);
-  void ImplicitAngularFluxes(AthenaArray<Real> &ir);
+  void ImplicitAngularFluxes(const int k, const int j, const int i, 
+                             AthenaArray<Real> &ir);
 
   void ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, 
             Real zeta_coefr, Real zeta_coefl);
@@ -56,10 +55,11 @@ public:
                        AthenaArray<Real> &ir, const int order);
   void CalculateFluxes(AthenaArray<Real> &ir, const int order);
 
-  void GetMatrixResidual(MeshBlock *pmb, AthenaArray<Real> &ir_new);
+
 
   
-  void CalSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
+  void CalSourceTerms(MeshBlock *pmb, const Real dt, const int k, const int j, 
+                                      const int i, AthenaArray<Real> &u,
                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u);
@@ -213,9 +213,6 @@ private:
 
   AthenaArray<Real> adv_flx_;
 
-  // arrays to store off-diagonal terms during iteration
-  AthenaArray<Real> off_diagonal_, off_diagonal_new_;
-  AthenaArray<Real> matrix_residual_;
 
   AthenaArray<Real> const_coef_, exp_coef_;
   AthenaArray<Real> const_coef1_l_, const_coef1_r_;

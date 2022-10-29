@@ -873,10 +873,11 @@ void RadIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &ir_in,
 
   if(prad->angle_flag == 1 && (imp_ang_flx_ == 1)){
     ImplicitAngularFluxesCoef(wght); 
-    ImplicitAngularFluxes(ir_out);
     for (int k=ks; k<=ke; ++k) { 
       for (int j=js; j<=je; ++j) {
         for(int i=is; i<=ie; ++i){
+          ImplicitAngularFluxes(k,j,i,ir_out);
+
           for(int ifr=0; ifr<nfreq; ++ifr){
             Real *p_angflx  = &(ang_flx_(k,j,i,ifr*nang));
             Real *iro = &(ir_out(k,j,i,ifr*nang));

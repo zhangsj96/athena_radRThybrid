@@ -360,6 +360,7 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     fprintf(pfile,"nu_max:       %e  \n",nu_max);  
     if(IM_RADIATION_ENABLED){
     fprintf(pfile,"iteration:    %d  \n",pmb->pmy_mesh->pimrad->ite_scheme);
+    fprintf(pfile,"red_or_black: %d  \n",pmb->pmy_mesh->pimrad->rb_or_not);
     fprintf(pfile,"err_limit:    %e  \n",pmb->pmy_mesh->pimrad->error_limit_);
     fprintf(pfile,"n_limit:      %d  \n",pmb->pmy_mesh->pimrad->nlimit_);
     fprintf(pfile,"tau_scheme    %d  \n",pradintegrator->tau_flag_); 
@@ -386,36 +387,36 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
 // destructor
 // destructor not used
-//Radiation::~Radiation()
-//{
-//  ir.DeleteAthenaArray();
-//  ir1.DeleteAthenaArray();
-//  rad_mom.DeleteAthenaArray();
-//  rad_mom_cm.DeleteAthenaArray();
-//  rad_mom_nu.DeleteAthenaArray();
-//  rad_mom_nu_cm.DeleteAthenaArray();
-//  sigma_s.DeleteAthenaArray();
-//  sigma_a.DeleteAthenaArray();
-//  sigma_ae.DeleteAthenaArray();
-//  sigma_planck.DeleteAthenaArray();
-//  grey_sigma.DeleteAthenaArray();
+Radiation::~Radiation()
+{
+
+  ir_old.DeleteAthenaArray();
+  rad_mom.DeleteAthenaArray();
+  rad_mom_cm.DeleteAthenaArray();
+
+  sigma_s.DeleteAthenaArray();
+  sigma_a.DeleteAthenaArray();
+  sigma_ae.DeleteAthenaArray();
+  sigma_planck.DeleteAthenaArray();
+  t_floor_.DeleteAthenaArray();
+  t_ceiling_.DeleteAthenaArray();
+  output_sigma.DeleteAthenaArray();
+
+  mu.DeleteAthenaArray();
+  wmu.DeleteAthenaArray();
+  cosx_cm_.DeleteAthenaArray();
+  cosy_cm_.DeleteAthenaArray();
+  cosz_cm_.DeleteAthenaArray();
+
+  if(nfreq  > 1){
+    rad_mom_nu.DeleteAthenaArray();
+    rad_mom_cm_nu.DeleteAthenaArray();
+  }
+
   
-//  if(ir_output > 0){
-//    ir_index.DeleteAthenaArray();
-//    dump_ir.DeleteAthenaArray();
-//  }
+  delete pradintegrator;
   
-///  mu.DeleteAthenaArray();
-//  wmu.DeleteAthenaArray();
-//  wfreq.DeleteAthenaArray();
-  
-//  flux[X1DIR].DeleteAthenaArray();
-//  if(pmy_block->block_size.nx2 > 1) flux[X2DIR].DeleteAthenaArray();
-//  if(pmy_block->block_size.nx3 > 1) flux[X3DIR].DeleteAthenaArray();
-  
-//  delete pradintegrator;
-  
-//}
+}
 
 
 //Enrol the function to update opacity
