@@ -83,9 +83,7 @@ class IMRadITTaskList : public IMRadTaskList {
   TaskStatus SendRadBoundaryShear(MeshBlock *pmb);
   TaskStatus ReceiveRadBoundaryShear(MeshBlock *pmb);
   TaskStatus CheckResidual(MeshBlock *pmb);
-  TaskStatus AddFluxDivergence(MeshBlock *pmb);
-  TaskStatus AddAngularFlux(MeshBlock *pmb);
-  TaskStatus CalSourceTerms(MeshBlock *pmb);
+  TaskStatus AddFluxAndSourceTerms(MeshBlock *pmb);
   
 
 
@@ -159,9 +157,7 @@ const TaskID PRLN_RAD_BND(6); // prolongation
 const TaskID SEND_RAD_SH(7); // send shearing box boundary
 const TaskID RECV_RAD_SH(8); // receive shearing box boundary
 const TaskID CHK_RAD_RES(9); // check residual
-const TaskID ADD_FLX_DIV(10); // add flux divergence term
-const TaskID ADD_ANG_FLX(11);  // add angular flux if necessary
-const TaskID CAL_RAD_SCR(12);  // calculate the source term and all others together
+const TaskID FLX_AND_SCR(10);  // calculate the source term and all others together
 
 } // namespace IMRadITTaskNames
 

@@ -139,21 +139,37 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
             hst_data[prev_out + n] += vol(i)*s;
           }
           if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
-            constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS;
-            hst_data[prev_out + 0] += vol(i)*prad->rad_mom(IER,k,j,i);
-            hst_data[prev_out + 1] += vol(i)*prad->rad_mom(IFR1,k,j,i);
-            hst_data[prev_out + 2] += vol(i)*prad->rad_mom(IFR2,k,j,i);
-            hst_data[prev_out + 3] += vol(i)*prad->rad_mom(IFR3,k,j,i);
-            hst_data[prev_out + 4] += vol(i)*prad->rad_mom_cm(IER,k,j,i);
-            hst_data[prev_out + 5] += vol(i)*prad->rad_mom_cm(IFR1,k,j,i);
-            hst_data[prev_out + 6] += vol(i)*prad->rad_mom_cm(IFR2,k,j,i);
-            hst_data[prev_out + 7] += vol(i)*prad->rad_mom_cm(IFR3,k,j,i);            
-            hst_data[prev_out + 8] += vol(i)*prad->rad_mom(IPR11,k,j,i);
-            hst_data[prev_out + 9] += vol(i)*prad->rad_mom(IPR12,k,j,i);
-            hst_data[prev_out + 10] += vol(i)*prad->rad_mom(IPR13,k,j,i);
-            hst_data[prev_out + 11] += vol(i)*prad->rad_mom(IPR22,k,j,i);
-            hst_data[prev_out + 12] += vol(i)*prad->rad_mom(IPR23,k,j,i);
-            hst_data[prev_out + 13] += vol(i)*prad->rad_mom(IPR33,k,j,i);
+            if(prad->nfreq == 1){
+              constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS;
+              hst_data[prev_out + 0] += vol(i)*prad->rad_mom(IER,k,j,i);
+              hst_data[prev_out + 1] += vol(i)*prad->rad_mom(IFR1,k,j,i);
+              hst_data[prev_out + 2] += vol(i)*prad->rad_mom(IFR2,k,j,i);
+              hst_data[prev_out + 3] += vol(i)*prad->rad_mom(IFR3,k,j,i);
+              hst_data[prev_out + 4] += vol(i)*prad->rad_mom_cm(IER,k,j,i);
+              hst_data[prev_out + 5] += vol(i)*prad->rad_mom_cm(IFR1,k,j,i);
+              hst_data[prev_out + 6] += vol(i)*prad->rad_mom_cm(IFR2,k,j,i);
+              hst_data[prev_out + 7] += vol(i)*prad->rad_mom_cm(IFR3,k,j,i);            
+              hst_data[prev_out + 8] += vol(i)*prad->rad_mom(IPR11,k,j,i);
+              hst_data[prev_out + 9] += vol(i)*prad->rad_mom(IPR12,k,j,i);
+              hst_data[prev_out + 10] += vol(i)*prad->rad_mom(IPR13,k,j,i);
+              hst_data[prev_out + 11] += vol(i)*prad->rad_mom(IPR22,k,j,i);
+              hst_data[prev_out + 12] += vol(i)*prad->rad_mom(IPR23,k,j,i);
+              hst_data[prev_out + 13] += vol(i)*prad->rad_mom(IPR33,k,j,i);
+            }else{
+              if(4*prad->nfreq > NRAD){
+                std::stringstream msg;
+                msg << "### FATAL ERROR in function [OutputType::HistoryFile]" << std::endl
+                    << "Incrase NRAD '" << NRAD << "' to 4 x number of frequency groups";
+                ATHENA_ERROR(msg);
+              }
+              constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS;
+              for(int ifr=0; ifr<prad->nfreq; ++ifr){
+                hst_data[prev_out + 4*ifr] += vol(i)*prad->rad_mom_nu(ifr*13,k,j,i);
+                hst_data[prev_out + 4*ifr+1] += vol(i)*prad->rad_mom_nu(ifr*13+1,k,j,i);
+                hst_data[prev_out + 4*ifr+2] += vol(i)*prad->rad_mom_nu(ifr*13+2,k,j,i);
+                hst_data[prev_out + 4*ifr+3] += vol(i)*prad->rad_mom_nu(ifr*13+3,k,j,i);
+              }              
+            }// end nfreq > 1
           }
           if(CR_ENABLED){
             constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS 
@@ -264,20 +280,29 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
       if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
-        std::fprintf(pfile,"[%d]=Er    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr1    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr2    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr3    ", iout++);
-        std::fprintf(pfile,"[%d]=Er0    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr10    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr20    ", iout++);
-        std::fprintf(pfile,"[%d]=Fr30    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr11    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr12    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr13    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr22    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr23    ", iout++);
-        std::fprintf(pfile,"[%d]=Pr33    ", iout++);
+        if(pm->my_blocks(0)->prad->nfreq == 1){
+          std::fprintf(pfile,"[%d]=Er    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr1    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr2    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr3    ", iout++);
+          std::fprintf(pfile,"[%d]=Er0    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr10    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr20    ", iout++);
+          std::fprintf(pfile,"[%d]=Fr30    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr11    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr12    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr13    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr22    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr23    ", iout++);
+          std::fprintf(pfile,"[%d]=Pr33    ", iout++);
+        }else{
+          for(int ifr=0; ifr<pm->my_blocks(0)->prad->nfreq; ++ifr){
+            std::fprintf(pfile,"[%d]=Er   ", iout++);
+            std::fprintf(pfile,"[%d]=Fr1   ", iout++);
+            std::fprintf(pfile,"[%d]=Fr2   ", iout++);
+            std::fprintf(pfile,"[%d]=Fr3   ", iout++);            
+          }
+        }
       }
       if(CR_ENABLED){
         std::fprintf(pfile,"[%d]=Ec    ", iout++);

@@ -162,12 +162,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
 
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
-    off_diagonal_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-    off_diagonal_new_.NewAthenaArray(prad->n_fre_ang);
-    matrix_residual_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
-
-    if(split_compton_ > 0)
-      compt_source.NewAthenaArray(ncells3,ncells2,ncells1,nfreq);
 
 
   }// end implicit
@@ -492,13 +486,7 @@ RadIntegrator::~RadIntegrator()
     imp_ang_psi_l_.DeleteAthenaArray();
     imp_ang_psi_r_.DeleteAthenaArray();
     adv_flx_.DeleteAthenaArray();
-    off_diagonal_.DeleteAthenaArray();
-    off_diagonal_new_.DeleteAthenaArray();
-    matrix_residual_.DeleteAthenaArray();
 
-
-    if((pmy_rad->nfreq > 1) && (split_compton_ > 0))
-      compt_source.DeleteAthenaArray();
     
   }
   implicit_coef_.DeleteAthenaArray();
@@ -802,7 +790,7 @@ void RadIntegrator::SplitVelocity(Real *vel_l, Real *vel_r, const Real advl,
     } 
 
   }// end iteration == 0
-  else if(iteration == 2){
+  else if(iteration == 1){
     for(int n=0; n<tot_ang; ++n){
       Real vl = vel_l[n] - advl;
       if(vl > 0.0){
@@ -825,7 +813,14 @@ void RadIntegrator::SplitVelocity(Real *vel_l, Real *vel_r, const Real advl,
       } 
     } 
 
-  }// end if iter == 2
+  }// end if iter == 1
+  else{
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [SplitVelocity]"
+        << std::endl << "ite_scheme '" << iteration << "' not allowed!";
+    ATHENA_ERROR(msg);
+
+  }
 
 }
 

@@ -41,10 +41,10 @@
 // tgas is gas temperature
 // This function updates normal absorption plus scattering opacity together
 
-Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
-          AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
-          AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
+Real RadIntegrator::AbsorptionScattering(
+          AthenaArray<Real> &wmu_cm, AthenaArray<Real> &tran_coef, Real *sigma_a, 
+          Real *sigma_p, Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, 
+          Real rho, Real &tgas, AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
   Real& prat = pmy_rad->prat;
@@ -62,8 +62,8 @@ Real RadIntegrator::AbsorptionScattering(AthenaArray<Real> &wmu_cm,
   
   
   Real coef[2];
-  for (int i=0; i<2; ++i)
-    coef[i] = 0.0;
+  for (int ci=0; ci<2; ++ci)
+    coef[ci] = 0.0;
   
   Real tgasnew = tgas;
   

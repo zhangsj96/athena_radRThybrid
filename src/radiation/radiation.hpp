@@ -44,7 +44,7 @@ class Radiation {
   friend class Mesh;
 public:
   Radiation(MeshBlock *pmb, ParameterInput *pin);
-//  ~Radiation();
+  ~Radiation();
     
   AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments

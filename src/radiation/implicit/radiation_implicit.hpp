@@ -48,6 +48,7 @@ public:
                 // but with smaller time step
 
   int ite_scheme;
+  int rb_or_not;
 
   IMRadITTaskList *pimraditlist;
   IMRadHydroTaskList *pimradhylist;

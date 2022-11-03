@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "bulk_compton"
+#define PROBLEM_GENERATOR "thermal_multigroup"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"

@@ -110,8 +110,8 @@ void RadIntegrator::ImplicitAngularFluxesCoef(const Real wght)
 }
 
 
-void RadIntegrator::ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, Real zeta_coef1, 
-            Real zeta_coef)
+void RadIntegrator::ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wght, 
+                                                   Real zeta_coef1, Real zeta_coef)
 {
 
   Radiation *prad=pmy_rad;
@@ -156,7 +156,8 @@ void RadIntegrator::ImplicitPsiFluxCoef(int k, int j, int i, int n_zeta, Real wg
   }
 }// end psiflux_coef
 
-void RadIntegrator::ImplicitAngularFluxes(AthenaArray<Real> &ir_ini)
+void RadIntegrator::ImplicitAngularFluxes(const int k, const int j, const int i, 
+                                          AthenaArray<Real> &ir_ini)
 {
   Radiation *prad=pmy_rad;
   MeshBlock *pmb=prad->pmy_block;
@@ -170,38 +171,31 @@ void RadIntegrator::ImplicitAngularFluxes(AthenaArray<Real> &ir_ini)
 
   AthenaArray<Real> &area_zeta = zeta_area_, &ang_vol = ang_vol_;
 
-  
-  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
-  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
 
-
-  for(int k=ks; k<=ke; ++k)
-    for(int j=js; j<=je; ++j)
-      for(int i=is; i<=ie; ++i){
-        for(int ifr=0; ifr<nfreq; ++ifr){
-          if(prad->npsi == 0){
+  for(int ifr=0; ifr<nfreq; ++ifr){
+    if(prad->npsi == 0){
           // the angle 2*nzeta-1 does not contribute to ang_flx_
-            Real *p_angflx = &(ang_flx_(k,j,i,ifr*nang));
-            Real *coef_r = &(imp_ang_coef_r_(k,j,i,0));
-            Real *p_ir = &(ir_ini(k,j,i,ifr*nang));
-            for(int n=0; n<2*nzeta-1; ++n){
-              p_angflx[n] = -coef_r[n] * p_ir[n+1];
-            }// end nzeta
+      Real *p_angflx = &(ang_flx_(k,j,i,ifr*nang));
+      Real *coef_r = &(imp_ang_coef_r_(k,j,i,0));
+      Real *p_ir = &(ir_ini(k,j,i,ifr*nang));
+      for(int n=0; n<2*nzeta-1; ++n){
+        p_angflx[n] = -coef_r[n] * p_ir[n+1];
+      }// end nzeta
         ///////////////////////////////////////////////////////////////////////////////
-          }else{//end npsi ==0
-            // now go from 2*nzeta-2 to 0
-            for(int n=0; n<2*nzeta; ++n){
-              ImplicitPsiFlux(k,j,i, ifr, n, ir_ini);
-            }// end n
-          }// end npsi > 0
-        }// end ifr
-      }// end k,j,i
+    }else{//end npsi ==0
+    // now go from 2*nzeta-2 to 0
+      for(int n=0; n<2*nzeta; ++n){
+        ImplicitPsiFlux(k,j,i, ifr, n, ir_ini);
+      }// end n
+    }// end npsi > 0
+  }// end ifr
+
 
 }// end calculate_flux
 
 
-void RadIntegrator::ImplicitPsiFlux(int k, int j, int i, int ifr, 
-                            int n_zeta, AthenaArray<Real> &ir_ini)
+void RadIntegrator::ImplicitPsiFlux(const int k, const int j, const int i, 
+                      int ifr, int n_zeta, AthenaArray<Real> &ir_ini)
 {
   
   Radiation *prad=pmy_rad;
