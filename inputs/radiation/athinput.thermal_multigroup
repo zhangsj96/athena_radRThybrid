@@ -83,7 +83,6 @@ length_unit    = 3.e14
 nlimit         = 500
 Split_compton  = 0
 cfl_rad        = 1
-black_body     = 0
 red_or_black   = 1
 
 <problem>
@@ -95,3 +94,4 @@ sigma_1           = 100.0
 sigma_2           = 200.0
 sigma_3           = 300.0
 kappa_es        = 0
+black_body      = 0

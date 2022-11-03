@@ -41,8 +41,8 @@ def run(**kwargs):
                 'radiation/n_frequency=150','radiation/frequency_min=-0.01',
                 'radiation/frequency_max=-500','radiation/Compton=1','radiation/T_unit=1.e4',
                 'radiation/unit=1','radiation/density_unit=1.e-10','radiation/length_unit=3.e14',
-                'radiation/cfl_rad=0.01','radiation/Split_compton=1','radiation/black_body=1',
-                'problem/kappa_es=100','time/tlim=1.e-2']
+                'radiation/cfl_rad=0.01','radiation/Split_compton=1','problem/black_body=1',
+                'problem/kappa_es=100','time/tlim=1.e-2','radiation/nmu=1']
   athena.run('radiation/athinput.thermal_multigroup', arguments)
   bashcommand="mv bin/Averaged_quantity.dat bin/Averaged_quantity2.dat"
   os.system(bashcommand)
@@ -61,12 +61,17 @@ def analyze():
 
 
   # check absolute error and convergence of all three waves
-  if np.abs(data[0]-2.752165) > 1.0e-5 or \
-            + np.abs(data[1]-5.044411) > 1.0e-5 or \
-            + np.abs(data[2]-1.632063e+01) > 1.0e-5 or \
-            + np.abs(data[3]-3.600671e+01) > 1.0e-5:
+  ref_sol=np.array([2.752165,5.044411,1.632063e+01,3.600671e+01])
+  max_err = np.abs(data[0][0]-ref_sol[0])
+  for i in range(1,4):
+    err = np.abs(data[0][i]-ref_sol[i])
+    if err > max_err:
+      max_err = err
+
+  if max_err > 1.e-5:
     print("error in case 1: T, Er0, Er1, Er2:",data[0],data[1],data[2],data[3])
     return False
+
 
   filename = 'bin/Averaged_quantity2.dat'
   data = []
@@ -104,14 +109,14 @@ def analyze():
   3.860696e+00,  4.111657e+00,  4.304421e+00,  4.423673e+00,  4.456591e+00,  4.394496e+00,  
   4.234355e+00,  3.979875e+00,  3.641916e+00,  3.238031e+00,  2.791056e+00,  2.326840e+00,  
   6.649287e+00 ])
-  max_err = np.abs(data[0] - ref_sol[0])/ref_sol[0]
+  max_err = np.abs(data[0][0] - ref_sol[0])/ref_sol[0]
   for i in range(1,150):
-    err = np.abs(data[i]-ref_sol[i])/ref_sol[i]
+    err = np.abs(data[0][i]-ref_sol[i])/ref_sol[i]
     if err > max_err:
       max_err = err
   # check absolute error and convergence of all three waves
   if max_err > 1.e-5:
-    print("relative error too large:",data[0],data[1],max_err)  
+    print("relative error too large:",data[0][0],data[0][1],max_err)  
 
 
   return True

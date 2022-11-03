@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "rad_linearwave"
+#define PROBLEM_GENERATOR "thermal_multigroup"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
@@ -84,7 +84,7 @@
 #define NOT_OPENMP_PARALLEL
 
 // HDF5 output (HDF5OUTPUT or NO_HDF5OUTPUT)
-#define NO_HDF5OUTPUT
+#define HDF5OUTPUT
 
 // debug build macros (DEBUG or NOT_DEBUG)
 #define NOT_DEBUG
@@ -98,7 +98,7 @@
 // compiler options
 #define COMPILED_WITH "g++"
 #define COMPILER_COMMAND "g++"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11  " // NOLINT
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)
