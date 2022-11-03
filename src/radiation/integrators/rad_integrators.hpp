@@ -59,7 +59,7 @@ public:
 
   
   void CalSourceTerms(MeshBlock *pmb, const Real dt, const int k, const int j, 
-                                      const int i, AthenaArray<Real> &u,
+                      const int i, AthenaArray<Real> &u,  
                       AthenaArray<Real> &ir_ini, AthenaArray<Real> &ir);
 
   void AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u);
@@ -168,7 +168,6 @@ public:
   AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
   AthenaArray<Real> taufact;
   AthenaArray<Real> rad_source; // store the radiation source terms 
-  AthenaArray<Real> compt_source;
   AthenaArray<Real> delta_source; // calculate delta E, delta Fr per frequency
                                    // then sum the different across fre
 

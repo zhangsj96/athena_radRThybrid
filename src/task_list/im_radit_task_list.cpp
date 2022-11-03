@@ -144,7 +144,7 @@ TaskStatus IMRadITTaskList::AddFluxAndSourceTerms(MeshBlock *pmb) {
 
         // add the source terms together
           prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
-                                              prad->ir1, prad->ir);
+                                          prad->ir1, prad->ir);
 
     }// end k,j,i
   }else if(rb_or_not == 1){
@@ -164,9 +164,10 @@ TaskStatus IMRadITTaskList::AddFluxAndSourceTerms(MeshBlock *pmb) {
 
         // add the source terms together
             prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
-                                              prad->ir1, prad->ir);
+                                                 prad->ir1, prad->ir);
           }// end even number
     }// end k,j,i
+  }else if(rb_or_not == 2){
     // now the black points
     for(int k=ks; k<=ke; ++k)
       for(int j=js; j<=je; ++j)
@@ -182,7 +183,7 @@ TaskStatus IMRadITTaskList::AddFluxAndSourceTerms(MeshBlock *pmb) {
 
         // add the source terms together
             prad->pradintegrator->CalSourceTerms(pmb, dt, k,j,i, ph->u, 
-                                              prad->ir1, prad->ir);
+                                          prad->ir1, prad->ir);
 
           }// end odd number
     }// end k,j,i

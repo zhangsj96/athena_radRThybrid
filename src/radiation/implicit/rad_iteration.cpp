@@ -100,8 +100,8 @@ void IMRadiation::Iteration(Mesh *pm,
       }
 
       // always use initial guess from last step to keep the balance
-      if((stage == 2) && (prad->pradintegrator->split_compton_ > 0))
-        prad->ir = ir_ini;
+//      if((stage == 2) && (prad->pradintegrator->split_compton_ > 0))
+//        prad->ir = ir_ini;
 
       // ir_old always store the value from last iteration
       // ir1 store the value at the beginning of the step
@@ -121,7 +121,17 @@ void IMRadiation::Iteration(Mesh *pm,
 
       // using TaskList to handle 
       // operations during each iteration
+      if(rb_or_not > 0)
+        rb_or_not = 1;
+      // red cells
       pimraditlist->DoTaskListOneStage(wght);
+
+      if(rb_or_not > 0){
+        rb_or_not = 2;
+        // black cells
+        pimraditlist->DoTaskListOneStage(wght);        
+      }
+
 
       for(int nb=0; nb<pm->nblocal; ++nb){
         pmb = pm->my_blocks(nb);

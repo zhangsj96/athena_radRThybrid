@@ -163,9 +163,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     adv_flx_.NewAthenaArray(ncells3,ncells2,ncells1,prad->n_fre_ang);
 
 
-    if(split_compton_ > 0)
-      compt_source.NewAthenaArray(ncells3,ncells2,ncells1,nfreq);
-
 
   }// end implicit
 
@@ -490,9 +487,6 @@ RadIntegrator::~RadIntegrator()
     imp_ang_psi_r_.DeleteAthenaArray();
     adv_flx_.DeleteAthenaArray();
 
-
-    if((pmy_rad->nfreq > 1) && (split_compton_ > 0))
-      compt_source.DeleteAthenaArray();
     
   }
   implicit_coef_.DeleteAthenaArray();

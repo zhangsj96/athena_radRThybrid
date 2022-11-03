@@ -279,11 +279,19 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           for(int n=0; n<nang; ++n){
             wmu_cm(n) *= numsum;
           }
+
                 
           for(int ifr=0; ifr<nfreq; ++ifr){
             lab_ir=&(ir(k,j,i,ifr*nang));
             for(int n=0; n<nang; ++n)
               ir_cm(n+ifr*nang) = std::max(lab_ir[n] * cm_to_lab(n), TINY_NUMBER);
+            // store the moments
+            Real er_fr = 0.0;
+            for(int n=0; n<nang; ++n){
+              Real ir_weight = lab_ir[n]*prad->wmu(n);
+              er_fr += ir_weight;
+            }
+            delta_source(0,ifr) = er_fr;
           }// End frequency
 
 
@@ -320,8 +328,7 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
                 Real ir_weight = p_ir[n] * prad->wmu(n);
                 er_fr  += ir_weight;
               }
-              compt_source(k,j,i,ifr) = (-prat*(er_fr-compt_source(k,j,i,ifr))
-                                        *invredfactor);  
+              rad_source(0,k,j,i) += (-prat*(er_fr-delta_source(0,ifr))*invredfactor);  
             }// end ifr
 
           }// end the compton source term
@@ -427,8 +434,6 @@ void RadIntegrator::GetHydroSourceTerms(MeshBlock *pmb,
             frz_fr += ir_weight * prad->mu(2,k,j,i,n);
           }
 
-          if(compton_flag_ > 0 && split_compton_ > 0)
-            compt_source(k,j,i,ifr) = er_fr;
 
           delta_source(0,ifr) = er_fr  - delta_source(0,ifr);
           delta_source(1,ifr) = frx_fr - delta_source(1,ifr);
@@ -507,12 +512,6 @@ void RadIntegrator::AddSourceTerms(MeshBlock *pmb, AthenaArray<Real> &u)
           u(IEN,k,j,i) = eint + pb + ekin;         
         }else{
           Real e_source = rad_source(0,k,j,i);
-          Real e_compt = 0.0;
-          if(compton_flag_ > 0 && split_compton_ > 0){
-            for(int ifr=0; ifr<prad->nfreq; ++ifr)
-              e_compt += compt_source(k,j,i,ifr);
-          }
-          e_source += e_compt;
           // first check that gas internal energy will not become negative
           Real eint = u(IEN,k,j,i) + e_source - ekin - pb;
           Real tgas = eint * gm1/u(IDN,k,j,i);
