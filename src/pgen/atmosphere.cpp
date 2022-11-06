@@ -57,6 +57,9 @@ void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 void Outflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
      const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &ir,
       Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
+
+
+void Atmosphereopacity(MeshBlock *pmb, AthenaArray<Real> &prim);
 //======================================================================================
 //! \fn void Mesh::TerminateUserMeshProperties(void)
 //  \brief Clean up the Mesh properties
@@ -72,6 +75,21 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
     EnrollUserRadBoundaryFunction(BoundaryFace::outer_x1, Outflow_rad_X1);
   }
 
+}
+
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
+{
+  
+  
+  if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
+    
+      prad->EnrollOpacityFunction(Atmosphereopacity);
+    
+
+  }
+  
+
+  return;
 }
 //======================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -89,7 +107,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   
   Real rho0=1.e-3;
-  Real ztop = block_size.x1max;
+  Real ztop = pmy_mesh->mesh_size.x1max;
   
   Real gamma = peos->GetGamma();
   
@@ -170,7 +188,7 @@ void MeshBlock::UserWorkInLoop(void)
   Real gamma = peos->GetGamma();
   Real rho0=1.e-3;
   Real tgas = 1.0;
-  Real ztop = block_size.x1max;
+  Real ztop = pmy_mesh->mesh_size.x1max;
     
   for(int k=ks; k<=ke; k++) {
     for(int j=js; j<=je; j++) {
@@ -298,4 +316,39 @@ void Outflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
   return;
 }
 
+
+void Atmosphereopacity(MeshBlock *pmb, AthenaArray<Real> &prim)
+{
+  Radiation *prad = pmb->prad;
+  Hydro *phydro=pmb->phydro;
+  int il = pmb->is; int jl = pmb->js; int kl = pmb->ks;
+  int iu = pmb->ie; int ju = pmb->je; int ku = pmb->ke;
+  il -= NGHOST;
+  iu += NGHOST;
+  if(ju > jl){
+    jl -= NGHOST;
+    ju += NGHOST;
+  }
+  if(ku > kl){
+    kl -= NGHOST;
+    ku += NGHOST;
+  }
+
+  
+  for (int k=kl; k<=ku; ++k) {
+  for (int j=jl; j<=ju; ++j) {
+  for (int i=il; i<=iu; ++i) {
+  for (int ifr=0; ifr<prad->nfreq; ++ifr){
+
+
+    prad->sigma_s(k,j,i,ifr) = (1-eps0) * phydro->u(IDN,k,j,i);
+    prad->sigma_a(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
+    prad->sigma_ae(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
+    prad->sigma_planck(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);           
+          
+
+  }// end ifr
+ }}}
+
+}
 
