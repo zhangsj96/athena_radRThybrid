@@ -156,10 +156,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
     if(ndim == 1){
       noct = 2;
       n_ang = nzeta;
-      if(npsi > 1){
+      if(npsi > 0){
         std::stringstream msg;
         msg << "### FATAL ERROR in radiation class" << std::endl
-        << "1D problem cannot have npsi > 1"   << std::endl;
+        << "1D problem cannot have npsi > 0"   << std::endl;
         ATHENA_ERROR(msg);
       }
 
@@ -289,9 +289,11 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
   
   if(angle_flag == 1){
     AngularGrid(angle_flag, nzeta, npsi);
-    cot_theta.NewAthenaArray(nc2);
-    for(int i=0; i<nc2; ++i)
-      cot_theta(i) = cos(pmb->pcoord->x2v(i))/sin(pmb->pcoord->x2v(i));
+    if(nc2 > 1){
+      cot_theta.NewAthenaArray(nc2);
+      for(int i=0; i<nc2; ++i)
+        cot_theta(i) = cos(pmb->pcoord->x2v(i))/sin(pmb->pcoord->x2v(i));
+    }
   }
   else
     AngularGrid(angle_flag, nmu);    
