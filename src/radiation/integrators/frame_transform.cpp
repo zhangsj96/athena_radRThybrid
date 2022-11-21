@@ -205,7 +205,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
 
       if(rad_fre_order == 1){
         SplitFrequencyBinConstant(l_bd, r_bd, nu_shift, nu_l, nu_r, 
-                                             &(split_ratio_(ifr,n)));
+                                             &(split_ratio_(ifr,n,0)));
       }else if(rad_fre_order == 2){
         Real dim_slope = ir_slope_(ifr,n);
         if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
@@ -213,7 +213,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
         else
           dim_slope = 0.0;
         SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, 
-                                    dim_slope, &(split_ratio_(ifr,n)));          
+                                    dim_slope, &(split_ratio_(ifr,n,0)));          
 
       }// end rad_fre_order=2
     }// end n  
