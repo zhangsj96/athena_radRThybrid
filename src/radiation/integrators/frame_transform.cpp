@@ -131,6 +131,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
   // first, get the lorentz transformation factor
   Real *cm_nu = &(tran_coef_(0));
   // first, set cm_nu=1
+  // as we assume the frequency to be in the co-moving frame to begin with
   for(int n=0; n<nang; ++n)
     cm_nu[n] = 1.0;
   // now call the function to get value at frequency center, face and slope
@@ -171,6 +172,9 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
     Real &nu_l = pmy_rad->nu_grid(ifr);
     Real &nu_r = pmy_rad->nu_grid(ifr+1);
 
+    int *bin_start = &(map_start(ifr,0));
+    int *bin_end = &(map_end(ifr,0));
+
 
 
     for(int n=0; n<nang; ++n){
@@ -194,7 +198,10 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
               "' larger than maximum allowed " << nmax_map_;
             ATHENA_ERROR(msg);
 
-      }      
+      }
+
+      bin_start[n] = l_bd;
+      bin_end[n] = r_bd;      
 
       if(rad_fre_order == 1){
         SplitFrequencyBinConstant(l_bd, r_bd, nu_shift, nu_l, nu_r, 
@@ -220,10 +227,14 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
     Real &nu_l = pmy_rad->nu_grid(nfreq-1);
     if(cm_nu[n] <= 1.0){
       split_ratio_(nfreq-1,n,0) = 1.0;
+      map_start(nfreq-1,n) = nfreq-1;
+      map_end(nfreq-1,n) = nfreq-1;
     }else if(cm_nu[n] > 1.0){
       int r_bd = nfreq-1;
       int l_bd = nfreq-2;// it will always be <= current bin
-      while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--;   
+      while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--; 
+      map_start(nfreq-1,n) = l_bd;
+      map_end(nfreq-1,n) = r_bd;  
       // nu_l/kt
       Real nu_tr = pmy_rad->EffectiveBlackBody(ir_cm((nfreq-1)*nang+n), nu_l);
       // FitBlackBody is integral _0 to nu_tr
@@ -256,6 +267,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
 
 
   // now map the array based on the ratio
+  // we need map_start and map_end in this function
   MapIrcmFrequency(ir_cm, ir_shift_);
 
   //transform from ir_shift to ir_lab
