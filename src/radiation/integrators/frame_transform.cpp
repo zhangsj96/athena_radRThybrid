@@ -172,8 +172,8 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
     Real &nu_l = pmy_rad->nu_grid(ifr);
     Real &nu_r = pmy_rad->nu_grid(ifr+1);
 
-    int *bin_start = &(map_start(ifr,0));
-    int *bin_end = &(map_end(ifr,0));
+    int *bin_start = &(map_bin_start_(ifr,0));
+    int *bin_end = &(map_bin_end_(ifr,0));
 
 
 
@@ -227,14 +227,14 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
     Real &nu_l = pmy_rad->nu_grid(nfreq-1);
     if(cm_nu[n] <= 1.0){
       split_ratio_(nfreq-1,n,0) = 1.0;
-      map_start(nfreq-1,n) = nfreq-1;
-      map_end(nfreq-1,n) = nfreq-1;
+      map_bin_start_(nfreq-1,n) = nfreq-1;
+      map_bin_end_(nfreq-1,n) = nfreq-1;
     }else if(cm_nu[n] > 1.0){
       int r_bd = nfreq-1;
       int l_bd = nfreq-2;// it will always be <= current bin
       while((nu_l < nu_shift[l_bd]) && (l_bd > 0))   l_bd--; 
-      map_start(nfreq-1,n) = l_bd;
-      map_end(nfreq-1,n) = r_bd;  
+      map_bin_start_(nfreq-1,n) = l_bd;
+      map_bin_end_(nfreq-1,n) = r_bd;  
       // nu_l/kt
       Real nu_tr = pmy_rad->EffectiveBlackBody(ir_cm((nfreq-1)*nang+n), nu_l);
       // FitBlackBody is integral _0 to nu_tr
