@@ -274,7 +274,7 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
   for(int ifr=0; ifr<nfreq; ++ifr){
 #pragma omp simd
     for(int n=0; n<nang; n++){
-       ir_lab[n+ifr*nang] = ir_shift_(ifr,n)/(cm_nu[n]*cm_nu[n]*cm_nu[n]*cm_nu[n]);
+       ir_lab[n+ifr*nang] = ir_shift_(ifr*nang+n)/(cm_nu[n]*cm_nu[n]*cm_nu[n]*cm_nu[n]);
     }
   }
 
