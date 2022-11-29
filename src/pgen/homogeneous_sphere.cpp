@@ -112,14 +112,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
             prad->sigma_s(k,j,i,ifr) = 0.0;
             if (pcoord->x1v(i) < 1.0) {
                 prad->sigma_a(k,j,i,ifr) = 100.0;
-                prad->sigma_ae(k,j,i,ifr) = 100.0;
-                prad->sigma_planck(k,j,i,ifr) = 100.0;
+                prad->sigma_pe(k,j,i,ifr) = 100.0;
+                prad->sigma_p(k,j,i,ifr) = 100.0;
 
             }
             else {
                 prad->sigma_a(k,j,i,ifr) = 0.0;
-                prad->sigma_ae(k,j,i,ifr) = 0.0;
-                prad->sigma_planck(k,j,i,ifr) = 0.0;
+                prad->sigma_pe(k,j,i,ifr) = 0.0;
+                prad->sigma_p(k,j,i,ifr) = 0.0;
             }
           }
         }

@@ -752,11 +752,9 @@ void DiskOpacity(MeshBlock *pmb, AthenaArray<Real> &prim)
 
     prad->sigma_s(k,j,i,ifr) = kappa * rho * rhounit * lunit;
     prad->sigma_a(k,j,i,ifr) = kappaa * rho * rhounit * lunit;
-    prad->sigma_ae(k,j,i,ifr) = prad->sigma_a(k,j,i,ifr);
-    if(kappaa < kappa_planck)
-      prad->sigma_planck(k,j,i,ifr) = (kappa_planck-kappaa)*rho*rhounit*lunit;
-    else
-      prad->sigma_planck(k,j,i,ifr) = 0.0;
+    prad->sigma_p(k,j,i,ifr) = kappa_planck*rho*rhounit*lunit;
+    prad->sigma_pe(k,j,i,ifr) = prad->sigma_p(k,j,i,ifr);
+
   }    
 
 

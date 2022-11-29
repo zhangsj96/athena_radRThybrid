@@ -268,12 +268,12 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   // the equation is
   // (sigma_s+sigma_a)(J-I)  // Rosseland mean
-  // + sigma_planck * a_rT^4 - sigma_ae * J // Planck mean
+  // + sigma_p * a_rT^4 - sigma_pe * J // Planck mean
 
   sigma_s.NewAthenaArray(nc3,nc2,nc1,nfreq);
   sigma_a.NewAthenaArray(nc3,nc2,nc1,nfreq);
-  sigma_ae.NewAthenaArray(nc3,nc2,nc1,nfreq);
-  sigma_planck.NewAthenaArray(nc3,nc2,nc1,nfreq);
+  sigma_p.NewAthenaArray(nc3,nc2,nc1,nfreq);
+  sigma_pe.NewAthenaArray(nc3,nc2,nc1,nfreq);
 
   t_floor_.NewAthenaArray(nc3,nc2,nc1);
   t_ceiling_.NewAthenaArray(nc3,nc2,nc1);
@@ -398,8 +398,8 @@ Radiation::~Radiation()
 
   sigma_s.DeleteAthenaArray();
   sigma_a.DeleteAthenaArray();
-  sigma_ae.DeleteAthenaArray();
-  sigma_planck.DeleteAthenaArray();
+  sigma_p.DeleteAthenaArray();
+  sigma_pe.DeleteAthenaArray();
   t_floor_.DeleteAthenaArray();
   t_ceiling_.DeleteAthenaArray();
   output_sigma.DeleteAthenaArray();

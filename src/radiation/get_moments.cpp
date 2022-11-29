@@ -284,7 +284,7 @@ void Radiation::CalculateComMoment()
         for(int ifr=0; ifr<nfreq; ++ifr){
           output_sigma(3*ifr+OPAS,k,j,i) = sigma_s(k,j,i,ifr);
           output_sigma(3*ifr+OPAA,k,j,i) = sigma_a(k,j,i,ifr);
-          output_sigma(3*ifr+OPAP,k,j,i) = sigma_planck(k,j,i,ifr);
+          output_sigma(3*ifr+OPAP,k,j,i) = sigma_p(k,j,i,ifr);
         }// end frquency
       }// end i
     }

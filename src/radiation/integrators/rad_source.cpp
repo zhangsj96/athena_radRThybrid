@@ -62,7 +62,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   Real invcrat = 1.0/prad->crat;
 
   
-  Real *sigma_at, *sigma_aer, *sigma_s, *sigma_p;
+  Real *sigma_at, *sigma_s, *sigma_p, *sigma_pe;
   Real *lab_ir;
   
   int &nang =prad->nang;
@@ -94,9 +94,9 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
         
         
   sigma_at=&(prad->sigma_a(k,j,i,0));
-  sigma_aer=&(prad->sigma_ae(k,j,i,0));
   sigma_s=&(prad->sigma_s(k,j,i,0));
-  sigma_p=&(prad->sigma_planck(k,j,i,0));
+  sigma_p=&(prad->sigma_p(k,j,i,0));
+  sigma_pe=&(prad->sigma_pe(k,j,i,0));
 
          // Prepare the transformation coefficients
   Real numsum = 0.0;
@@ -164,7 +164,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
   // Add absorption and scattering opacity source
     tgas_new_(k,j,i) = AbsorptionScattering(wmu_cm,tran_coef, sigma_at, sigma_p, 
-                     sigma_aer, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
+                     sigma_pe, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
                      implicit_coef_,ir_cm);
         
     // Add compton scattering
@@ -184,7 +184,7 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
       // calculate the source term 
     tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, 
-                               sigma_aer, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
+                               sigma_pe, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
                                                      implicit_coef_,ir_shift_);
 
           // Add compton scattering 

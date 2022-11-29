@@ -43,7 +43,7 @@
 
 Real RadIntegrator::AbsorptionScattering(
           AthenaArray<Real> &wmu_cm, AthenaArray<Real> &tran_coef, Real *sigma_a, 
-          Real *sigma_p, Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, 
+          Real *sigma_p, Real *sigma_pe, Real *sigma_s, Real dt, Real lorz, 
           Real rho, Real &tgas, AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
@@ -73,14 +73,14 @@ Real RadIntegrator::AbsorptionScattering(
     Real jr_cm=0.0;
     
     Real dtcsigmar = ct * sigma_a[ifr]; //Rosseland mean absorption
-    Real dtcsigmae = ct * sigma_ae[ifr]; // Energy (planck) mean absorption
     Real dtcsigmas = ct * sigma_s[ifr]; // scattering
     Real dtcsigmap = ct * sigma_p[ifr];// planck mean absorption
+    Real dtcsigmae = ct * sigma_pe[ifr]; // Energy (planck) mean absorption
 
     Real rdtcsigmar = redfactor * dtcsigmar;
-    Real rdtcsigmae = redfactor * dtcsigmae;
     Real rdtcsigmas = redfactor * dtcsigmas;
     Real rdtcsigmap = redfactor * dtcsigmap;
+    Real rdtcsigmae = redfactor * dtcsigmae;
     
 
     Real *ircm = &(ir_cm(nang*ifr));
@@ -105,9 +105,9 @@ Real RadIntegrator::AbsorptionScattering(
 
     
     // No need to do this if already in thermal equilibrium
-    coef[1] = lorz * prat * (dtcsigmap - dtcsigmae * suma1/(1.0-suma3))
+    coef[1] = prat * (dtcsigmap - dtcsigmae * suma1/(1.0-suma3))
                    * (gamma - 1.0)/rho;
-    coef[0] = -tgas - dtcsigmae * lorz * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
+    coef[0] = -tgas - dtcsigmae * prat * suma2 * (gamma - 1.0)/(rho*(1.0-suma3));
     
     if(fabs(coef[1]) > TINY_NUMBER){
       int flag = FouthPolyRoot(coef[1], coef[0], tgasnew);

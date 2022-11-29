@@ -52,7 +52,7 @@ public:
   AthenaArray<Real> rad_mom_nu, rad_mom_cm_nu; // multi_group radiation moments
   AthenaArray<Real> sigma_s, sigma_a; //   opacity
                   //scattering and fluxes weighted Rosseland mean
-  AthenaArray<Real> sigma_planck, sigma_ae; 
+  AthenaArray<Real> sigma_p, sigma_pe; 
                   // Planck mean and radiation energy weighted mean
   AthenaArray<Real> output_sigma; // frequency integrated opacity
   AthenaArray<Real> mu, wmu; // angles and weight

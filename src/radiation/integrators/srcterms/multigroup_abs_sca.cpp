@@ -46,7 +46,7 @@
 
 Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
           AthenaArray<Real> &tran_coef, Real *sigma_a, Real *sigma_p,
-          Real *sigma_ae, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
+          Real *sigma_pe, Real *sigma_s, Real dt, Real lorz, Real rho, Real &tgas, 
           AthenaArray<Real> &implicit_coef, AthenaArray<Real> &ir_cm)
 {
 
@@ -84,13 +84,13 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     suma3[ifr]=0.0;
 
     Real dtcsigmar = ct * sigma_a[ifr];
-    Real dtcsigmae = ct * sigma_ae[ifr];
     Real dtcsigmas = ct * sigma_s[ifr];
+    Real dtcsigmae = ct * sigma_pe[ifr];
     Real dtcsigmap = ct * sigma_p[ifr];
 
     Real rdtcsigmar = redfactor * dtcsigmar;
-    Real rdtcsigmae = redfactor * dtcsigmae;
     Real rdtcsigmas = redfactor * dtcsigmas;
+    Real rdtcsigmae = redfactor * dtcsigmae;
     Real rdtcsigmap = redfactor * dtcsigmap;
     
 
@@ -110,7 +110,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     suma3[ifr] = suma1[ifr] * (rdtcsigmas + rdtcsigmar - rdtcsigmae);
     suma1[ifr] *= (rdtcsigmap);
     
-    coef[0] += - dtcsigmae * lorz * prat * suma2[ifr] 
+    coef[0] += - dtcsigmae * prat * suma2[ifr] 
                * (gamma - 1.0)/(rho*(1.0-suma3[ifr]));
 
   }// end frequency groups
@@ -127,7 +127,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
   
     for(int ifr=0; ifr<nfreq; ++ifr){
       Real dtcsigmar = ct * sigma_a[ifr];
-      Real dtcsigmae = ct * sigma_ae[ifr];
+      Real dtcsigmae = ct * sigma_pe[ifr];
 //      Real dtcsigmas = ct * sigma_s[ifr];
       Real rdtcsigmar = redfactor * dtcsigmar;
       Real rdtcsigmae = redfactor * dtcsigmae;
@@ -137,7 +137,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
     
 
       // No need to do this if already in thermal equilibrium
-      coef[1] += lorz * prat * (dtcsigmap - dtcsigmae * suma1[ifr]/(1.0-suma3[ifr]))
+      coef[1] += prat * (dtcsigmap - dtcsigmae * suma1[ifr]/(1.0-suma3[ifr]))
                  * pmy_rad->emission_spec(ifr) * (gamma - 1.0)/rho;
 
     }// end frequency nfreq
@@ -169,7 +169,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
 
     for(int ifr=0; ifr<nfreq; ++ifr){
       Real dtcsigmar = ct * sigma_a[ifr];
-      Real dtcsigmae = ct * sigma_ae[ifr];
+      Real dtcsigmae = ct * sigma_pe[ifr];
       Real dtcsigmas = ct * sigma_s[ifr];
       Real dtcsigmap = ct * sigma_p[ifr];
 
@@ -191,7 +191,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       Real *tcoef = &(tran_coef(0));
 #pragma omp simd aligned(irn,vn2:ALI_LEN)
       for(int n=0; n<nang; n++){
-        irn[n] +=  ((rdtcsigmas + rdtcsigmar - rdtcsigmap) * jr_cm + rdtcsigmap * emi_nu
+        irn[n] +=  ((rdtcsigmas + rdtcsigmar - rdtcsigmae) * jr_cm + rdtcsigmap * emi_nu
                       - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmar) * irn[n]) * vn2[n];
       }
     }// end badcell

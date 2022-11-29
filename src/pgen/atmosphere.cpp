@@ -162,8 +162,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           for (int ifr=0; ifr < nfreq; ++ifr){
             prad->sigma_s(k,j,i,ifr) = (1-eps0) * phydro->u(IDN,k,j,i);
             prad->sigma_a(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
-            prad->sigma_ae(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
-            prad->sigma_planck(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
+            prad->sigma_pe(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
+            prad->sigma_p(k,j,i,ifr) = eps0 * phydro->u(IDN,k,j,i);
             
           }
         }

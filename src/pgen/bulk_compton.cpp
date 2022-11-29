@@ -140,18 +140,18 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
             if(ifr == 0){
               prad->sigma_s(k,j,i,ifr) = 10.0;
               prad->sigma_a(k,j,i,ifr) = 0.0;
-              prad->sigma_ae(k,j,i,ifr) = 0.0;
-              prad->sigma_planck(k,j,i,ifr) = 0.0;
+              prad->sigma_pe(k,j,i,ifr) = 0.0;
+              prad->sigma_p(k,j,i,ifr) = 0.0;
             }else if(ifr == 1){
               prad->sigma_s(k,j,i,ifr) = 10.0;
               prad->sigma_a(k,j,i,ifr) = 0.0;
-              prad->sigma_ae(k,j,i,ifr) = 0.0;
-              prad->sigma_planck(k,j,i,ifr) = 0.0;
+              prad->sigma_pe(k,j,i,ifr) = 0.0;
+              prad->sigma_p(k,j,i,ifr) = 0.0;
             }else{
               prad->sigma_s(k,j,i,ifr) = 10.0;
               prad->sigma_a(k,j,i,ifr) = 0.0;
-              prad->sigma_ae(k,j,i,ifr) = 0.0;   
-              prad->sigma_planck(k,j,i,ifr) = 0.0;          
+              prad->sigma_pe(k,j,i,ifr) = 0.0;   
+              prad->sigma_p(k,j,i,ifr) = 0.0;          
             }
 
           }
