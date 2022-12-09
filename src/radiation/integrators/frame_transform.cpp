@@ -38,7 +38,7 @@
 // with flow velocity vx, vy, vz
 
 
-
+// this is only used for one frequency group
 void RadIntegrator::LabToCom(const Real vx, const Real vy, const Real vz,
                           Real *mux, Real *muy, Real *muz,
                           Real *ir_lab, AthenaArray<Real> &ir_cm)
@@ -47,7 +47,7 @@ void RadIntegrator::LabToCom(const Real vx, const Real vy, const Real vz,
   Real& prat = pmy_rad->prat;
   Real invcrat = 1.0/pmy_rad->crat;
   int& nang=pmy_rad->nang;
-  int& nfreq=pmy_rad->nfreq;
+
   
   
   
@@ -56,17 +56,16 @@ void RadIntegrator::LabToCom(const Real vx, const Real vy, const Real vz,
   
 
 
-  for(int ifr=0; ifr<nfreq; ++ifr){
-#pragma omp simd
-    for(int n=0; n<nang; n++){
-       Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
+
+  for(int n=0; n<nang; n++){
+    Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
       
-       vnc = 1.0 - vnc * invcrat;
-       Real coef = vnc * vnc * vnc * vnc * lorzsq * lorzsq;
+    vnc = 1.0 - vnc * invcrat;
+    Real coef = vnc * vnc * vnc * vnc * lorzsq * lorzsq;
       
-       ir_cm(n+ifr*nang) = ir_lab[n+ifr*nang] * coef;
-    }
+    ir_cm(n) = ir_lab[n] * coef;
   }
+  
 
   return;
 }
@@ -87,9 +86,7 @@ void RadIntegrator::ComToLab(const Real vx, const Real vy, const Real vz,
 
   Real& prat = pmy_rad->prat;
   Real invcrat = 1.0/pmy_rad->crat;
-  int& nang=pmy_rad->nang;
-  int& nfreq=pmy_rad->nfreq;
-  
+  int& nang=pmy_rad->nang;  
   
   
   // square of Lorentz factor
@@ -97,17 +94,16 @@ void RadIntegrator::ComToLab(const Real vx, const Real vy, const Real vz,
   
 
 
-  for(int ifr=0; ifr<nfreq; ++ifr){
-#pragma omp simd
-    for(int n=0; n<nang; n++){
-       Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
+
+  for(int n=0; n<nang; n++){
+    Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
       
-       vnc = 1.0 - vnc * invcrat;
-       Real coef = vnc * vnc * vnc * vnc * lorzsq * lorzsq;
+    vnc = 1.0 - vnc * invcrat;
+    Real coef = vnc * vnc * vnc * vnc * lorzsq * lorzsq;
       
-       ir_lab[n+ifr*nang] = ir_cm(n+ifr*nang) / coef;
-    }
+    ir_lab[n] = ir_cm(n) / coef;
   }
+
 
   return;
 }
