@@ -141,8 +141,8 @@ public:
 
   // multigroup compton scattering function
   void MultiGroupCompton(AthenaArray<Real> &wmu_cm,
-          AthenaArray<Real> &tran_coef, 
-          Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm);
+          AthenaArray<Real> &tran_coef, Real dt, Real lorz, Real rho, 
+          Real &tgas_ini, Real &tgas, AthenaArray<Real> &ir_cm);
 
   Real QuasiEqSol(Real &tgas, Real &tot_n);
   Real ComptCorrection(Real &tgas);
@@ -236,11 +236,11 @@ private:
   // This is the actual flux in frequency space
   // shift amount from the frequency boundary
   AthenaArray<Real> split_ratio_, delta_ratio_;
-  AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_;
+  AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_, ir_buff_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
   AthenaArray<Real> nu_shift_;
-  int iteration_tgas_;
-  Real tgas_error_;
+  int iteration_tgas_, iteration_compton_;
+  Real tgas_error_, compton_error_;
   int nmax_map_; //maximum number of frequency bins that each bin will map to
 
 

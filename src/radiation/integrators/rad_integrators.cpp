@@ -72,7 +72,9 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   // multi-group iteration
   // iterations < iterative_tgas_
   iteration_tgas_  = pin->GetOrAddInteger("radiation","iterative_tgas",5);
+  iteration_compton_  = pin->GetOrAddInteger("radiation","iterative_compton",5);
   tgas_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
+  compton_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
   // maximum number of bins each frequency bin will map to, default is nfreq/2
   nmax_map_ = pin->GetOrAddInteger("radiation","max_map_bin",0);
 
@@ -199,6 +201,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     ir_slope_.NewAthenaArray(nfreq, nang);
     ir_face_.NewAthenaArray(nfreq,nang);
     ir_shift_.NewAthenaArray(prad->n_fre_ang);
+    ir_buff_.NewAthenaArray(prad->n_fre_ang);
     if(nmax_map_ == 0)  nmax_map_ = nfreq/2+1;
     split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
     delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
@@ -533,6 +536,7 @@ RadIntegrator::~RadIntegrator()
     ir_cen_.DeleteAthenaArray();
     ir_slope_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();
+    ir_buff_.DeleteAthenaArray();
     ir_face_.DeleteAthenaArray();
     map_bin_start_.DeleteAthenaArray();
     map_bin_end_.DeleteAthenaArray();

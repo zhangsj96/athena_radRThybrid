@@ -125,8 +125,8 @@ void RadIntegrator::Compton(AthenaArray<Real> &wmu_cm,
 
 
 void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
-          AthenaArray<Real> &tran_coef,
-          Real dt, Real lorz, Real rho, Real &tgas, AthenaArray<Real> &ir_cm)
+          AthenaArray<Real> &tran_coef, Real dt, Real lorz, Real rho, 
+          Real &tgas_ini, Real &tgas, AthenaArray<Real> &ir_cm)
 {
 
   int bd_cell_flag = 0;
@@ -445,7 +445,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
 
   // now update tgas_new via energy conservation
     Real tgas_test = (prat/redfactor)*(sum_jnu-sum_new_jnu)
-            *((gamma-1.0)/rho) + tgas;
+            *((gamma-1.0)/rho) + tgas_ini;
 
     if(tgas_test < TINY_NUMBER)
       tgas_test = tgas_new;

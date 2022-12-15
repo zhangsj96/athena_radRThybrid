@@ -189,10 +189,21 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
           // Add compton scattering 
           // Compton scattering for implicit scheme is added separately
-    if((compton_flag_ > 0) && (split_compton_ == 0))
-      MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
-
+    if((compton_flag_ > 0) && (split_compton_ == 0)){
+      Real t_ini = tgas_new_(k,j,i);
+      Real t_old;
+      int count=0;
+      Real relative_error = 1;
+      while((count < iteration_compton_) && (relative_error > compton_error_)){
+        ir_buff_ = ir_shift_;
+        t_old = tgas_new_(k,j,i);
+        MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),ir_buff_);
+        count++;
+        relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
+      }
+      ir_shift_ = ir_buff_;
           // inverseshift
+    }
     InverseMapFrequency(ir_shift_,ir_cm);
        
   }// end nfreq > 1
@@ -305,9 +316,22 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
 
 
           // Add compton scattering 
-          MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,tgas_new_(k,j,i),ir_shift_);
 
+
+          Real t_ini = tgas_new_(k,j,i);
+          Real t_old;
+          int count=0;
+          Real relative_error = 1;
+          while((count < iteration_compton_) && (relative_error > compton_error_)){
+            ir_buff_ = ir_shift_;
+            t_old = tgas_new_(k,j,i);
+            MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),ir_buff_);
+            count++;
+            relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
+          }
+          ir_shift_ = ir_buff_;
           // inverseshift
+
           InverseMapFrequency(ir_shift_,ir_cm);
 
           for(int ifr=0; ifr<nfreq; ++ifr){
