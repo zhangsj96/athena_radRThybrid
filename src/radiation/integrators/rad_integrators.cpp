@@ -205,6 +205,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     if(nmax_map_ == 0)  nmax_map_ = nfreq/2+1;
     split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
     delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    delta_nu_n_.NewAthenaArray(nfreq,nang);
     map_bin_start_.NewAthenaArray(nfreq,nang);
     map_bin_end_.NewAthenaArray(nfreq,nang);
     nu_shift_.NewAthenaArray(nang,nfreq);
@@ -533,6 +534,7 @@ RadIntegrator::~RadIntegrator()
 
   if(pmy_rad->nfreq > 1){
     delta_ratio_.DeleteAthenaArray();
+    delta_nu_n_.DeleteAthenaArray();
     ir_cen_.DeleteAthenaArray();
     ir_slope_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();

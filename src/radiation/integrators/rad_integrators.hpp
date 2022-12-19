@@ -126,6 +126,8 @@ public:
   void SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
                   Real *nu_lab, Real &nu_l, Real &nu_r, Real &slope, 
                                                  Real *split_ratio); 
+  void MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
+                      AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm);
 
   void ComToLabMultiGroup(const Real vx, const Real vy, const Real vz,
                           Real *mux, Real *muy, Real *muz,
@@ -236,6 +238,7 @@ private:
   // This is the actual flux in frequency space
   // shift amount from the frequency boundary
   AthenaArray<Real> split_ratio_, delta_ratio_;
+  AthenaArray<Real> delta_nu_n_; // width of frequency bins for each angle
   AthenaArray<Real> ir_shift_, ir_cen_, ir_slope_, ir_face_, ir_buff_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
   AthenaArray<Real> nu_shift_;

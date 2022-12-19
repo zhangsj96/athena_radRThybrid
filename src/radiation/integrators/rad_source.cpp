@@ -173,8 +173,14 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   }else{
         
           // get monochromatic specific intensity 
+    // prepare the frequency bin width
+    for(int ifr=0; ifr<nfreq-1; ++ifr){
+      for(int n=0; n<nang; ++n){
+        delta_nu_n_(ifr,n) = pmy_rad->delta_nu(ifr) * tran_coef(n);
+      }
+    }
 
-    GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_slope_);
+    GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
       // calculate the shift ratio
     ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
                                    map_bin_start_,map_bin_end_);
@@ -306,7 +312,15 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           }// End frequency
 
 
-          GetCmMCIntensity(ir_cm, tran_coef, ir_cen_, ir_slope_);
+    // prepare the frequency bin width
+          for(int ifr=0; ifr<nfreq-1; ++ifr){
+            for(int n=0; n<nang; ++n){
+              delta_nu_n_(ifr,n) = pmy_rad->delta_nu(ifr) * tran_coef(n);
+            }
+          }
+
+
+          GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
           // calculate the shift ratio
           ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
                                          map_bin_start_,map_bin_end_);
