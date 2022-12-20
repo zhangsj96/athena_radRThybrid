@@ -158,19 +158,14 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
       bin_start[n] = l_bd;
       bin_end[n] = r_bd;
 
-      if(rad_fre_order == 1){
-        SplitFrequencyBinConstant(l_bd, r_bd, nu_lab, nu_l, nu_r, 
-                                             &(split_ratio(ifr,n,0)));
-      }else if(rad_fre_order == 2){
-        Real dim_slope = slope(ifr,n);
-        if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
-          dim_slope /= ir_cm(ifr*nang+n);
-        else
-          dim_slope = 0.0;
-        SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, 
+      Real dim_slope = slope(ifr,n);
+      if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
+        dim_slope /= ir_cm(ifr*nang+n);
+      else
+        dim_slope = 0.0;
+      SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, 
                                  dim_slope, &(split_ratio(ifr,n,0)));          
 
-      }// end rad_fre_order=2
 
     }// end nang
 
@@ -513,19 +508,15 @@ void RadIntegrator::MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
       bin_start[n] = l_bd;
       bin_end[n] = r_bd;      
 
-      if(rad_fre_order == 1){
-        SplitFrequencyBinConstant(l_bd, r_bd, nu_shift, nu_l, nu_r, 
-                                             &(split_ratio_(ifr,n,0)));
-      }else if(rad_fre_order == 2){
-        Real dim_slope = ir_slope_(ifr,n);
-        if(fabs(ir_shift(ifr*nang+n)) > TINY_NUMBER)
-          dim_slope /= ir_shift(ifr*nang+n);
-        else
-          dim_slope = 0.0;
-        SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, 
-                                    dim_slope, &(split_ratio_(ifr,n,0)));          
 
-      }// end rad_fre_order=2
+      Real dim_slope = ir_slope_(ifr,n);
+      if(fabs(ir_shift(ifr*nang+n)) > TINY_NUMBER)
+        dim_slope /= ir_shift(ifr*nang+n);
+      else
+        dim_slope = 0.0;
+      SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, 
+                                  dim_slope, &(split_ratio_(ifr,n,0)));          
+
     }// end n  
   }// end ifr=nfreq-2
   //-----------------------------------------------------
