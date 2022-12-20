@@ -47,94 +47,42 @@
 
 //Giving the frequency integrated intensity for each group in the co-moving frame,
 // get the monochromatic intensity at the face and center of the frequency grid
+//monochromatic intensity is always 0 at nu=0, the values at frequency grid faces should 
+// satisfy 0.5*(ir_face(f)+ir_face(f+1))*delta_nu = ir_f
+// as we assume piecewise linear spectrum shape, and continuous intensity across frequency
+
+
 void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &delta_nu_n,
-                                     AthenaArray<Real> &ir_cen, AthenaArray<Real> &ir_slope)
+                                     AthenaArray<Real> &ir_face, AthenaArray<Real> &ir_slope)
 {
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
 
 
   if(nfreq > 1){
-    // no frequency center for the last bin 
-    for(int ifr=0; ifr<nfreq-1; ++ifr){
-      Real *delta_nu = &(delta_nu_n(ifr,0));
-      Real *ir_int = &(ir_cm(ifr*nang));
-      Real *ir_n_cen = &(ir_cen(ifr,0));
-      for(int n=0; n<nang; ++n){
-        ir_n_cen[n] = ir_int[n]/delta_nu[n];
-      }
-    }// end ir_n-cen
-    // get value at frequency grid face
-    for(int n=0; n<nang; ++n)
-      ir_face_(0,n) = 0.0;
-    for(int ifr=1; ifr<nfreq-1; ++ifr){
-      Real d_nu = pmy_rad->nu_cen(ifr) - pmy_rad->nu_cen(ifr-1);
-      Real d_nu_face = pmy_rad->nu_grid(ifr) - pmy_rad->nu_cen(ifr-1);
-      Real *ir_n_cen = &(ir_cen(ifr,0));
-      Real *ir_l_cen = &(ir_cen(ifr-1,0));
-      Real *ir_face = &(ir_face_(ifr,0));
-      // the cm_nu[n] factor is cancelled 
-      for(int n=0; n<nang; ++n){
-        ir_face[n] = ir_l_cen[n] + (ir_n_cen[n] - ir_l_cen[n]) * d_nu_face/d_nu;
-      }
+
+    for(int n=0; n<nang; ++n){
+      ir_face(0,n) = 0.0;
     }
 
-  //-------------------------------------------------------------
-    // now get the slope with a limiter
-    if((rad_fre_order == 1) || (nfreq == 2)){
-      for(int ifr=0; ifr<nfreq; ++ifr)
-        for(int n=0; n<nang; ++n){
-          ir_slope(ifr,n) = 0.0;
-        }
-    }else{
-      // the first bin
-      // nfreq > 2
+    // get values at frequency faces
+    // get slope for piecewise lienar spectrum
+    for(int ifr=1; ifr<nfreq; ++ifr){
+      Real *delta_nu = &(delta_nu_n(ifr-1,0));
+      Real *ir_int = &(ir_cm((ifr-1)*nang));
+      Real *ir_n_face = &(ir_face(ifr,0));
+      Real *ir_l_face = &(ir_face(ifr-1,0));
+      Real *slope = &(ir_slope(ifr-1,0));
       for(int n=0; n<nang; ++n){
-        ir_slope(0,n) = (ir_face_(1,n) - ir_cen(0,n))/(0.5*delta_nu_n(0,n));
-      }
-
-
-      // now frequency bin from 1 to nfreq-2
-      for(int ifr=1; ifr<nfreq-2; ++ifr){
-        Real *delta_nu = &(delta_nu_n(ifr,0));
-        Real *ir_face = &(ir_face_(ifr,0));
-        Real *ir_face_r = &(ir_face_(ifr+1,0));
-        Real *slope = &(ir_slope(ifr,0));
-        Real *ir_n = &(ir_cen(ifr,0));
-        for(int n=0; n<nang; ++n){
-          if((ir_face_r[n]-ir_n[n]) * (ir_n[n]-ir_face[n]) > 0.0)
-            slope[n] = (ir_face_r[n] - ir_face[n])/delta_nu[n];
-          else
-            slope[n] = 0.0;
-        }// end n
-
-      }// end ifr nfreq-3
-      // the last bin
-
-      for(int n=0; n<nang; ++n){
-        ir_slope(nfreq-2,n) = (ir_cen(nfreq-2,n) - ir_face_(nfreq-2,n))
-                                            /(0.5*delta_nu_n(nfreq-2,n));
-      }
-
-      // check to make sure it does not cause negative intensity
-      for(int ifr=0; ifr<nfreq-1; ++ifr){
-        Real *slope = &(ir_slope(ifr,0));
-        Real *ir_n = &(ir_cen(ifr,0));
-        Real *delta_nu = &(delta_nu_n(ifr,0));
-        for(int n=0; n<nang; ++n){
-          if(slope[n] < 0.0){
-            Real ir_rbd = ir_n[n] + slope[n] * 0.5 * delta_nu[n];
-            if(ir_rbd < 0.0)
-              slope[n] = 0.0;
-          }else if(slope[n] > 0){
-            Real ir_lbd = ir_n[n] - slope[n] * 0.5 * delta_nu[n];
-            if(ir_lbd < 0.0)
-              slope[n] = 0.0;            
-          }
+        ir_n_face[n] = 2*ir_int[n]/delta_nu[n] - ir_l_face[n];
+        if(ir_n_face[n] > 0.0){
+          slope[n] = (ir_n_face[n] - ir_l_face[n])/delta_nu[n];
+        }else{
+          ir_n_face[n] = 0.0;
+          slope[n] = 0.0;
         }
-      }// end ifr 
- 
-    }// end nfreq > 2
+      }
+    }// end ir_n_face
 
   }// end nfreq > 1
 
@@ -175,7 +123,6 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
   // slope (nu-nu_cen[ifr]) + ir_cen[ifr] 
     Real &nu_r_lab = pmy_rad->nu_grid(ifr+1);
     Real &nu_l_lab = pmy_rad->nu_grid(ifr);
-    Real &nu_cen_lab = pmy_rad->nu_cen(ifr);
 
     int *bin_start = &(map_start(ifr,0));
     int *bin_end = &(map_end(ifr,0));
