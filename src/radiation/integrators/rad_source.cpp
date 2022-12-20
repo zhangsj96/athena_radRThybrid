@@ -173,20 +173,8 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   }else{
         
           // get monochromatic specific intensity 
-    // prepare the frequency bin width
-    for(int ifr=0; ifr<nfreq-1; ++ifr){
-      for(int n=0; n<nang; ++n){
-        delta_nu_n_(ifr,n) = pmy_rad->delta_nu(ifr) * tran_coef(n);
-      }
-    }
 
-    GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
-      // calculate the shift ratio
-    ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
-                                   map_bin_start_,map_bin_end_);
-    MapIrcmFrequency(ir_cm,ir_shift_);
-          
-    DetermineShiftRatio(ir_cm,ir_shift_,delta_ratio_);
+    MapLabToCmFrequency(tran_coef, ir_cm, ir_shift_);
 
       // calculate the source term 
     tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, 
@@ -210,7 +198,13 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       ir_shift_ = ir_buff_;
           // inverseshift
     }
-    InverseMapFrequency(ir_shift_,ir_cm);
+
+    if(conservative_mapping_)
+      InverseMapFrequency(ir_shift_,ir_cm);
+    else
+      MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
+
+
        
   }// end nfreq > 1
        
@@ -311,22 +305,7 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
             delta_source(0,ifr) = er_fr;
           }// End frequency
 
-
-    // prepare the frequency bin width
-          for(int ifr=0; ifr<nfreq-1; ++ifr){
-            for(int n=0; n<nang; ++n){
-              delta_nu_n_(ifr,n) = pmy_rad->delta_nu(ifr) * tran_coef(n);
-            }
-          }
-
-
-          GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
-          // calculate the shift ratio
-          ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
-                                         map_bin_start_,map_bin_end_);
-          MapIrcmFrequency(ir_cm,ir_shift_);
-          
-          DetermineShiftRatio(ir_cm,ir_shift_,delta_ratio_);
+          MapLabToCmFrequency(tran_coef, ir_cm, ir_shift_);
 
 
           // Add compton scattering 
@@ -345,8 +324,10 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           }
           ir_shift_ = ir_buff_;
           // inverseshift
-
-          InverseMapFrequency(ir_shift_,ir_cm);
+          if(conservative_mapping_)
+            InverseMapFrequency(ir_shift_,ir_cm);
+          else
+            MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
 
           for(int ifr=0; ifr<nfreq; ++ifr){
             lab_ir = &(ir(k,j,i,nang*ifr));

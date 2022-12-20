@@ -452,6 +452,32 @@ void RadIntegrator::SplitFrequencyBinLinear(int &l_bd, int &r_bd,
 }
 
 
+void RadIntegrator::MapLabToCmFrequency(AthenaArray<Real> &tran_coef, 
+                   AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift)
+{
+  int &nang =pmy_rad->nang;
+  int &nfreq=pmy_rad->nfreq;
+
+  // prepare the frequency bin width
+  for(int ifr=0; ifr<nfreq-1; ++ifr){
+    for(int n=0; n<nang; ++n){
+      delta_nu_n_(ifr,n) = pmy_rad->delta_nu(ifr) * tran_coef(n);
+    }
+  }
+
+
+  GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
+  // calculate the shift ratio
+  ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
+                                     map_bin_start_,map_bin_end_);
+  MapIrcmFrequency(ir_cm,ir_shift);
+      
+  DetermineShiftRatio(ir_cm,ir_shift,delta_ratio_);
+
+
+  return;
+}
+
 
 
 // Ir_cm and ir_shift are both co-moving frame intensities
