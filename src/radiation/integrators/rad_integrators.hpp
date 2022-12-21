@@ -119,7 +119,8 @@ public:
   void InverseMapFrequency(AthenaArray<Real> &input_array, 
                                      AthenaArray<Real> &shift_array);
 
-
+  bool CheckExtrema(AthenaArray<Real> &input_array, 
+                                     AthenaArray<Real> &shift_array);
   void SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
                   Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
                                       Real &ir_r, Real *split_ratio); 
@@ -203,7 +204,6 @@ private:
   // flag to add simple Compton scattering
   // compton_t_ flag to estimate gas temperature or not for Compton scattering
   int compton_flag_, compton_t_, split_compton_; 
-  int conservative_mapping_;
   int adv_flag_; // flag used to indicate whether separate
                  // advection flux from diffustion flux or not.
   int imp_ang_flx_;

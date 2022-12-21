@@ -199,13 +199,14 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           // inverseshift
     }
 
-    if(conservative_mapping_)
-      InverseMapFrequency(ir_shift_,ir_cm);
-    else
-      MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
+    InverseMapFrequency(ir_shift_,ir_cm);
+    bool flag = CheckExtrema(ir_shift_,ir_cm);
+    // backup when new extra is created
+    if(flag){
+       MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
+    }
 
-
-       
+     
   }// end nfreq > 1
        
          //update specific intensity in the lab frame
@@ -324,10 +325,13 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           }
           ir_shift_ = ir_buff_;
           // inverseshift
-          if(conservative_mapping_)
-            InverseMapFrequency(ir_shift_,ir_cm);
-          else
+          InverseMapFrequency(ir_shift_,ir_cm);
+
+          bool flag = CheckExtrema(ir_shift_,ir_cm);
+          // backup when new extra is created
+          if(flag){
             MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
+          }
 
           for(int ifr=0; ifr<nfreq; ++ifr){
             lab_ir = &(ir(k,j,i,nang*ifr));

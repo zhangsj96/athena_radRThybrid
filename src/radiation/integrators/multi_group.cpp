@@ -81,6 +81,7 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
 
 }
 
+
 // general function to split any array in the frequency bin [\Gamma nu_f]
 // to the frequency bin [nu_f]
 // ir_last_bin is used to determine the shift in the last frequency bin
@@ -320,6 +321,36 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &input_array,
 
 }// end map function
 
+bool RadIntegrator::CheckExtrema(AthenaArray<Real> &input_array, 
+                                     AthenaArray<Real> &shift_array)
+{
+
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+
+  bool flag=false; 
+
+  if(nfreq > 2){
+    for(int ifr=1; ifr<nfreq-1; ++ifr){
+      for(int n=0; n<nang; ++n){
+        Real sign_shift = (shift_array(ifr*nang+n)-shift_array((ifr-1)*nang+n))*
+                          (shift_array((ifr+1)*nang+n)-shift_array(ifr*nang+n));
+        if(sign_shift < 0.0){
+          Real sign_ori = (input_array(ifr*nang+n)-input_array((ifr-1)*nang+n))*
+                          (input_array((ifr+1)*nang+n)-input_array(ifr*nang+n));
+          if(sign_ori > 0.0){ 
+            flag = true;    
+            return flag; 
+          }     
+        }
+
+      }// end n
+    }// end ifr
+  }
+
+  return flag;
+
+}// end map function
 
 
 // fit a linear line between nu_l and nu_r for ir_l and ir_r

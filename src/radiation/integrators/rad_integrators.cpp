@@ -59,7 +59,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   Real taucell = pin->GetOrAddReal("radiation","taucell",5);
   tau_flag_ = pin->GetOrAddInteger("radiation","tau_scheme",1);
   compton_flag_=pin->GetOrAddInteger("radiation","Compton",0);
-  conservative_mapping_=pin->GetOrAddInteger("radiation","conservative_mapping",1);
   compton_t_=pin->GetOrAddInteger("radiation","Compton_t",0);
   split_compton_=pin->GetOrAddInteger("radiation","Split_compton",0);
   if((!IM_RADIATION_ENABLED) || (compton_flag_ == 0))
