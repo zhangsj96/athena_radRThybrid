@@ -53,7 +53,7 @@
 
 
 void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &delta_nu_n,
-                                     AthenaArray<Real> &ir_face, AthenaArray<Real> &ir_slope)
+                                                                  AthenaArray<Real> &ir_face)
 {
   int &nfreq = pmy_rad->nfreq;
   int &nang = pmy_rad->nang; 
@@ -72,15 +72,8 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
       Real *ir_int = &(ir_cm((ifr-1)*nang));
       Real *ir_n_face = &(ir_face(ifr,0));
       Real *ir_l_face = &(ir_face(ifr-1,0));
-      Real *slope = &(ir_slope(ifr-1,0));
       for(int n=0; n<nang; ++n){
-        ir_n_face[n] = 2*ir_int[n]/delta_nu[n] - ir_l_face[n];
-        if(ir_n_face[n] > 0.0){
-          slope[n] = (ir_n_face[n] - ir_l_face[n])/delta_nu[n];
-        }else{
-          ir_n_face[n] = 0.0;
-          slope[n] = 0.0;
-        }
+        ir_n_face[n] = std::max(2*ir_int[n]/delta_nu[n] - ir_l_face[n],0.0);
       }
     }// end ir_n_face
 
@@ -95,7 +88,7 @@ void RadIntegrator::GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real>
 // In other bins, we assume piecewise constant, split each bin according 
 // to frequency overlap
 void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef, 
-                      AthenaArray<Real> &ir_cm, AthenaArray<Real> &slope,
+                      AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_face,
                       AthenaArray<Real> &split_ratio,
                       AthenaArray<int> &map_start,AthenaArray<int> &map_end)
 {
@@ -158,14 +151,9 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
       bin_start[n] = l_bd;
       bin_end[n] = r_bd;
 
-      Real dim_slope = slope(ifr,n);
-      if(fabs(ir_cm(ifr*nang+n)) > TINY_NUMBER)
-        dim_slope /= ir_cm(ifr*nang+n);
-      else
-        dim_slope = 0.0;
-      SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, 
-                                 dim_slope, &(split_ratio(ifr,n,0)));          
 
+      SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, ir_face(ifr,n), 
+                                    ir_face(ifr+1,n), &(split_ratio(ifr,n,0)));          
 
     }// end nang
 
@@ -334,55 +322,33 @@ void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &input_array,
 
 
 
-
-// The spectrum is assumed to be constant 
-void RadIntegrator::SplitFrequencyBinConstant(int &l_bd, int &r_bd, 
-                Real *nu_lab, Real &nu_l, Real &nu_r, Real *split_ratio)
-{
-
-  if(r_bd == l_bd){
-    split_ratio[0] = 1.0;
-  }else{
-    Real sum = 0.0;
-    Real delta_nu = 1.0/(nu_r - nu_l);
-    // between nu_l and nu_lab[l_bd+1]
-    split_ratio[0] = delta_nu * (nu_lab[l_bd+1] - nu_l);
-    sum = split_ratio[0];
-    for(int m=l_bd+1; m< r_bd; ++m){
-      split_ratio[m-l_bd] = delta_nu * (nu_lab[m+1] - nu_lab[m]);
-      sum += split_ratio[m-l_bd];
-    }
-    // make sure the sum is always 1
-    split_ratio[r_bd-l_bd] = 1.0 - sum;
-
-  }
-
-  return;
-
-}
-// the spectrum is assumed to be Ir/(nu_r-nu_l) + (dI_nu/dnu) * (nu - nu_c)
-// I_nu is the chromotic intensity while Ir is the integrated intensity
-// The input slope should be (dI_nu/dnu)/Ir
+// fit a linear line between nu_l and nu_r for ir_l and ir_r
 void RadIntegrator::SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
-                  Real *nu_lab, Real &nu_l, Real &nu_r, Real &slope, 
-                                                 Real *split_ratio)
+                  Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
+                                     Real &ir_r, Real *split_ratio)
 {
-
-  if(r_bd == l_bd){
+  Real ir_sum = ir_l + ir_r;
+  if((r_bd == l_bd) || (ir_sum < TINY_NUMBER)){
     split_ratio[0] = 1.0;
+
+    for(int m=l_bd+1;m<=r_bd; ++m)
+      split_ratio[m-l_bd] = 0.0;
+
   }else{
     Real sum = 0.0;
     Real delta_nu = 1.0/(nu_r - nu_l);
-    Real nu_cen = 0.5*(nu_l + nu_r);
-    Real nu_width = nu_lab[l_bd+1] - nu_l;
+    Real nu_ratio = (nu_lab[l_bd+1] - nu_l)*delta_nu;
+    Real ir_l_bd1 = ir_l + (ir_r-ir_l)*nu_ratio;
     // between nu_l and nu_lab[l_bd+1]
-    split_ratio[0] = delta_nu * nu_width
-                 + slope * (0.5*(nu_lab[l_bd+1] + nu_l) - nu_cen) * nu_width;
+    split_ratio[0] = ((ir_l_bd1+ir_l)/ir_sum)*nu_ratio;
     sum = split_ratio[0];
     for(int m=l_bd+1; m< r_bd; ++m){
-      nu_width = nu_lab[m+1] - nu_lab[m];      
-      split_ratio[m-l_bd] = delta_nu * nu_width
-                 + slope * (0.5*(nu_lab[m+1] + nu_lab[m]) - nu_cen) * nu_width;
+      nu_ratio = (nu_lab[m+1] - nu_lab[m])*delta_nu;    
+      Real nu_ratio2 = (nu_lab[m+1] - nu_l) * delta_nu;
+      Real nu_ratio1 = (nu_lab[m] - nu_l) * delta_nu;
+      Real ir_l_m =  ir_l + (ir_r-ir_l)*nu_ratio1;
+      Real ir_l_m1 =  ir_l + (ir_r-ir_l)*nu_ratio2;
+      split_ratio[m-l_bd] = ((ir_l_m+ir_l_m1)/ir_sum)*nu_ratio;
       sum += split_ratio[m-l_bd];
     }
     // make sure the sum is always 1
@@ -408,9 +374,9 @@ void RadIntegrator::MapLabToCmFrequency(AthenaArray<Real> &tran_coef,
   }
 
 
-  GetCmMCIntensity(ir_cm, delta_nu_n_, ir_cen_, ir_slope_);
+  GetCmMCIntensity(ir_cm, delta_nu_n_, ir_face_);
   // calculate the shift ratio
-  ForwardSplitting(tran_coef, ir_cm, ir_slope_, split_ratio_,
+  ForwardSplitting(tran_coef, ir_cm, ir_face_, split_ratio_,
                                      map_bin_start_,map_bin_end_);
   MapIrcmFrequency(ir_cm,ir_shift);
       
@@ -446,7 +412,7 @@ void RadIntegrator::MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
 
 
   // now call the function to get value at frequency center, face and slope
-  GetCmMCIntensity(ir_shift, delta_nu_n_, ir_cen_, ir_slope_);
+  GetCmMCIntensity(ir_shift, delta_nu_n_, ir_face_);
 
 
   // first, get the lorentz transformation factor
@@ -508,14 +474,8 @@ void RadIntegrator::MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
       bin_start[n] = l_bd;
       bin_end[n] = r_bd;      
 
-
-      Real dim_slope = ir_slope_(ifr,n);
-      if(fabs(ir_shift(ifr*nang+n)) > TINY_NUMBER)
-        dim_slope /= ir_shift(ifr*nang+n);
-      else
-        dim_slope = 0.0;
-      SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, 
-                                  dim_slope, &(split_ratio_(ifr,n,0)));          
+      SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, ir_face_(ifr,n), 
+                                    ir_face_(ifr+1,n), &(split_ratio_(ifr,n,0)));          
 
     }// end n  
   }// end ifr=nfreq-2
