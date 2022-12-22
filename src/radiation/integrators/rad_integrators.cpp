@@ -202,7 +202,8 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     ir_buff_.NewAthenaArray(prad->n_fre_ang);
     if(nmax_map_ == 0)  nmax_map_ = nfreq/2+1;
     split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
-    delta_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    // this needs to be done for each angle, all frequency groups
+    fre_map_matrix_.NewAthenaArray(nang,nfreq,nmax_map_); 
     delta_nu_n_.NewAthenaArray(nfreq,nang);
     map_bin_start_.NewAthenaArray(nfreq,nang);
     map_bin_end_.NewAthenaArray(nfreq,nang);
@@ -531,7 +532,8 @@ RadIntegrator::~RadIntegrator()
   // multi-group array
 
   if(pmy_rad->nfreq > 1){
-    delta_ratio_.DeleteAthenaArray();
+    split_ratio_.DeleteAthenaArray();
+    fre_map_matrix_.DeleteAthenaArray();
     delta_nu_n_.DeleteAthenaArray();
     ir_shift_.DeleteAthenaArray();
     ir_buff_.DeleteAthenaArray();

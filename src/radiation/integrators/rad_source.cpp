@@ -191,7 +191,8 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       while((count < iteration_compton_) && (relative_error > compton_error_)){
         ir_buff_ = ir_shift_;
         t_old = tgas_new_(k,j,i);
-        MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),ir_buff_);
+        MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),
+                                                                    ir_buff_);
         count++;
         relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
       }
@@ -199,14 +200,14 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
           // inverseshift
     }
 
-    InverseMapFrequency(ir_shift_,ir_cm);
-    bool flag = CheckExtrema(ir_shift_,ir_cm);
-    // backup when new extra is created
-    if(flag){
-       MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
-    }
-
-     
+    bool invertible = FreMapMatrix(split_ratio_, tran_coef, map_bin_start_,
+                                            map_bin_end_, fre_map_matrix_);
+    if(invertible){
+      InverseMapFrequency(tran_coef, map_bin_start_, map_bin_end_, 
+                                fre_map_matrix_, ir_shift_, ir_cm);
+    }else{
+      MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
+    }     
   }// end nfreq > 1
        
          //update specific intensity in the lab frame
@@ -319,19 +320,22 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           while((count < iteration_compton_) && (relative_error > compton_error_)){
             ir_buff_ = ir_shift_;
             t_old = tgas_new_(k,j,i);
-            MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),ir_buff_);
+            MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),
+                                                                        ir_buff_);
             count++;
             relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
           }
           ir_shift_ = ir_buff_;
-          // inverseshift
-          InverseMapFrequency(ir_shift_,ir_cm);
 
-          bool flag = CheckExtrema(ir_shift_,ir_cm);
-          // backup when new extra is created
-          if(flag){
+
+          bool invertible = FreMapMatrix(split_ratio_, tran_coef, map_bin_start_,
+                                            map_bin_end_, fre_map_matrix_);
+          if(invertible){
+            InverseMapFrequency(tran_coef, map_bin_start_, map_bin_end_, 
+                                                  fre_map_matrix_, ir_shift_, ir_cm);
+          }else{
             MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
-          }
+          }   
 
           for(int ifr=0; ifr<nfreq; ++ifr){
             lab_ir = &(ir(k,j,i,nang*ifr));

@@ -111,16 +111,17 @@ public:
   void MapIrcmFrequency(AthenaArray<Real> &input_array, 
                         AthenaArray<Real> &shift_array);
 
+  bool FreMapMatrix(AthenaArray<Real> &split_ratio, 
+          AthenaArray<Real> &tran_coef, AthenaArray<int> &map_bin_start,
+          AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix);
 
-  void DetermineShiftRatio( AthenaArray<Real> &input_array, 
-              AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio);
+
+  void InverseMapFrequency(AthenaArray<Real> &tran_coef, 
+         AthenaArray<int> &map_bin_start, 
+         AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix,
+         AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
 
-  void InverseMapFrequency(AthenaArray<Real> &input_array, 
-                                     AthenaArray<Real> &shift_array);
-
-  bool CheckExtrema(AthenaArray<Real> &input_array, 
-                                     AthenaArray<Real> &shift_array);
   void SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
                   Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
                                       Real &ir_r, Real *split_ratio); 
@@ -238,7 +239,7 @@ private:
 
   // This is the actual flux in frequency space
   // shift amount from the frequency boundary
-  AthenaArray<Real> split_ratio_, delta_ratio_;
+  AthenaArray<Real> split_ratio_, fre_map_matrix_;
   AthenaArray<Real> delta_nu_n_; // width of frequency bins for each angle
   AthenaArray<Real> ir_shift_, ir_face_, ir_buff_;
   AthenaArray<int> map_bin_start_, map_bin_end_;

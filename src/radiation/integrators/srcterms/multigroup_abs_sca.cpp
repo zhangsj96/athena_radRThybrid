@@ -193,6 +193,7 @@ Real RadIntegrator::MultiGroupAbsScat(AthenaArray<Real> &wmu_cm,
       for(int n=0; n<nang; n++){
         irn[n] +=  ((rdtcsigmas + rdtcsigmar - rdtcsigmae) * jr_cm + rdtcsigmap * emi_nu
                       - ((imcoef[n]-1.0)/tcoef[n] + rdtcsigmas + rdtcsigmar) * irn[n]) * vn2[n];
+        irn[n] = std::max(irn[n],TINY_NUMBER);
       }
     }// end badcell
 

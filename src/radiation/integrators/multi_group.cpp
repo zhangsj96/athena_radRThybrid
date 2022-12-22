@@ -216,6 +216,126 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
 }// end function forward splitting
 
 
+// constrcutre the matrix when map between different frequency grids
+// Matrix x intensity in shifted grid = intensity in default grid
+// get the matrix inversion if possible
+bool RadIntegrator::FreMapMatrix(AthenaArray<Real> &split_ratio, 
+          AthenaArray<Real> &tran_coef, AthenaArray<int> &map_bin_start,
+          AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix)
+{
+
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+
+  map_matrix.ZeroClear();
+
+
+  bool invertible = true;
+  // first, check the diagonal elements are non-zero
+  for(int ifr=0; ifr<nfreq; ++ifr)
+    for(int n=0; n<nang; ++n){
+      if((ifr < map_bin_start(ifr,n)) || (ifr > map_bin_end(ifr,n))){
+        invertible = false;
+        return invertible;
+      }
+    }
+
+
+  // now construct the frequency map matrix for each angle
+  for(int n=0; n<nang; ++n){
+  
+    if(tran_coef(n) >= 1){
+      // fre_map_matrix is lower triangle
+      // make sure fre_map_matrix(ifr,0) is always the diagonal
+      for(int ifr=0; ifr<nfreq; ++ifr){
+        int &fre_start=map_bin_start(ifr,n);
+        int &fre_end = map_bin_end(ifr,n);
+        // m is always larger than ifr
+        // lower triangle, when store the matrix, we always start from diagonal
+        for(int m=fre_start; m>=fre_end; ++m){
+          map_matrix(n,m,m-ifr) = split_ratio(ifr,n,m-fre_start);
+        }
+      }
+    }else{
+      // fre_map_matrix is upper triangle
+      // make sure fre_map_matrix(ifr,0) is always the diagonal
+      for(int ifr=0; ifr<nfreq; ++ifr){
+        int &fre_start=map_bin_start(ifr,n);
+        int &fre_end = map_bin_end(ifr,n);
+        // m is always smaller than ifr
+        // upper triangle, when store the matrix, we always start from diagonal
+        for(int m=fre_start; m>=fre_end; ++m){
+          map_matrix(n,m,ifr-m) = split_ratio(ifr,n,m-fre_start);
+        }
+      }
+
+    }
+
+  }// do this for each angle 
+
+
+
+  return invertible;
+}
+
+
+
+// We have the equation map_matrix * shift_array = input_array
+// need to calculate inverse_map_matrix * input_array 
+
+void RadIntegrator::InverseMapFrequency(
+         AthenaArray<Real> &tran_coef, AthenaArray<int> &map_bin_start, 
+         AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix,
+         AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array)
+{
+
+  int &nfreq = pmy_rad->nfreq;
+  int &nang = pmy_rad->nang; 
+
+
+    // clear zero
+  shift_array.ZeroClear();
+
+
+  //Now invert the matrix split_ratio
+  // we need to do this for each angle, all frequency bins
+
+  for(int n=0; n<nang; ++n){
+    if(tran_coef(n) >= 1){
+      // map_matrix is a lower triangle matrix
+      // first, ifr=0
+      shift_array(n) = input_array(n)/map_matrix(n,0,0);
+      for(int ifr=1; ifr<nfreq; ++ifr){
+        shift_array(ifr*nang+n) = input_array(ifr*nang+n);
+        int &fre_start=map_bin_start(ifr,n);
+        int &fre_end = map_bin_end(ifr,n);
+        for(int m=1; m<=fre_end-fre_start; ++m){
+          shift_array(ifr*nang+n) -= map_matrix(n,ifr,m) * shift_array((ifr-m)*nang+n);
+        }
+        shift_array(ifr*nang+n) /= map_matrix(n,ifr,0);
+        shift_array(ifr*nang+n) = std::max(shift_array(ifr*nang+n),TINY_NUMBER);
+      }
+    }else{
+      // map_matrix is a upper triangle, 
+      // we need to start from ifr=nfreq-1
+      shift_array((nfreq-1)*nang+n) = input_array((nfreq-1)*nang+n)/map_matrix(n,nfreq-1,0);
+      for(int ifr=nfreq-2; ifr>=0; ++ifr){
+        shift_array(ifr*nang+n) = input_array(ifr*nang+n);
+        int &fre_start=map_bin_start(ifr,n);
+        int &fre_end = map_bin_end(ifr,n);
+        for(int m=1; m<=fre_end-fre_start; ++m){
+          shift_array(ifr*nang+n) -= map_matrix(n,ifr,m) * shift_array((ifr+m)*nang+n);
+        }
+        shift_array(ifr*nang+n) /= map_matrix(n,ifr,0);
+        shift_array(ifr*nang+n) = std::max(shift_array(ifr*nang+n),TINY_NUMBER);
+      }
+
+    }
+  }
+
+  return;
+
+}// end map function
 
 
 // interpolate co-moving frame specific intensity over frequency grid
@@ -263,94 +383,8 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
 }// end map function
 
 
-void RadIntegrator::DetermineShiftRatio( AthenaArray<Real> &input_array, 
-     AthenaArray<Real> &shift_array, AthenaArray<Real> &delta_ratio)
-{
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-
-  for(int ifr=0; ifr<nfreq; ++ifr){
-    Real *ir_input = &(input_array(ifr*nang));
-    for(int n=0; n<nang; ++n){
-      int start_fre = map_bin_start_(ifr,n);
-      int end_fre=map_bin_end_(ifr,n);
-      for(int m=start_fre; m<=end_fre; ++m){
-        if(shift_array(m*nang+n) < TINY_NUMBER)
-          delta_ratio(ifr,n,m-start_fre) = 0.0;
-        else
-          delta_ratio(ifr,n,m-start_fre) = ir_input[n] * 
-                               split_ratio_(ifr,n,m-start_fre)
-                                          /shift_array(m*nang+n);
-      }//end m
-    }// end n
-  }// end ifr 
-
-  return;
-
-}
 
 
-// interpolate co-moving frame specific intensity over frequency grid
-// from the default frequency grid back to the shifted frequency grid
-void RadIntegrator::InverseMapFrequency(AthenaArray<Real> &input_array, 
-                                     AthenaArray<Real> &shift_array)
-{
-
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-
-  // clear zero
-  shift_array.ZeroClear();
-
-
-  for(int ifr=0; ifr<nfreq; ++ifr){
-    Real *ir_output = &(shift_array(ifr*nang));
-    for(int n=0; n<nang; ++n){
-      int start_fre = map_bin_start_(ifr,n);
-      int end_fre=map_bin_end_(ifr,n);
-      for(int m=start_fre; m<=end_fre; ++m){
-        ir_output[n] += delta_ratio_(ifr,n,m-start_fre) 
-                      * input_array(m*nang+n);
-      }
-
-    }// end n
-  }// end ifr
-
-
-  return;
-
-}// end map function
-
-bool RadIntegrator::CheckExtrema(AthenaArray<Real> &input_array, 
-                                     AthenaArray<Real> &shift_array)
-{
-
-  int &nfreq = pmy_rad->nfreq;
-  int &nang = pmy_rad->nang; 
-
-  bool flag=false; 
-
-  if(nfreq > 2){
-    for(int ifr=1; ifr<nfreq-1; ++ifr){
-      for(int n=0; n<nang; ++n){
-        Real sign_shift = (shift_array(ifr*nang+n)-shift_array((ifr-1)*nang+n))*
-                          (shift_array((ifr+1)*nang+n)-shift_array(ifr*nang+n));
-        if(sign_shift < 0.0){
-          Real sign_ori = (input_array(ifr*nang+n)-input_array((ifr-1)*nang+n))*
-                          (input_array((ifr+1)*nang+n)-input_array(ifr*nang+n));
-          if(sign_ori > 0.0){ 
-            flag = true;    
-            return flag; 
-          }     
-        }
-
-      }// end n
-    }// end ifr
-  }
-
-  return flag;
-
-}// end map function
 
 
 // fit a linear line between nu_l and nu_r for ir_l and ir_r
@@ -410,8 +444,6 @@ void RadIntegrator::MapLabToCmFrequency(AthenaArray<Real> &tran_coef,
   ForwardSplitting(tran_coef, ir_cm, ir_face_, split_ratio_,
                                      map_bin_start_,map_bin_end_);
   MapIrcmFrequency(ir_cm,ir_shift);
-      
-  DetermineShiftRatio(ir_cm,ir_shift,delta_ratio_);
 
 
   return;

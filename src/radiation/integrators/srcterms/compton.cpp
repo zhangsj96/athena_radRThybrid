@@ -458,6 +458,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
       Real *irn = &(ir_cm(nang*ifr));
       for(int n=0; n<nang; n++){
         irn[n] += tcoef[n]* (new_j_nu[ifr] - j_nu[ifr]);
+        irn[n] = std::max(irn[n],TINY_NUMBER);
       }
     }
 
@@ -484,8 +485,8 @@ Real RadIntegrator::ComptCorrection(Real &tgas)
 {
   // this is kT/m_ec^2
   Real theta=tgas/pmy_rad->telectron;
-  Real f_theta=(1.0+3.683*theta+4.0*theta*theta)/(1.0+theta);
-
+//  Real f_theta=(1.0+3.683*theta+4.0*theta*theta)/(1.0+theta);
+  Real f_theta = 1.0;
   return f_theta;
 }
 
