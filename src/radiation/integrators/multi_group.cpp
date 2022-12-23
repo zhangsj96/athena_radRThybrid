@@ -252,7 +252,7 @@ bool RadIntegrator::FreMapMatrix(AthenaArray<Real> &split_ratio,
         int &fre_end = map_bin_end(ifr,n);
         // m is always larger than ifr
         // lower triangle, when store the matrix, we always start from diagonal
-        for(int m=fre_start; m>=fre_end; ++m){
+        for(int m=fre_start; m<=fre_end; ++m){
           map_matrix(n,m,m-ifr) = split_ratio(ifr,n,m-fre_start);
         }
       }
@@ -264,7 +264,7 @@ bool RadIntegrator::FreMapMatrix(AthenaArray<Real> &split_ratio,
         int &fre_end = map_bin_end(ifr,n);
         // m is always smaller than ifr
         // upper triangle, when store the matrix, we always start from diagonal
-        for(int m=fre_start; m>=fre_end; ++m){
+        for(int m=fre_start; m<=fre_end; ++m){
           map_matrix(n,m,ifr-m) = split_ratio(ifr,n,m-fre_start);
         }
       }
