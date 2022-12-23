@@ -122,7 +122,7 @@ public:
          AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
 
-  void SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
+  void SplitFrequencyBinLinear(int &l_bd, int &r_bd, int &fre_n,
                   Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
                                       Real &ir_r, Real *split_ratio); 
   

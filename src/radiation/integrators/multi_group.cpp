@@ -153,7 +153,7 @@ void RadIntegrator::ForwardSplitting(AthenaArray<Real> &tran_coef,
       bin_end[n] = r_bd;
 
 
-      SplitFrequencyBinLinear(l_bd, r_bd, nu_lab, nu_l, nu_r, ir_face(ifr,n), 
+      SplitFrequencyBinLinear(l_bd, r_bd, ifr, nu_lab, nu_l, nu_r, ir_face(ifr,n), 
                                     ir_face(ifr+1,n), &(split_ratio(ifr,n,0)));          
 
     }// end nang
@@ -389,15 +389,16 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
 
 // fit a linear line between nu_l and nu_r for ir_l and ir_r
 void RadIntegrator::SplitFrequencyBinLinear(int &l_bd, int &r_bd, 
-                  Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
-                                     Real &ir_r, Real *split_ratio)
+                  int &fre_n, Real *nu_lab, Real &nu_l, Real &nu_r, 
+                   Real &ir_l, Real &ir_r, Real *split_ratio)
 {
   Real ir_sum = ir_l + ir_r;
   if((r_bd == l_bd) || (ir_sum < TINY_NUMBER)){
-    split_ratio[0] = 1.0;
 
-    for(int m=l_bd+1;m<=r_bd; ++m)
-      split_ratio[m-l_bd] = 0.0;
+    for(int m=0; m<=r_bd-l_bd; ++m)
+      split_ratio[0] = 0.0;
+
+    split_ratio[fre_n-l_bd] = 1.0;
 
   }else{
     Real sum = 0.0;
@@ -537,7 +538,7 @@ void RadIntegrator::MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
       bin_start[n] = l_bd;
       bin_end[n] = r_bd;      
 
-      SplitFrequencyBinLinear(l_bd, r_bd, nu_shift, nu_l, nu_r, ir_face_(ifr,n), 
+      SplitFrequencyBinLinear(l_bd, r_bd, ifr, nu_shift, nu_l, nu_r, ir_face_(ifr,n), 
                                     ir_face_(ifr+1,n), &(split_ratio_(ifr,n,0)));          
 
     }// end n  
