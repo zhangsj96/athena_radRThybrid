@@ -319,7 +319,7 @@ void RadIntegrator::InverseMapFrequency(
       // map_matrix is a upper triangle, 
       // we need to start from ifr=nfreq-1
       shift_array((nfreq-1)*nang+n) = input_array((nfreq-1)*nang+n)/map_matrix(n,nfreq-1,0);
-      for(int ifr=nfreq-2; ifr>=0; ++ifr){
+      for(int ifr=nfreq-2; ifr>=0; --ifr){
         shift_array(ifr*nang+n) = input_array(ifr*nang+n);
         int &fre_start=map_bin_start(ifr,n);
         int &fre_end = map_bin_end(ifr,n);
