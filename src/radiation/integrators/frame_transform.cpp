@@ -118,6 +118,8 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
   Real invcrat = 1.0/pmy_rad->crat;
   int& nang=pmy_rad->nang;
   int& nfreq=pmy_rad->nfreq;
+  AthenaArray<Real> split_ratio;
+  AthenaArray<int> map_start, map_end;
   
   
   // square of Lorentz factor
@@ -126,17 +128,21 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
   // now calculate the actual transformation factor
 
   for(int n=0; n<nang; ++n){
-     Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
-      vnc = 1.0 - vnc * invcrat;
-      Real cm_nu = vnc * lorz;
+    Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
+    vnc = 1.0 - vnc * invcrat;
+    Real cm_nu = vnc * lorz;
 
-      for(int ifr=0; ifr<nfreq; ++ifr)
-        ir_ori_(ifr) = ir_cm(ifr*nang+n);
+    for(int ifr=0; ifr<nfreq; ++ifr)
+      ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-      MapCmToLabFrequency(cm_nu,ir_ori_,ir_done_);
+    split_ratio.InitWithShallowSlice(split_ratio_,3,n,1);
+    map_start.InitWithShallowSlice(map_bin_start_,2,n,1);
+    map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
+
+    MapCmToLabFrequency(cm_nu,split_ratio,map_start,map_end,ir_ori_,ir_done_);
       
-      for(int ifr=0; ifr<nfreq; ++ifr)
-        ir_lab[ifr*nang+n] = ir_done_(ifr)/(cm_nu*cm_nu*cm_nu*cm_nu);
+    for(int ifr=0; ifr<nfreq; ++ifr)
+      ir_lab[ifr*nang+n] = ir_done_(ifr)/(cm_nu*cm_nu*cm_nu*cm_nu);
   }// end nang
 
 

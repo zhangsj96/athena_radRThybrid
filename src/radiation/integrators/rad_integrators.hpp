@@ -97,9 +97,11 @@ public:
   //====================================
   // multi-group functions
 
-  void MapLabToCmFrequency(Real &tran_coef, 
+  void MapLabToCmFrequency(Real &tran_coef, AthenaArray<Real> &split_ratio, 
+                   AthenaArray<int> &map_start, AthenaArray<int> &map_end,
                    AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift);
-  void MapCmToLabFrequency(Real &tran_coef,
+  void MapCmToLabFrequency(Real &tran_coef, AthenaArray<Real> &split_ratio, 
+                   AthenaArray<int> &map_start, AthenaArray<int> &map_end,
                       AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm);
 
   void GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &delta_nu_n, 
@@ -116,8 +118,9 @@ public:
                       AthenaArray<int> &map_start,AthenaArray<int> &map_end);
 
 
-  void MapIrcmFrequency(AthenaArray<Real> &input_array, 
-                        AthenaArray<Real> &shift_array);
+  void MapIrcmFrequency(AthenaArray<Real> &split_ratio, 
+                          AthenaArray<int> &map_start, AthenaArray<int> &map_end,
+                  AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
   bool FreMapMatrix(AthenaArray<Real> &split_ratio, 
           Real &tran_coef, AthenaArray<int> &map_bin_start,
@@ -173,7 +176,7 @@ public:
             const Real advr, Real *smax_l, Real *smin_l, Real *smax_r, Real *smin_r);
 
 
-  int rad_xorder, rad_fre_order; 
+  int rad_xorder; 
   AthenaArray<Real> adv_vel; // the advectioin velocity that we separate
   AthenaArray<Real> taufact;
   AthenaArray<Real> rad_source; // store the radiation source terms 

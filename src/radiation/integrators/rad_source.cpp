@@ -75,7 +75,8 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   AthenaArray<Real> &ir_cm = ir_cm_;
   AthenaArray<Real> &cm_to_lab = cm_to_lab_;
 
-
+  AthenaArray<Real> split_ratio;
+  AthenaArray<int> map_start, map_end;
 
 
 
@@ -177,7 +178,13 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       for(int ifr=0; ifr<nfreq; ++ifr)
         ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-      MapLabToCmFrequency(tran_coef(n), ir_ori_, ir_done_);
+
+      split_ratio.InitWithShallowSlice(split_ratio_,3,n,1);
+      map_start.InitWithShallowSlice(map_bin_start_,2,n,1);
+      map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
+
+      MapLabToCmFrequency(tran_coef(n), split_ratio, map_start, map_end, 
+                                                     ir_ori_, ir_done_);
 
       for(int ifr=0; ifr<nfreq; ++ifr)
         ir_cm(ifr*nang+n) = ir_done_(ifr);
@@ -213,17 +220,22 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
     // map frequency grid 
     for(int n=0; n<nang; ++n){
+
       for(int ifr=0; ifr<nfreq; ++ifr)
         ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
+      split_ratio.InitWithShallowSlice(split_ratio_,3,n,1);
+      map_start.InitWithShallowSlice(map_bin_start_,2,n,1);
+      map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
 
-      bool invertible = FreMapMatrix(split_ratio_, tran_coef(n), map_bin_start_,
-                                            map_bin_end_, fre_map_matrix_);
+      bool invertible = FreMapMatrix(split_ratio, tran_coef(n), map_start,
+                                            map_end, fre_map_matrix_);
       if(invertible){
-        InverseMapFrequency(tran_coef(n), map_bin_start_, map_bin_end_, 
+        InverseMapFrequency(tran_coef(n), map_start, map_end, 
                                 fre_map_matrix_, ir_ori_, ir_done_);
       }else{
-        MapCmToLabFrequency(tran_coef(n),ir_ori_,ir_done_);
+        MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
+                                                        ir_ori_,ir_done_);
       }
 
       for(int ifr=0; ifr<nfreq; ++ifr)
@@ -259,7 +271,8 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
   Real invcrat = 1.0/prad->crat;
   Real invredfactor = prad->crat/prad->reduced_c;
 
-
+  AthenaArray<Real> split_ratio;
+  AthenaArray<int> map_start, map_end;
 
   Real *lab_ir;
   
@@ -333,10 +346,17 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
 
           // map frequency grid 
           for(int n=0; n<nang; ++n){
+
             for(int ifr=0; ifr<nfreq; ++ifr)
               ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-            MapLabToCmFrequency(tran_coef(n), ir_ori_, ir_done_);
+            split_ratio.InitWithShallowSlice(split_ratio_,3,n,1);
+            map_start.InitWithShallowSlice(map_bin_start_,2,n,1);
+            map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
+
+            MapLabToCmFrequency(tran_coef(n), split_ratio, map_start, map_end, 
+                                                            ir_ori_, ir_done_);
+
 
             for(int ifr=0; ifr<nfreq; ++ifr)
               ir_cm(ifr*nang+n) = ir_done_(ifr);
@@ -364,17 +384,22 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
 
           // map frequency grid 
           for(int n=0; n<nang; ++n){
+
             for(int ifr=0; ifr<nfreq; ++ifr)
               ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
+            split_ratio.InitWithShallowSlice(split_ratio_,3,n,1);
+            map_start.InitWithShallowSlice(map_bin_start_,2,n,1);
+            map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
 
-            bool invertible = FreMapMatrix(split_ratio_, tran_coef(n), map_bin_start_,
-                                            map_bin_end_, fre_map_matrix_);
+            bool invertible = FreMapMatrix(split_ratio, tran_coef(n), map_start,
+                                            map_end, fre_map_matrix_);
             if(invertible){
-              InverseMapFrequency(tran_coef(n), map_bin_start_, map_bin_end_, 
+              InverseMapFrequency(tran_coef(n), map_start, map_end, 
                                 fre_map_matrix_, ir_ori_, ir_done_);
             }else{
-              MapCmToLabFrequency(tran_coef(n),ir_ori_,ir_done_);
+              MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
+                                                             ir_ori_,ir_done_);
             }
 
             for(int ifr=0; ifr<nfreq; ++ifr)

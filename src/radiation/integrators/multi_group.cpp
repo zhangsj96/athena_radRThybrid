@@ -54,6 +54,8 @@
 
 
 void RadIntegrator::MapLabToCmFrequency(Real &tran_coef, 
+                   AthenaArray<Real> &split_ratio, 
+                   AthenaArray<int> &map_start, AthenaArray<int> &map_end,
                    AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift)
 {
 
@@ -68,9 +70,8 @@ void RadIntegrator::MapLabToCmFrequency(Real &tran_coef,
 
   GetCmMCIntensity(ir_cm, delta_nu_n_, ir_face_);
   // calculate the shift ratio
-  ForwardSplitting(tran_coef, ir_cm, ir_face_, split_ratio_,
-                                     map_bin_start_,map_bin_end_);
-  MapIrcmFrequency(ir_cm,ir_shift);
+  ForwardSplitting(tran_coef, ir_cm, ir_face_, split_ratio, map_start, map_end);
+  MapIrcmFrequency(split_ratio, map_start, map_end, ir_cm,ir_shift);
 
 
   return;
@@ -237,8 +238,9 @@ void RadIntegrator::ForwardSplitting(Real &tran_coef,
 
 // interpolate co-moving frame specific intensity over frequency grid
 // every bin is 
-void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array, 
-                                      AthenaArray<Real> &shift_array)
+void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &split_ratio, 
+      AthenaArray<int> &map_start, AthenaArray<int> &map_end,
+      AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array)
 {
 
   int &nfreq = pmy_rad->nfreq;
@@ -259,10 +261,10 @@ void RadIntegrator::MapIrcmFrequency( AthenaArray<Real> &input_array,
   // map intensity to the desired bin
   for(int ifr=0; ifr<nfreq; ++ifr){
    // map shifted intensity to the nu_grid
-    int &fre_start=map_bin_start_(ifr);
-    int &fre_end = map_bin_end_(ifr);
+    int &fre_start=map_start(ifr);
+    int &fre_end = map_end(ifr);
     for(int m=fre_start; m<=fre_end; ++m){
-      shift_array(m) += input_array(ifr) * split_ratio_(ifr,m-fre_start);
+      shift_array(m) += input_array(ifr) * split_ratio(ifr,m-fre_start);
     }
           
   }// end ifr=nfreq-1
@@ -451,7 +453,9 @@ void RadIntegrator::SplitFrequencyBinLinear(int &l_bd, int &r_bd,
 // Ir_cm is defined in the corresponding frequency grid as transoformed 
 // from lab frame 
 void RadIntegrator::MapCmToLabFrequency(Real &tran_coef,
-                      AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm)
+                    AthenaArray<Real> &split_ratio, 
+                    AthenaArray<int> &map_start, AthenaArray<int> &map_end,
+                    AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm)
 {
 
   
@@ -463,10 +467,10 @@ void RadIntegrator::MapCmToLabFrequency(Real &tran_coef,
   // now call the function to get value at frequency face
   GetCmMCIntensity(ir_shift, delta_nu, ir_face_);
 
-  BackwardSplitting(tran_coef,ir_shift,ir_face_, split_ratio_,
-                                     map_bin_start_,map_bin_end_);
+  BackwardSplitting(tran_coef, ir_shift, ir_face_, split_ratio,
+                                     map_start,map_end);
 
-  MapIrcmFrequency(ir_shift, ir_cm);
+  MapIrcmFrequency(split_ratio, map_start, map_end, ir_shift, ir_cm);
 
 
   return;

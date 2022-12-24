@@ -161,6 +161,9 @@ void Radiation::CalculateComMoment()
   AthenaArray<Real> &cosx_cm = cosx_cm_;
   AthenaArray<Real> &cosy_cm = cosy_cm_;
   AthenaArray<Real> &cosz_cm = cosz_cm_;
+
+  AthenaArray<Real> split_ratio;
+  AthenaArray<int> map_start, map_end;
   
   // reset the moment arrays to be zero
   // There are 4 3D arrays
@@ -237,10 +240,20 @@ void Radiation::CalculateComMoment()
 
     // map frequency grid 
           for(int n=0; n<nang; ++n){
+
             for(int ifr=0; ifr<nfreq; ++ifr)
               pradintegrator->ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-            pradintegrator->MapLabToCmFrequency(tran_coef(n), 
+            split_ratio.InitWithShallowSlice(pradintegrator->split_ratio_,
+                                                                    3,n,1);
+            map_start.InitWithShallowSlice(pradintegrator->map_bin_start_,
+                                                                    2,n,1);
+            map_end.InitWithShallowSlice(pradintegrator->map_bin_end_,
+                                                                    2,n,1);
+
+
+            pradintegrator->MapLabToCmFrequency(tran_coef(n), split_ratio,
+                      map_start, map_end,
                       pradintegrator->ir_ori_, pradintegrator->ir_done_);
 
             for(int ifr=0; ifr<nfreq; ++ifr)
