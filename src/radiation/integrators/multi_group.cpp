@@ -454,19 +454,14 @@ void RadIntegrator::MapCmToLabFrequency(Real &tran_coef,
                       AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm)
 {
 
-  Real& prat = pmy_rad->prat;
-  Real invcrat = 1.0/pmy_rad->crat;
-  int& nang=pmy_rad->nang;
-  int& nfreq=pmy_rad->nfreq;
   
   Real *nu_fixed = &(pmy_rad->nu_grid(0));
 
   AthenaArray<Real> &delta_nu = pmy_rad->delta_nu;
 
 
-
   // now call the function to get value at frequency face
-  GetCmMCIntensity(ir_shift, delta_nu_n_, ir_face_);
+  GetCmMCIntensity(ir_shift, delta_nu, ir_face_);
 
   BackwardSplitting(tran_coef,ir_shift,ir_face_, split_ratio_,
                                      map_bin_start_,map_bin_end_);

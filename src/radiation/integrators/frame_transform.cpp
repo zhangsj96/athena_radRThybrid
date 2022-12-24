@@ -84,7 +84,6 @@ void RadIntegrator::ComToLab(const Real vx, const Real vy, const Real vz,
                           AthenaArray<Real> &ir_cm, Real *ir_lab)
 {
 
-  Real& prat = pmy_rad->prat;
   Real invcrat = 1.0/pmy_rad->crat;
   int& nang=pmy_rad->nang;  
   
