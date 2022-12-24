@@ -172,14 +172,24 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       Compton(wmu_cm,tran_coef, sigma_s, dt, lorz, rho, tgas_new_(k,j,i), ir_cm);
   }else{
         
-          // get monochromatic specific intensity 
+    // map frequency grid 
+    for(int n=0; n<nang; ++n){
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-    MapLabToCmFrequency(tran_coef, ir_cm, ir_shift_);
+      MapLabToCmFrequency(tran_coef(n), ir_ori_, ir_done_);
+
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_cm(ifr*nang+n) = ir_done_(ifr);
+
+    }// end nang
+
+
 
       // calculate the source term 
     tgas_new_(k,j,i) = MultiGroupAbsScat(wmu_cm,tran_coef, sigma_at, sigma_p, 
                                sigma_pe, sigma_s, dt, lorz, rho, tgas_(k,j,i), 
-                                                     implicit_coef_,ir_shift_);
+                                                     implicit_coef_,ir_cm);
 
           // Add compton scattering 
           // Compton scattering for implicit scheme is added separately
@@ -189,25 +199,38 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       int count=0;
       Real relative_error = 1;
       while((count < iteration_compton_) && (relative_error > compton_error_)){
-        ir_buff_ = ir_shift_;
+        ir_buff_ = ir_cm;
         t_old = tgas_new_(k,j,i);
         MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),
                                                                     ir_buff_);
         count++;
         relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
       }
-      ir_shift_ = ir_buff_;
+      ir_cm = ir_buff_;
           // inverseshift
     }
 
-    bool invertible = FreMapMatrix(split_ratio_, tran_coef, map_bin_start_,
+
+    // map frequency grid 
+    for(int n=0; n<nang; ++n){
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_ori_(ifr) = ir_cm(ifr*nang+n);
+
+
+      bool invertible = FreMapMatrix(split_ratio_, tran_coef(n), map_bin_start_,
                                             map_bin_end_, fre_map_matrix_);
-    if(invertible){
-      InverseMapFrequency(tran_coef, map_bin_start_, map_bin_end_, 
-                                fre_map_matrix_, ir_shift_, ir_cm);
-    }else{
-      MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
-    }     
+      if(invertible){
+        InverseMapFrequency(tran_coef(n), map_bin_start_, map_bin_end_, 
+                                fre_map_matrix_, ir_ori_, ir_done_);
+      }else{
+        MapCmToLabFrequency(tran_coef(n),ir_ori_,ir_done_);
+      }
+
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_cm(ifr*nang+n) = ir_done_(ifr);
+
+    }// end nang
+
   }// end nfreq > 1
        
          //update specific intensity in the lab frame
@@ -307,7 +330,18 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
             delta_source(0,ifr) = er_fr;
           }// End frequency
 
-          MapLabToCmFrequency(tran_coef, ir_cm, ir_shift_);
+
+          // map frequency grid 
+          for(int n=0; n<nang; ++n){
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              ir_ori_(ifr) = ir_cm(ifr*nang+n);
+
+            MapLabToCmFrequency(tran_coef(n), ir_ori_, ir_done_);
+
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              ir_cm(ifr*nang+n) = ir_done_(ifr);
+
+          }// end nang
 
 
           // Add compton scattering 
@@ -318,24 +352,36 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
           int count=0;
           Real relative_error = 1;
           while((count < iteration_compton_) && (relative_error > compton_error_)){
-            ir_buff_ = ir_shift_;
+            ir_buff_ = ir_cm;
             t_old = tgas_new_(k,j,i);
             MultiGroupCompton(wmu_cm,tran_coef,dt,lorz,rho,t_ini,tgas_new_(k,j,i),
                                                                         ir_buff_);
             count++;
             relative_error = std::fabs(t_old-tgas_new_(k,j,i))/tgas_new_(k,j,i);
           }
-          ir_shift_ = ir_buff_;
+          ir_cm = ir_buff_;
 
 
-          bool invertible = FreMapMatrix(split_ratio_, tran_coef, map_bin_start_,
+          // map frequency grid 
+          for(int n=0; n<nang; ++n){
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              ir_ori_(ifr) = ir_cm(ifr*nang+n);
+
+
+            bool invertible = FreMapMatrix(split_ratio_, tran_coef(n), map_bin_start_,
                                             map_bin_end_, fre_map_matrix_);
-          if(invertible){
-            InverseMapFrequency(tran_coef, map_bin_start_, map_bin_end_, 
-                                                  fre_map_matrix_, ir_shift_, ir_cm);
-          }else{
-            MapCmToLabFrequency(tran_coef,ir_shift_,ir_cm);
-          }   
+            if(invertible){
+              InverseMapFrequency(tran_coef(n), map_bin_start_, map_bin_end_, 
+                                fre_map_matrix_, ir_ori_, ir_done_);
+            }else{
+              MapCmToLabFrequency(tran_coef(n),ir_ori_,ir_done_);
+            }
+
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              ir_cm(ifr*nang+n) = ir_done_(ifr);
+
+          }// end nang
+
 
           for(int ifr=0; ifr<nfreq; ++ifr){
             lab_ir = &(ir(k,j,i,nang*ifr));

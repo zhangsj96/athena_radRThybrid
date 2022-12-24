@@ -197,17 +197,21 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   //----------------------------------------------------
   // array for multi-group 
   if(nfreq > 1){
-    ir_face_.NewAthenaArray(nfreq,nang);
-    ir_shift_.NewAthenaArray(prad->n_fre_ang);
+    // put the angle index first when map in frequency space
+
     ir_buff_.NewAthenaArray(prad->n_fre_ang);
+
     if(nmax_map_ == 0)  nmax_map_ = nfreq/2+1;
-    split_ratio_.NewAthenaArray(nfreq,nang,nmax_map_);
+    split_ratio_.NewAthenaArray(nfreq,nmax_map_);
     // this needs to be done for each angle, all frequency groups
-    fre_map_matrix_.NewAthenaArray(nang,nfreq,nmax_map_); 
-    delta_nu_n_.NewAthenaArray(nfreq,nang);
-    map_bin_start_.NewAthenaArray(nfreq,nang);
-    map_bin_end_.NewAthenaArray(nfreq,nang);
-    nu_shift_.NewAthenaArray(nang,nfreq);
+    fre_map_matrix_.NewAthenaArray(nfreq,nmax_map_); 
+    delta_nu_n_.NewAthenaArray(nfreq);
+    map_bin_start_.NewAthenaArray(nfreq);
+    map_bin_end_.NewAthenaArray(nfreq);
+    nu_shift_.NewAthenaArray(nfreq);
+    ir_face_.NewAthenaArray(nfreq);
+    ir_ori_.NewAthenaArray(nfreq);
+    ir_done_.NewAthenaArray(nfreq);
 
     com_b_face_coef_.NewAthenaArray(nfreq);
     com_d_face_coef_.NewAthenaArray(nfreq);
@@ -535,12 +539,13 @@ RadIntegrator::~RadIntegrator()
     split_ratio_.DeleteAthenaArray();
     fre_map_matrix_.DeleteAthenaArray();
     delta_nu_n_.DeleteAthenaArray();
-    ir_shift_.DeleteAthenaArray();
     ir_buff_.DeleteAthenaArray();
     ir_face_.DeleteAthenaArray();
     map_bin_start_.DeleteAthenaArray();
     map_bin_end_.DeleteAthenaArray();
     nu_shift_.DeleteAthenaArray();
+    ir_ori_.DeleteAthenaArray();
+    ir_done_.DeleteAthenaArray();
 
     com_b_face_coef_.DeleteAthenaArray();
     com_d_face_coef_.DeleteAthenaArray();

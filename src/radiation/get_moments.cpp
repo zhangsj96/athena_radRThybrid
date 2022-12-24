@@ -235,13 +235,18 @@ void Radiation::CalculateComMoment()
         if(nfreq > 1){
           // shift intensity from shifted frequency bins
 
-         // get monochromatic specific intensity 
-          pradintegrator->MapLabToCmFrequency(tran_coef, ir_cm, 
-                                     pradintegrator->ir_shift_);
+    // map frequency grid 
+          for(int n=0; n<nang; ++n){
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              pradintegrator->ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
-          // copy back to ir_cm
-          ir_cm = pradintegrator->ir_shift_;
+            pradintegrator->MapLabToCmFrequency(tran_coef(n), 
+                      pradintegrator->ir_ori_, pradintegrator->ir_done_);
 
+            for(int ifr=0; ifr<nfreq; ++ifr)
+              ir_cm(ifr*nang+n) = pradintegrator->ir_done_(ifr);
+
+          }// end nang
         }
            
         Real *cm_weight = &(wmu_cm(0));

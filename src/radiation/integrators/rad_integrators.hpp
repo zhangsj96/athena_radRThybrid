@@ -97,12 +97,20 @@ public:
   //====================================
   // multi-group functions
 
-
+  void MapLabToCmFrequency(Real &tran_coef, 
+                   AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift);
+  void MapCmToLabFrequency(Real &tran_coef,
+                      AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm);
 
   void GetCmMCIntensity(AthenaArray<Real> &ir_cm, AthenaArray<Real> &delta_nu_n, 
                                                     AthenaArray<Real> &ir_face);
 
-  void ForwardSplitting(AthenaArray<Real> &tran_coef, 
+  void ForwardSplitting(Real &tran_coef, 
+                      AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_face,
+                      AthenaArray<Real> &split_ratio,
+                      AthenaArray<int> &map_start,AthenaArray<int> &map_end);
+
+  void BackwardSplitting(Real &tran_coef, 
                       AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_face,
                       AthenaArray<Real> &split_ratio,
                       AthenaArray<int> &map_start,AthenaArray<int> &map_end);
@@ -112,11 +120,11 @@ public:
                         AthenaArray<Real> &shift_array);
 
   bool FreMapMatrix(AthenaArray<Real> &split_ratio, 
-          AthenaArray<Real> &tran_coef, AthenaArray<int> &map_bin_start,
+          Real &tran_coef, AthenaArray<int> &map_bin_start,
           AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix);
 
 
-  void InverseMapFrequency(AthenaArray<Real> &tran_coef, 
+  void InverseMapFrequency(Real &tran_coef, 
          AthenaArray<int> &map_bin_start, 
          AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix,
          AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
@@ -126,10 +134,7 @@ public:
                   Real *nu_lab, Real &nu_l, Real &nu_r, Real &ir_l, 
                                       Real &ir_r, Real *split_ratio); 
   
-  void MapLabToCmFrequency(AthenaArray<Real> &tran_coef, 
-                   AthenaArray<Real> &ir_cm, AthenaArray<Real> &ir_shift);
-  void MapCmToLabFrequency(AthenaArray<Real> &tran_coef,
-                      AthenaArray<Real> &ir_shift, AthenaArray<Real> &ir_cm);
+
 
   void ComToLabMultiGroup(const Real vx, const Real vy, const Real vz,
                           Real *mux, Real *muy, Real *muz,
@@ -241,7 +246,8 @@ private:
   // shift amount from the frequency boundary
   AthenaArray<Real> split_ratio_, fre_map_matrix_;
   AthenaArray<Real> delta_nu_n_; // width of frequency bins for each angle
-  AthenaArray<Real> ir_shift_, ir_face_, ir_buff_;
+  AthenaArray<Real> ir_buff_;
+  AthenaArray<Real> ir_face_, ir_ori_, ir_done_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
   AthenaArray<Real> nu_shift_;
   int iteration_tgas_, iteration_compton_;

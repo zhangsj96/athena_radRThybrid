@@ -125,24 +125,21 @@ void RadIntegrator::ComToLabMultiGroup(const Real vx, const Real vy, const Real 
   Real lorz = sqrt(1.0/(1.0 - (vx * vx + vy * vy + vz * vz) * invcrat * invcrat));
   // first, get the lorentz transformation factor
   // now calculate the actual transformation factor
-  Real *cm_nu = &(tran_coef_(0));
+
   for(int n=0; n<nang; ++n){
      Real vnc = vx * mux[n] + vy * muy[n] + vz * muz[n];
       vnc = 1.0 - vnc * invcrat;
-      cm_nu[n] = vnc * lorz;
-  }
+      Real cm_nu = vnc * lorz;
 
-  MapCmToLabFrequency(tran_coef_,ir_cm,ir_shift_);
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_ori_(ifr) = ir_cm(ifr*nang+n);
 
+      MapCmToLabFrequency(cm_nu,ir_ori_,ir_done_);
+      
+      for(int ifr=0; ifr<nfreq; ++ifr)
+        ir_lab[ifr*nang+n] = ir_done_(ifr)/(cm_nu*cm_nu*cm_nu*cm_nu);
+  }// end nang
 
-
-  //transform from ir_shift to ir_lab
-  for(int ifr=0; ifr<nfreq; ++ifr){
-#pragma omp simd
-    for(int n=0; n<nang; n++){
-       ir_lab[n+ifr*nang] = ir_shift_(ifr*nang+n)/(cm_nu[n]*cm_nu[n]*cm_nu[n]*cm_nu[n]);
-    }
-  }
 
   return;
 }
