@@ -232,27 +232,24 @@ void RadIntegrator::ForwardSplitting(Real &tran_coef,
     // Ir=ir_face(\nu/nu_0)^alpha
     // integral is -ir_face*nu_0/(alpha+1) and alpha < -1
     // ratio is (nu_2^alpha+1- nu_1^alpha+1)/nu_0^alpha+1
-    if(1.0-sum < TINY_NUMBER){
-      if((ir_cm(nfreq-1) < TINY_NUMBER) || (ir_face(nfreq-1) < TINY_NUMBER))
-        split_ratio(nfreq-1,r_bd-l_bd) = -1.0;
-      else{
-        Real slope = -ir_face(nfreq-1) * nu_l/ir_cm(nfreq-1);
-        split_ratio(nfreq-1,0) = 1.0 - pow(nu_lab[l_bd+1]/nu_l,slope);
-        Real sum = split_ratio(nfreq-1,0);
 
-        for(int m=l_bd+1; m<r_bd; ++m){
-          split_ratio(nfreq-1,m-l_bd) = -pow(nu_lab[m+1]/nu_l,slope) 
-                                      + pow(nu_lab[m]/nu_l, slope);
-          sum += split_ratio(nfreq-1,m-l_bd);
-        }
-        split_ratio(nfreq-1,r_bd-l_bd) = 1.0 - sum;
-        // if power law also fails, set a flag
-        if(1.0 - sum  < TINY_NUMBER)
-          split_ratio(nfreq-1,r_bd-l_bd)  = -1.0;
+//    if(1.0-sum < TINY_NUMBER){
 
-      }// end else
+//      if(ir_face(nfreq-1) * ir_cm(nfreq-1) > TINY_NUMBER){
+//        Real slope = -ir_face(nfreq-1) * nu_l/ir_cm(nfreq-1);
+//        split_ratio(nfreq-1,0) = 1.0 - pow(nu_lab[l_bd+1]/nu_l,slope);
+//        Real sum = split_ratio(nfreq-1,0);
 
-    }// end 1.0-sum < TINY_NUMBER
+//        for(int m=l_bd+1; m<r_bd; ++m){
+//          split_ratio(nfreq-1,m-l_bd) = -pow(nu_lab[m+1]/nu_l,slope) 
+//                                      + pow(nu_lab[m]/nu_l, slope);
+//          sum += split_ratio(nfreq-1,m-l_bd);
+//        }
+//        split_ratio(nfreq-1,r_bd-l_bd) = 1.0 - sum;
+
+//      }// 
+
+//    }// end 1.0-sum < TINY_NUMBER
 
   }// end cm_nu <=1
 
@@ -321,11 +318,12 @@ bool RadIntegrator::FreMapMatrix(AthenaArray<Real> &split_ratio,
   bool invertible = true;
   // first, check the diagonal elements are non-zero
   for(int ifr=0; ifr<nfreq; ++ifr){
-    if((ifr < map_bin_start(ifr)) || (ifr > map_bin_end(ifr))){
+    if(split_ratio(ifr,ifr-map_bin_start(ifr)) < TINY_NUMBER){
       invertible = false;
       return invertible;
     }
   }
+
 
 
 
@@ -404,10 +402,7 @@ void RadIntegrator::InverseMapFrequency(Real &tran_coef,
     // we need to start from ifr=nfreq-1
 
     // when flag for fail, set intensity to 0
-    if(map_matrix(nfreq-1,0) < 0.0)
-      shift_array(nfreq-1) = 0.0;
-    else
-      shift_array(nfreq-1) = input_array(nfreq-1)/map_matrix(nfreq-1,0);
+    shift_array(nfreq-1) = input_array(nfreq-1)/map_matrix(nfreq-1,0);
     
     for(int ifr=nfreq-2; ifr>=0; --ifr){
       shift_array(ifr) = input_array(ifr);
