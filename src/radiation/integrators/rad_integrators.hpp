@@ -122,14 +122,13 @@ public:
                           AthenaArray<int> &map_start, AthenaArray<int> &map_end,
                   AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
-  bool FreMapMatrix(AthenaArray<Real> &split_ratio, 
-          Real &tran_coef, AthenaArray<int> &map_bin_start,
-          AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix);
+  bool FreMapMatrix(AthenaArray<Real> &split_ratio, Real &tran_coef, 
+    AthenaArray<int> &map_bin_start, AthenaArray<int> &map_bin_end, 
+    AthenaArray<int> &map_count, AthenaArray<Real> &map_matrix);
 
 
   void InverseMapFrequency(Real &tran_coef, 
-         AthenaArray<int> &map_bin_start, 
-         AthenaArray<int> &map_bin_end, AthenaArray<Real> &map_matrix,
+         AthenaArray<int> &map_count, AthenaArray<Real> &map_matrix,
          AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
 
@@ -252,6 +251,7 @@ private:
   AthenaArray<Real> ir_buff_;
   AthenaArray<Real> ir_face_, ir_ori_, ir_done_;
   AthenaArray<int> map_bin_start_, map_bin_end_;
+  AthenaArray<int> map_count_;
   AthenaArray<Real> nu_shift_;
   int iteration_tgas_, iteration_compton_;
   Real tgas_error_, compton_error_;

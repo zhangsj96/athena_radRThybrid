@@ -229,10 +229,10 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
 
       bool invertible = FreMapMatrix(split_ratio, tran_coef(n), map_start,
-                                            map_end, fre_map_matrix_);
+                                        map_end, map_count_, fre_map_matrix_);
       if(invertible){
-        InverseMapFrequency(tran_coef(n), map_start, map_end, 
-                                fre_map_matrix_, ir_ori_, ir_done_);
+        InverseMapFrequency(tran_coef(n), map_count_, fre_map_matrix_, 
+                                                   ir_ori_, ir_done_);
       }else{
         MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
                                                         ir_ori_,ir_done_);
@@ -393,10 +393,10 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
             map_end.InitWithShallowSlice(map_bin_end_,2,n,1);
 
             bool invertible = FreMapMatrix(split_ratio, tran_coef(n), map_start,
-                                            map_end, fre_map_matrix_);
+                                            map_end, map_count_, fre_map_matrix_);
             if(invertible){
-              InverseMapFrequency(tran_coef(n), map_start, map_end, 
-                                fre_map_matrix_, ir_ori_, ir_done_);
+              InverseMapFrequency(tran_coef(n), map_count_, fre_map_matrix_, 
+                                                        ir_ori_, ir_done_);
             }else{
               MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
                                                              ir_ori_,ir_done_);

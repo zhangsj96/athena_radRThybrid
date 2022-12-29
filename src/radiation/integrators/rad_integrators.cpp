@@ -207,6 +207,7 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
     delta_nu_n_.NewAthenaArray(nfreq);
     map_bin_start_.NewAthenaArray(nang,nfreq);
     map_bin_end_.NewAthenaArray(nang,nfreq);
+    map_count_.NewAthenaArray(nfreq);
     nu_shift_.NewAthenaArray(nfreq);
     ir_face_.NewAthenaArray(nfreq);
     ir_ori_.NewAthenaArray(nfreq);
@@ -542,6 +543,7 @@ RadIntegrator::~RadIntegrator()
     ir_face_.DeleteAthenaArray();
     map_bin_start_.DeleteAthenaArray();
     map_bin_end_.DeleteAthenaArray();
+    map_count_.DeleteAthenaArray();
     nu_shift_.DeleteAthenaArray();
     ir_ori_.DeleteAthenaArray();
     ir_done_.DeleteAthenaArray();
