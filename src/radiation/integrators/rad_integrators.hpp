@@ -255,6 +255,7 @@ private:
   AthenaArray<Real> nu_shift_;
   int iteration_tgas_, iteration_compton_;
   Real tgas_error_, compton_error_;
+  Real map_limit_;
   int nmax_map_; //maximum number of frequency bins that each bin will map to
 
 

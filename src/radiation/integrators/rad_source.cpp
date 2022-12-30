@@ -233,6 +233,17 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
       if(invertible){
         InverseMapFrequency(tran_coef(n), map_count_, fre_map_matrix_, 
                                                    ir_ori_, ir_done_);
+
+        Real sum_ori=0.0, sum_after=0.0;
+        for(int ifr=0; ifr<nfreq; ++ifr){
+          sum_ori += ir_ori_(ifr);
+          sum_after += ir_done_(ifr);
+        }
+        Real ratio_shift = fabs(sum_after-sum_ori)/sum_ori;
+        if(ratio_shift > map_limit_)
+          MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
+                                                        ir_ori_,ir_done_);
+
       }else{
         MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
                                                         ir_ori_,ir_done_);
@@ -397,6 +408,17 @@ void RadIntegrator::AddMultiGroupCompt(MeshBlock *pmb, const Real dt,
             if(invertible){
               InverseMapFrequency(tran_coef(n), map_count_, fre_map_matrix_, 
                                                         ir_ori_, ir_done_);
+
+              Real sum_ori=0.0, sum_after=0.0;
+              for(int ifr=0; ifr<nfreq; ++ifr){
+                  sum_ori += ir_ori_(ifr);
+                  sum_after += ir_done_(ifr);
+              }
+              Real ratio_shift = fabs(sum_after-sum_ori)/sum_ori;
+              if(ratio_shift > map_limit_)
+                  MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
+                                                        ir_ori_,ir_done_);
+
             }else{
               MapCmToLabFrequency(tran_coef(n),split_ratio, map_start, map_end, 
                                                              ir_ori_,ir_done_);
