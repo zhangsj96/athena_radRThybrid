@@ -76,7 +76,6 @@ RadIntegrator::RadIntegrator(Radiation *prad, ParameterInput *pin)
   compton_error_ =   pin->GetOrAddReal("radiation","gas_error",1.e-6);
   // maximum number of bins each frequency bin will map to, default is nfreq/2
   nmax_map_ = pin->GetOrAddInteger("radiation","max_map_bin",0);
-  map_limit_ = pin->GetOrAddReal("radiation","map_limit",0.01);
 
   int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
   ncells3 = pmb->ncells3; 

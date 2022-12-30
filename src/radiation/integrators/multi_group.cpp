@@ -369,12 +369,16 @@ bool RadIntegrator::FreMapMatrix(AthenaArray<Real> &split_ratio,
 // We have the equation map_matrix * shift_array = input_array
 // need to calculate inverse_map_matrix * input_array 
 
-void RadIntegrator::InverseMapFrequency(Real &tran_coef, 
+// if this method cause negative intensity, we will give up
+
+bool RadIntegrator::InverseMapFrequency(Real &tran_coef, 
          AthenaArray<int> &map_count, AthenaArray<Real> &map_matrix,
          AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array)
 {
 
   int &nfreq = pmy_rad->nfreq;
+
+
 
 
     // clear zero
@@ -395,7 +399,8 @@ void RadIntegrator::InverseMapFrequency(Real &tran_coef,
         shift_array(ifr) -= map_matrix(ifr,m) * shift_array(ifr-m);
       }
       shift_array(ifr) /= map_matrix(ifr,0);
-      shift_array(ifr) = std::max(shift_array(ifr),TINY_NUMBER);
+      if(shift_array(ifr) < 0.0)
+        return false;
     }
   }else{
     // map_matrix is a upper triangle, 
@@ -410,13 +415,14 @@ void RadIntegrator::InverseMapFrequency(Real &tran_coef,
         shift_array(ifr) -= map_matrix(ifr,m) * shift_array(ifr+m);
       }
       shift_array(ifr) /= map_matrix(ifr,0);
-      shift_array(ifr) = std::max(shift_array(ifr),TINY_NUMBER);
+      if(shift_array(ifr) < 0.0)
+        return false;
     }
 
   }
 
 
-  return;
+  return true;
 
 }// end map function
 

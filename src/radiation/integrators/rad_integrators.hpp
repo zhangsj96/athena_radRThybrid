@@ -127,7 +127,7 @@ public:
     AthenaArray<int> &map_count, AthenaArray<Real> &map_matrix);
 
 
-  void InverseMapFrequency(Real &tran_coef, 
+  bool InverseMapFrequency(Real &tran_coef, 
          AthenaArray<int> &map_count, AthenaArray<Real> &map_matrix,
          AthenaArray<Real> &input_array, AthenaArray<Real> &shift_array);
 
@@ -255,7 +255,6 @@ private:
   AthenaArray<Real> nu_shift_;
   int iteration_tgas_, iteration_compton_;
   Real tgas_error_, compton_error_;
-  Real map_limit_;
   int nmax_map_; //maximum number of frequency bins that each bin will map to
 
 
