@@ -38,7 +38,7 @@ crat=8053.39
 
 files=sorted(glob.glob('disk.out1*athdf'))
 ni=0
-no=100
+no=200
 files=files[ni:no]
 
 num_file=len(files)

@@ -229,7 +229,7 @@ for filename in files:
 # In[8]:
 
 
-outfile='hist_'+files[0][8:13]+'_'+files[num_file-1][8:13]+'.npz'
+outfile='hist_'+files[0][10:15]+'_'+files[num_file-1][10:15]+'.npz'
 
 
 # In[10]:
