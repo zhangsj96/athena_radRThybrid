@@ -47,6 +47,7 @@ public:
   ~Radiation();
     
   AthenaArray<Real> ir, ir1, ir2, ir_old; // radiation specific intensity
+  AthenaArray<Real> ir_gray;
   AthenaArray<Real> rad_mom; // frequency integrated radiation moments
   AthenaArray<Real> rad_mom_cm; // co-moving frame Er, Frx, Fry, Frz
   AthenaArray<Real> rad_mom_nu, rad_mom_cm_nu; // multi_group radiation moments
@@ -88,6 +89,7 @@ public:
   Real nu_min, nu_max; 
   // mininum and maximum frequencies, and number of frequency bins
   int nfreq; // number of frequency bins
+  int restart_from_gray; // 
   Real fre_ratio; // ratio between neighboring frequency bins
   // frequency grid, center of each frequency bin
   AthenaArray<Real> nu_grid, nu_cen, delta_nu;  

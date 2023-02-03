@@ -226,6 +226,9 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
   log_fre_ = pin->GetOrAddInteger("radiation","log_frequency_spacing",1);
 
+  restart_from_gray  = pin->GetOrAddInteger("radiation","res_gray",0);  
+  // when the emission spectrum depends on tgas, we perform 
+
   // setup the frequency grid
   FrequencyGrid();  
 
@@ -250,6 +253,10 @@ Radiation::Radiation(MeshBlock *pmb, ParameterInput *pin):
 
 
   ir_old.NewAthenaArray(nc3,nc2,nc1,n_fre_ang);
+
+  if(restart_from_gray){
+    ir_gray.NewAthenaArray(nc3,nc2,nc1,nang);
+  }
   
  // Do not add to cell-centered refinement, as 
 // radiation variables need to be done in different order      
@@ -395,6 +402,10 @@ Radiation::~Radiation()
   ir_old.DeleteAthenaArray();
   rad_mom.DeleteAthenaArray();
   rad_mom_cm.DeleteAthenaArray();
+
+  if(restart_from_gray){
+    ir_gray.DeleteAthenaArray();
+  }
 
   sigma_s.DeleteAthenaArray();
   sigma_a.DeleteAthenaArray();
