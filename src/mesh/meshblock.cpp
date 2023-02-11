@@ -564,7 +564,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
             //get Er
             Real lorz = v1*v1+v2*v2+v3*v3;
-            lorz = 1.0/(1.0 - lorz * invcrat);
+            lorz = 1.0/(1.0 - lorz * invcrat * invcrat);
             lorz = sqrt(lorz);
             Real Er = 0.0;
             for(int n=0; n<prad->nang; ++n){
