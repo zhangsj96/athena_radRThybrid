@@ -544,36 +544,17 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
     if(prad->restart_from_gray){
       std::memcpy(prad->ir_gray.data(), &(mbdata[os]), prad->ir_gray.GetSizeInBytes());
-      AthenaArray<Real> ir_cm_gray, ir_cm, fre_ratio;
-      ir_cm_gray.NewAthenaArray(prad->nang);
-      ir_cm.NewAthenaArray(prad->n_fre_ang);
+      AthenaArray<Real> fre_ratio;
+
       fre_ratio.NewAthenaArray(prad->nfreq);
       Real invcrat = 1.0/prad->crat;
       for(int k=ks; k<=ke; ++k){
         for(int j=js; j<=je; ++j){
           for(int i=is; i<=ie; ++i){
-            Real v1 = phydro->u(IM1,k,j,i)/phydro->u(IDN,k,j,i);
-            Real v2 = phydro->u(IM2,k,j,i)/phydro->u(IDN,k,j,i);
-            Real v3 = phydro->u(IM3,k,j,i)/phydro->u(IDN,k,j,i);
-            // convert to co-moving frame
-            Real *ir_lab = &(prad->ir_gray(k,j,i,0));
-            Real *mux = &(prad->mu(0,k,j,i,0));
-            Real *muy = &(prad->mu(1,k,j,i,0));
-            Real *muz = &(prad->mu(2,k,j,i,0));
-            prad->pradintegrator->LabToCom(v1,v2,v3,mux,muy,muz,ir_lab,ir_cm_gray);
 
-            //get Er
-            Real lorz = v1*v1+v2*v2+v3*v3;
-            lorz = 1.0/(1.0 - lorz * invcrat * invcrat);
-            lorz = sqrt(lorz);
             Real Er = 0.0;
             for(int n=0; n<prad->nang; ++n){
-              Real vdotn = v1 * mux[n] + v2 * muy[n] + v3 * muz[n];
-              Real vnc = 1.0 - vdotn * invcrat;
-              Real tran_coef = lorz * vnc;
-              Real wmu_cm = prad->wmu(n)/(tran_coef*tran_coef);
-              Er += ir_cm_gray(n) * wmu_cm;
-
+              Er += prad->ir_gray(k,j,i,n) * prad->wmu(n);
             }// finish going through all angles
             Real tr = pow(Er,0.25);
 
@@ -585,19 +566,12 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
             for(int ifr=0; ifr<prad->nfreq; ++ifr){
               for(int n=0; n<prad->nang; ++n){
-                ir_cm(ifr*prad->nang+n) = ir_cm_gray(n) * fre_ratio(ifr);
+                prad->ir(k,j,i,ifr*prad->nang+n) = prad->ir_gray(k,j,i,n) * fre_ratio(ifr);
               }
             }// end ifr
-
-            // now convert ir_cm from co-moving frame to lab frame
-            ir_lab = &(prad->ir(k,j,i,0));
-            prad->pradintegrator->ComToLabMultiGroup(v1,v2,v3,mux,muy,muz,ir_cm,ir_lab);
-
           }// end i
         }
       }
-      ir_cm.DeleteAthenaArray();
-      ir_cm_gray.DeleteAthenaArray();
       fre_ratio.DeleteAthenaArray();
       os += prad->ir_gray.GetSizeInBytes();
     }else{
