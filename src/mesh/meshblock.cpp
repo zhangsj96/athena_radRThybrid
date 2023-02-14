@@ -756,6 +756,44 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   return size;
 }
 
+std::size_t MeshBlock::GetBlockSizeInBytesGray() {
+  std::size_t size;
+  // NEW_OUTPUT_TYPES:
+  size = phydro->u.GetSizeInBytes();
+  if (GENERAL_RELATIVITY) {
+    size += phydro->w.GetSizeInBytes();
+    size += phydro->w1.GetSizeInBytes();
+  }
+  if (MAGNETIC_FIELDS_ENABLED)
+    size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
+             + pfield->b.x3f.GetSizeInBytes());
+  for (int ipar=0; ipar < Particles::num_particles; ++ipar)
+    size += ppar[ipar]->GetSizeInBytes();
+  if (NSCALARS > 0)
+    size += pscalars->s.GetSizeInBytes();
+
+  if (RADIATION_ENABLED || IM_RADIATION_ENABLED){
+    if(prad->restart_from_gray > 0)
+      size += prad->ir_gray.GetSizeInBytes();
+    else
+      size += prad->ir.GetSizeInBytes();
+  }
+  if(CR_ENABLED)
+    size += pcr->u_cr.GetSizeInBytes();
+  if(TC_ENABLED)
+    size += ptc->u_tc.GetSizeInBytes();
+  
+
+  // calculate user MeshBlock data size
+  for (int n=0; n<nint_user_meshblock_data_; n++)
+    size += iuser_meshblock_data[n].GetSizeInBytes();
+  for (int n=0; n<nreal_user_meshblock_data_; n++)
+    size += ruser_meshblock_data[n].GetSizeInBytes();
+
+  return size;
+}
+
+
 //----------------------------------------------------------------------------------------
 //! \fn void MeshBlock::SetCostForLoadBalancing(double cost)
 //! \brief stop time measurement and accumulate it in the MeshBlock cost

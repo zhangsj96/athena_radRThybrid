@@ -138,6 +138,7 @@ class MeshBlock {
 
   // functions
   std::size_t GetBlockSizeInBytes();
+  std::size_t GetBlockSizeInBytesGray();
   int GetNumberOfMeshBlockCells() {
     return block_size.nx1*block_size.nx2*block_size.nx3; }
   void SearchAndSetNeighbors(MeshBlockTree &tree, int *ranklist, int *nslist);

@@ -899,12 +899,21 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
   delete [] mbdata;
   // check consistency
-  if (datasize != my_blocks(0)->GetBlockSizeInBytes()) {
-    msg << "### FATAL ERROR in Mesh constructor" << std::endl
-        << "The restart file is broken or input parameters are inconsistent."
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
+  if(my_blocks(0)->prad->restart_from_gray > 0){
+    if (datasize != my_blocks(0)->GetBlockSizeInBytesGray()) {
+        msg << "### FATAL ERROR in Mesh constructor" << std::endl
+            << "The restart file is broken or input parameters are inconsistent."
+            << std::endl;
+        ATHENA_ERROR(msg);
+    }
+  }else{
+    if (datasize != my_blocks(0)->GetBlockSizeInBytes()) {
+        msg << "### FATAL ERROR in Mesh constructor" << std::endl
+            << "The restart file is broken or input parameters are inconsistent."
+            << std::endl;
+        ATHENA_ERROR(msg);
+    }
+  }// end check getblocksizeinbytes
 
   ResetLoadBalanceVariables();
 
