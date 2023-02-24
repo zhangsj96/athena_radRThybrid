@@ -974,7 +974,7 @@ void Inflow_rad_X1(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
  
          for(int ifr=0; ifr<prad->nfreq; ++ifr){
             for(int n=0; n<prad->nang; ++n){
-              Real miux = prad->mu(0,k,j,is-i,ifr*prad->nang+n);
+              Real miux = prad->mu(0,k,j,is-i,n);
               if(miux < 0.0){
                 ir(k,j,is-i,ifr*prad->nang+n)
                               = ir(k,j,is-i+1,ifr*prad->nang+n);
@@ -1006,7 +1006,7 @@ void Outflow_rad_X2(MeshBlock *pmb, Coordinates *pco, Radiation *prad,
 
          for(int ifr=0; ifr<prad->nfreq; ++ifr){
             for(int n=0; n<prad->nang; ++n){
-              Real miux = prad->mu(0,k,j,ie+i,ifr*prad->nang+n);
+              Real miux = prad->mu(0,k,j,ie+i,n);
               if(miux > 0.0){
                 ir(k,j,ie+i,ifr*prad->nang+n)
                               = ir(k,j,ie+i-1,ifr*prad->nang+n);
