@@ -35,6 +35,24 @@
 #include "../integrators/rad_integrators.hpp"
 
 
+// set the default parameters for SRJ
+inline void DefaultSRJ(IMRadiation *pimrad)
+{
+
+  // One example
+// SRJ_P = 7
+//SRJ_w1 = 2.0, SRJ_w2 = 1.8,SRJ_w3 = 1.6,SRJ_w4 = 1.4,SRJ_w5 = 1.2,SRJ_w6 = 1.0,SRJ_w7 = 0.6
+//SRJ_Q1 = 1,SRJ_Q2 = 1,SRJ_Q3 = 1,SRJ_Q4 = 1,SRJ_Q5 = 1,SRJ_Q6 = 1,SRJ_Q7 = 1
+
+  for(int i=0; i<9; ++i){
+    pimrad->srj_q[i] = 0;
+    pimrad->srj_w[i] = 1.0;
+  }  
+
+  return;
+}
+
+
 
 IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
   // read in the parameters
@@ -45,11 +63,23 @@ IMRadiation::IMRadiation(Mesh *pm, ParameterInput *pin){
   ite_scheme = pin->GetOrAddInteger("radiation","iteration",1);
   rb_or_not = pin->GetOrAddInteger("radiation","red_or_black",0);
 
+  omega = pin->GetOrAddReal("radiation","omega",1.0);
+  srj_p = std::min(9, pin->GetOrAddInteger("radiation","SRJ_P",0));
+  srj_level = 0;
+  srj_cnt = 0;
+
   pimraditlist = new IMRadITTaskList(pm);
   pimradhylist = new IMRadHydroTaskList(pm);
   pimradcomptlist = new IMRadComptTaskList(pm);
+
+  // set default parameters
+  SetSRJParameters = DefaultSRJ;
 }
 
 
-
+void IMRadiation::EnrollSRJFunction(SRJFunc MySRJFunction)
+{
+  SetSRJParameters = MySRJFunction;
+  
+}
 

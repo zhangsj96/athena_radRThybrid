@@ -54,6 +54,21 @@ public:
   IMRadHydroTaskList *pimradhylist;
   IMRadComptTaskList *pimradcomptlist;
 
+  // scheduled relaxation jacobi method
+  //   // X.Yang, R.Mittal, JCP 274 (2014) 695-708.
+  Real omega;
+  int srj_p; // <= 9; 0 means off.
+  int srj_q[9]; // repetitions
+  Real srj_w[9]; // omegas
+  
+  // internal data
+  int srj_level, srj_cnt; // internal counts
+
+  // The function pointer for srj parameters
+  SRJFunc SetSRJParameters;
+  void EnrollSRJFunction(SRJFunc MySRJFunction);
+
+
 private:
 
   Real sum_diff_;

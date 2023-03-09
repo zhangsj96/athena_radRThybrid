@@ -52,6 +52,7 @@ class HydroDiffusion;
 class FieldDiffusion;
 class OrbitalAdvection;
 class Radiation;
+class IMRadiation;
 class CosmicRay;
 class ThermalConduction;
 
@@ -222,6 +223,8 @@ using FrequencyFunc = void (*)(Radiation *prad);
 using EmissionFunc = void(*)(Radiation *prad, Real tgas);
 using CROpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
                       AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
+using SRJFunc = void (*)(IMRadiation *pimrad);
+
 using CRBoundaryFunc = void (*)(
      MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
      const AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &u_cr,

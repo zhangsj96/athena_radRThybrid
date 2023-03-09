@@ -250,14 +250,35 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
 
   }// end nfreq > 1
        
-         //update specific intensity in the lab frame
-         // do not modify ir_ini
-  for(int ifr=0; ifr<nfreq; ++ifr){
-    lab_ir = &(ir(k,j,i,nang*ifr));
-    for(int n=0; n<nang; ++n){
-      lab_ir[n] = std::max(ir_cm(n+ifr*nang)/cm_to_lab(n), TINY_NUMBER);
+  //update specific intensity in the lab frame
+  // do not modify ir_ini
+
+  Real &omega = pmb->pmy_mesh->pimrad->omega;
+  Real omega_1 = 1.0 - omega;
+
+  if(std::fabs(omega_1) < TINY_NUMBER){
+
+    for(int ifr=0; ifr<nfreq; ++ifr){
+      lab_ir = &(ir(k,j,i,nang*ifr));
+      for(int n=0; n<nang; ++n){
+        lab_ir[n] = std::max(ir_cm(n+ifr*nang)/cm_to_lab(n), TINY_NUMBER);
+      }
     }
-  }
+  }else{
+
+    for(int ifr=0; ifr<nfreq; ++ifr){
+      lab_ir = &(ir(k,j,i,nang*ifr));
+      for(int n=0; n<nang; ++n){
+        Real ir_old = lab_ir[n];
+        Real ir_new = ir_cm(n+ifr*nang)/cm_to_lab(n);
+        ir_new = omega_1 * ir_old + omega * ir_new;
+        lab_ir[n] = std::max(ir_new, TINY_NUMBER);
+      }
+    }// end ifr
+    
+    tgas_new_(k,j,i) = omega_1*tgas_(k,j,i) + omega*tgas_new_(k,j,i);
+
+  }// end omega_1
 
 
 }// end source function

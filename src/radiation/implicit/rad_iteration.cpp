@@ -109,7 +109,16 @@ void IMRadiation::Iteration(Mesh *pm,
 
     }
 
+    // call the function to set SRJ parameters
+    if(srj_p > 0){
+      SetSRJParameters(this);
+    }
 
+
+    srj_level = 0;
+    srj_cnt = 0;
+    if(srj_p > 0)
+      omega = srj_w[0];
 
     while(iteration){
        // initialize the pointer
@@ -164,6 +173,18 @@ void IMRadiation::Iteration(Mesh *pm,
 
       if((niter > nlimit_) || tot_res < error_limit_)
         iteration = false;
+
+      if(srj_p > 0){
+        srj_cnt++;
+        if(srj_cnt >= srj_q[srj_level]){
+          srj_level++;
+          if(srj_level == srj_p)
+            srj_level = 0;
+          srj_cnt = 0;
+          omega = srj_w[srj_level];
+        }
+
+      }
 
     }// end iteration
 
