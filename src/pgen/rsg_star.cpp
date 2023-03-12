@@ -540,7 +540,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       tem = tem_rmax;
       Real grav_local = grav_rmax * pow(x1/rmax,2.0);
       rho = rho_rmax * exp(-grav_local*(x1-rmax)/(tem_rmax));
-      rho = std::max(rho,1.e-8);
+      rho = std::max(rho,Real(1.e-8));
     }else{
       int lleft=0;
 

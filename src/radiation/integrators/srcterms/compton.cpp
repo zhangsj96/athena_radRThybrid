@@ -299,7 +299,7 @@ void RadIntegrator::MultiGroupCompton(AthenaArray<Real> &wmu_cm,
                  /(nu_cen[ifr]-nu_cen[ifr-1]);
       Real eq_n_coef = 1-4.0*tgas_new*dndnu;
       Real eq_n_face = 0.5*(sqrt(eq_n_coef) - 1.0);
-      delta_coef[ifr] = std::max(0.0,(eq_n_face - eq_sol[ifr])/(eq_sol[ifr-1]-eq_sol[ifr]));
+      delta_coef[ifr] = std::max(Real(0.0),(eq_n_face - eq_sol[ifr])/(eq_sol[ifr-1]-eq_sol[ifr]));
     }
   }
   delta_coef[nfreq-1] = 0.5;

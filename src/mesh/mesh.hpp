@@ -184,7 +184,7 @@ class MeshBlock {
   void AllocateIntUserMeshBlockDataField(int n);
   void AllocateUserOutputVariables(int n);
   void SetUserOutputVariableName(int n, const char *name);
-  void SetCostForLoadBalancing(double cost);
+  void SetCostForLoadBalancing(Real cost);
 
   //! defined in either the prob file or default_pgen.cpp in ../pgen/
   void ProblemGenerator(ParameterInput *pin);
