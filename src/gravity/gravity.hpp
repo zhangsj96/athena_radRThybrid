@@ -34,9 +34,14 @@ class Gravity {
   Gravity(MeshBlock *pmb, ParameterInput *pin);
 
   MeshBlock* pmy_block;  // ptr to MeshBlock containing this Field
-  AthenaArray<Real> phi;   // gravitational potential
+  AthenaArray<Real> phi, coarse_phi;   // gravitational potential
+  AthenaArray<Real> def;   // defect from the Multigrid solver
   AthenaArray<Real> empty_flux[3];
-  Real gconst, four_pi_G;
+  Real four_pi_G;
+  bool output_defect;
+  bool fill_ghost;
+
+
   bool srcterm;
 
   // TODO(felker): consider creating a CellCentered.. derived class, and changing to
@@ -46,11 +51,16 @@ class Gravity {
   void Initialize(ParameterInput *pin);
   void Solver(const AthenaArray<Real> &u);
 
+  void SaveFaceBoundaries();
+  void RestoreFaceBoundaries();
+  void ExpandPhysicalBoundaries();
+
   friend class MGGravityDriver;
 
  private:
   bool gravity_tensor_momentum_;
   bool gravity_tensor_energy_;
+  AthenaArray<Real> fbuf_[6];
 };
 
 #endif // GRAVITY_GRAVITY_HPP_
