@@ -253,7 +253,10 @@ void RadIntegrator::CalSourceTerms(MeshBlock *pmb, const Real dt,
   //update specific intensity in the lab frame
   // do not modify ir_ini
 
-  Real &omega = pmb->pmy_mesh->pimrad->omega;
+  Real omega = 1.0;
+  if(IM_RADIATION_ENABLED)
+    omega = pmb->pmy_mesh->pimrad->omega;
+
   Real omega_1 = 1.0 - omega;
 
   if(std::fabs(omega_1) < TINY_NUMBER){
