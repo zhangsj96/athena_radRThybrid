@@ -51,7 +51,7 @@ inline void DefaultOpacity(MeshBlock *pmb,
   for(int k=0; k<nc3; ++k){
     for(int j=0; j<nc2; ++j){
 #pragma omp simd
-      for(int i=0; i<nc3; ++i){
+      for(int i=0; i<nc1; ++i){
 
         ptc->kappa(0,k,j,i) = ptc->min_kappa;
         ptc->kappa(1,k,j,i) = ptc->min_kappa;
