@@ -32,11 +32,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
  public:
   CellCenteredBoundaryVariable(MeshBlock *pmb,
                                AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-                               AthenaArray<Real> *var_flux);
-    //override function for arrays need different initialization of nu_
-  CellCenteredBoundaryVariable(MeshBlock *pmb,
-                               AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-                               AthenaArray<Real> *var_flux, int flag);
+                               AthenaArray<Real> *var_flux, bool fflux);
   ~CellCenteredBoundaryVariable();
 
   //! \note
@@ -79,7 +75,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
   //!@{
   //! BoundaryBuffer:
   void SendFluxCorrection() override;
-   bool ReceiveFluxCorrection() override;
+  bool ReceiveFluxCorrection() override;
   //!@}
 
   //!@{
@@ -119,19 +115,6 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
                       int il, int iu, int jl, int ju, int kl, int ngh) override;
   void OutflowOuterX3(Real time, Real dt,
                       int il, int iu, int jl, int ju, int ku, int ngh) override;
-
-  void VacuumInnerX1(Real time, Real dt,
-                      int il, int jl, int ju, int kl, int ku, int ngh) override;
-  void VacuumOuterX1(Real time, Real dt,
-                      int iu, int jl, int ju, int kl, int ku, int ngh) override;
-  void VacuumInnerX2(Real time, Real dt,
-                      int il, int iu, int jl, int kl, int ku, int ngh) override;
-  void VacuumOuterX2(Real time, Real dt,
-                      int il, int iu, int ju, int kl, int ku, int ngh) override;
-  void VacuumInnerX3(Real time, Real dt,
-                      int il, int iu, int jl, int ju, int kl, int ngh) override;
-  void VacuumOuterX3(Real time, Real dt,
-                      int il, int iu, int jl, int ju, int ku, int ngh) override;  
 
   void PolarWedgeInnerX2(Real time, Real dt,
                          int il, int iu, int jl, int kl, int ku, int ngh) override;
@@ -201,6 +184,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
 
   friend class ParticleMeshBoundaryVariable;
   friend class RadBoundaryVariable;
+  
 };
 
 #endif // BVALS_CC_BVALS_CC_HPP_

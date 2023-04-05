@@ -138,9 +138,22 @@ Outputs::Outputs(Mesh *pm, ParameterInput *pin) {
 
       // set time of last output, time between outputs
       op.next_time = pin->GetOrAddReal(op.block_name,"next_time", pm->time);
-      op.dt = pin->GetReal(op.block_name,"dt");
+      op.dt = pin->GetOrAddReal(op.block_name,"dt", 0.0);
+      op.dcycle = pin->GetOrAddInteger(op.block_name,"dcycle", 0);
 
-      if (op.dt > 0.0) {  // only add output if dt>0
+      if (op.dt == 0.0 && op.dcycle == 0) {
+        msg << "### FATAL ERROR in Outputs constructor" << std::endl
+            << "Either dt or dcycle must be specified in " << op.block_name
+            << std::endl;
+        ATHENA_ERROR(msg);
+      }
+      if (op.dt > 0.0 && op.dcycle > 0) {
+        msg << "### FATAL ERROR in Outputs constructor" << std::endl
+            << "dt and dcycle cannot be specified simultaneously in " << op.block_name
+            << std::endl;
+        ATHENA_ERROR(msg);
+      }
+      if (op.dt > 0.0 || op.dcycle > 0) {  // only add output if dt > 0 or dycle > 0
         // set file number, basename, id, and format
         op.file_number = pin->GetOrAddInteger(op.block_name,"file_number",0);
         op.file_basename = pin->GetString("job","problem_id");
@@ -348,8 +361,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // NEW_OUTPUT_TYPES:
 
   // (lab-frame) density
-  if (output_params.variable.compare("D") == 0 ||
-      output_params.variable.compare("cons") == 0) {
+  if (ContainVariable(output_params.variable, "D") ||
+      ContainVariable(output_params.variable, "cons")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "dens";
@@ -359,8 +372,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   // (rest-frame) density
-  if (output_params.variable.compare("d") == 0 ||
-      output_params.variable.compare("prim") == 0) {
+  if (ContainVariable(output_params.variable, "d") ||
+      ContainVariable(output_params.variable, "prim")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "rho";
@@ -371,8 +384,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   // total energy
   if (NON_BAROTROPIC_EOS) {
-    if (output_params.variable.compare("E") == 0 ||
-        output_params.variable.compare("cons") == 0) {
+    if (ContainVariable(output_params.variable, "E") ||
+        ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Etot";
@@ -388,8 +401,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
     // pressure
-    if (output_params.variable.compare("p") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+    if (ContainVariable(output_params.variable, "p") ||
+        ContainVariable(output_params.variable, "prim")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "press";
@@ -400,8 +413,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   // momentum vector
-  if (output_params.variable.compare("m") == 0 ||
-      output_params.variable.compare("cons") == 0) {
+  if (ContainVariable(output_params.variable, "m") ||
+      ContainVariable(output_params.variable, "cons")) {
     pod = new OutputData;
     pod->type = "VECTORS";
     pod->name = "mom";
@@ -434,7 +447,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   // each component of momentum
-  if (output_params.variable.compare("m1") == 0) {
+  if (ContainVariable(output_params.variable, "m1")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "mom1";
@@ -442,7 +455,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     AppendOutputDataNode(pod);
     num_vars_++;
   }
-  if (output_params.variable.compare("m2") == 0) {
+  if (ContainVariable(output_params.variable, "m2")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "mom2";
@@ -457,7 +470,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     AppendOutputDataNode(pod);
     num_vars_++;
   }
-  if (output_params.variable.compare("m3") == 0) {
+  if (ContainVariable(output_params.variable, "m3")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "mom3";
@@ -474,8 +487,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   // velocity vector
-  if (output_params.variable.compare("v") == 0 ||
-      output_params.variable.compare("prim") == 0) {
+  if (ContainVariable(output_params.variable, "v") ||
+      ContainVariable(output_params.variable, "prim")) {
     pod = new OutputData;
     pod->type = "VECTORS";
     pod->name = "vel";
@@ -508,8 +521,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   // each component of velocity
-  if (output_params.variable.compare("vx") == 0 ||
-      output_params.variable.compare("v1") == 0) {
+  if (ContainVariable(output_params.variable, "vx") ||
+      ContainVariable(output_params.variable, "v1")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "vel1";
@@ -517,8 +530,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     AppendOutputDataNode(pod);
     num_vars_++;
   }
-  if (output_params.variable.compare("vy") == 0 ||
-      output_params.variable.compare("v2") == 0) {
+  if (ContainVariable(output_params.variable, "vy") ||
+      ContainVariable(output_params.variable, "v2")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "vel2";
@@ -533,8 +546,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     AppendOutputDataNode(pod);
     num_vars_++;
   }
-  if (output_params.variable.compare("vz") == 0 ||
-      output_params.variable.compare("v3") == 0) {
+  if (ContainVariable(output_params.variable, "vz") ||
+      ContainVariable(output_params.variable, "v3")) {
     pod = new OutputData;
     pod->type = "SCALARS";
     pod->name = "vel3";
@@ -551,15 +564,23 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }
 
   if (SELF_GRAVITY_ENABLED) {
-    if (output_params.variable.compare("phi") == 0 ||
-        output_params.variable.compare("prim") == 0 ||
-        output_params.variable.compare("cons") == 0) {
+    if (ContainVariable(output_params.variable, "phi") ||
+        ContainVariable(output_params.variable, "prim") ||
+        ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "SCALARS";
-      pod->name = "Phi";
+      pod->name = "phi";
       pod->data.InitWithShallowSlice(pgrav->phi, 4, 0, 1);
       AppendOutputDataNode(pod);
       num_vars_++;
+      if (pgrav->output_defect) {
+        pod = new OutputData;
+        pod->type = "SCALARS";
+        pod->name = "defect-phi";
+        pod->data.InitWithShallowSlice(pgrav->def, 4, 0, 1);
+        AppendOutputDataNode(pod);
+        num_vars_++;
+      }
     }
   } // endif (SELF_GRAVITY_ENABLED)
 
@@ -569,8 +590,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     for (int n=0; n<NSCALARS; n++) {
       std::string scalar_name_cons = root_name_cons + std::to_string(n);
       std::string scalar_name_prim = root_name_prim + std::to_string(n);
-      if (output_params.variable.compare(scalar_name_cons) == 0 ||
-          output_params.variable.compare("cons") == 0) {
+      if (ContainVariable(output_params.variable, scalar_name_cons) ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = scalar_name_cons;
@@ -578,8 +599,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         AppendOutputDataNode(pod);
         num_vars_++;
       }
-      if (output_params.variable.compare(scalar_name_prim) == 0 ||
-          output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, scalar_name_prim) ||
+          ContainVariable(output_params.variable, "prim")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = scalar_name_prim;
@@ -597,9 +618,10 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     if(prad->nfreq == 1){
 
     // (lab-frame) radiation energy density
-      if (output_params.variable.compare("Er") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+
+      if (ContainVariable(output_params.variable, "Er") ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Er";
@@ -609,9 +631,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
 
    // comoving frame fram radiation flux vector
-      if (output_params.variable.compare("Fr") == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, "Fr") ||
+        ContainVariable(output_params.variable, "prim") ||
+        ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "VECTORS";
         pod->name = "Fr";
@@ -634,8 +656,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
 
   // each component of radiation flux
-      if (output_params.variable.compare("Frx") == 0 || 
-          output_params.variable.compare("Fr1") == 0) {
+     if (ContainVariable(output_params.variable, "Frx") ||
+        ContainVariable(output_params.variable, "Fr1")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr1";
@@ -644,8 +666,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_++;
       }   
 
-      if (output_params.variable.compare("Fry") == 0 || 
-          output_params.variable.compare("Fr2") == 0) {
+     if (ContainVariable(output_params.variable, "Fry") ||
+        ContainVariable(output_params.variable, "Fr2")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr2";
@@ -654,8 +676,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_++;
       } 
 
-      if (output_params.variable.compare("Frz") == 0 || 
-          output_params.variable.compare("Fr3") == 0) {
+     if (ContainVariable(output_params.variable, "Frz") ||
+        ContainVariable(output_params.variable, "Fr3")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr3";
@@ -665,9 +687,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
 
     // lab frame radiation pressure
-      if (output_params.variable.compare("Pr") == 0 ||
-            output_params.variable.compare("prim") == 0 ||
-            output_params.variable.compare("cons") == 0) {
+      if (ContainVariable(output_params.variable, "Pr") ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
           pod = new OutputData;
           pod->type = "TENSORS";
           pod->name = "Pr";
@@ -679,9 +701,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
 
     // (comoving-frame) radiation energy density
-      if (output_params.variable.compare("Er0") == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, "Er0") ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Er0";
@@ -693,9 +715,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
 
     // comoving frame fram radiation flux vector
-      if (output_params.variable.compare("Fr0") == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, "Fr0") ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "VECTORS";
         pod->name = "Fr0";
@@ -716,8 +738,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         }
       }
 
-      if (output_params.variable.compare("Fr0x") == 0 || 
-          output_params.variable.compare("Fr01") == 0) {
+     if (ContainVariable(output_params.variable, "Fr0x") ||
+        ContainVariable(output_params.variable, "Fr01")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr01";
@@ -726,8 +748,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_++;
       }   
 
-      if (output_params.variable.compare("Fr0y") == 0 || 
-          output_params.variable.compare("Fr02") == 0) {
+     if (ContainVariable(output_params.variable, "Fr0y") ||
+        ContainVariable(output_params.variable, "Fr02")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr02";
@@ -736,8 +758,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_++;
       } 
 
-      if (output_params.variable.compare("Fr0z") == 0 || 
-          output_params.variable.compare("Fr03") == 0) {
+     if (ContainVariable(output_params.variable, "Fr0z") ||
+        ContainVariable(output_params.variable, "Fr03")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = "Fr03";
@@ -763,9 +785,11 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         std::string fr0y_ifr = "Fr0y_" + std::to_string(ifr)+"_";
         std::string fr0z_ifr = "Fr0z_" + std::to_string(ifr)+"_";
 
-        if (output_params.variable.compare(er_ifr) == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+
+        if (ContainVariable(output_params.variable, er_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
+
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = er_ifr;
@@ -775,9 +799,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         }
 
    // comoving frame fram radiation flux vector
-        if (output_params.variable.compare(fr_ifr) == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+        if (ContainVariable(output_params.variable, fr_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
           pod = new OutputData;
           pod->type = "VECTORS";
           pod->name = fr_ifr;
@@ -799,7 +823,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         }
 
 
-        if (output_params.variable.compare(frx_ifr) == 0) {
+        if (ContainVariable(output_params.variable, frx_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = frx_ifr;
@@ -808,7 +832,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(fry_ifr) == 0) {
+        if (ContainVariable(output_params.variable, fry_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = fry_ifr;
@@ -817,7 +841,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(frz_ifr) == 0) {
+        if (ContainVariable(output_params.variable, frz_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = frz_ifr;
@@ -826,9 +850,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(pr_ifr) == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+        if (ContainVariable(output_params.variable, pr_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
           pod = new OutputData;
           pod->type = "TENSORS";
           pod->name = pr_ifr;
@@ -837,9 +861,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_+=9;
         }
 
-        if (output_params.variable.compare(er0_ifr) == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+        if (ContainVariable(output_params.variable, er0_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = er0_ifr;
@@ -848,9 +872,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(fr0_ifr) == 0 || 
-          output_params.variable.compare("cons") == 0 ||
-          output_params.variable.compare("prim") == 0) {
+        if (ContainVariable(output_params.variable, fr0_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
           pod = new OutputData;
           pod->type = "VECTORS";
           pod->name = fr0_ifr;
@@ -872,7 +896,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         }
 
 
-        if (output_params.variable.compare(fr0x_ifr) == 0) {
+        if (ContainVariable(output_params.variable, fr0x_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = fr0x_ifr;
@@ -881,7 +905,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(fr0y_ifr) == 0) {
+        if (ContainVariable(output_params.variable, fr0y_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = fr0y_ifr;
@@ -890,7 +914,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
           num_vars_++;
         }
 
-        if (output_params.variable.compare(fr0z_ifr) == 0) {
+        if (ContainVariable(output_params.variable, fr0z_ifr)){
           pod = new OutputData;
           pod->type = "SCALARS";
           pod->name = fr0z_ifr;
@@ -909,9 +933,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       std::string sigmas_ifr = "Sigma_s_" + std::to_string(ifr);        
       std::string sigmap_ifr = "Sigma_p_" + std::to_string(ifr); 
 
-      if (output_params.variable.compare(sigmas_ifr) == 0 ||
-          output_params.variable.compare("prim") == 0 ||
-          output_params.variable.compare("cons") == 0) {
+      if (ContainVariable(output_params.variable, sigmas_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = sigmas_ifr;
@@ -920,9 +944,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_ += 1;
       }
 
-      if (output_params.variable.compare(sigmaa_ifr) == 0 ||
-          output_params.variable.compare("prim") == 0 ||
-          output_params.variable.compare("cons") == 0) {
+      if (ContainVariable(output_params.variable, sigmaa_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = sigmaa_ifr;
@@ -931,9 +955,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_ += 1;
       }
     
-      if (output_params.variable.compare(sigmap_ifr) == 0 ||
-          output_params.variable.compare("prim") == 0 ||
-          output_params.variable.compare("cons") == 0) {
+      if (ContainVariable(output_params.variable, sigmap_ifr) ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
         pod->type = "SCALARS";
         pod->name = sigmap_ifr;
@@ -947,9 +971,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   if(CR_ENABLED){
 
-    if (output_params.variable.compare("Ec") == 0 || 
-      output_params.variable.compare("cons") == 0 ||
-      output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Ec') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Ec";
@@ -959,9 +983,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
    // comoving frame fram radiation flux vector
-    if (output_params.variable.compare("Fc") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Fc') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Fc";
@@ -982,9 +1006,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
     }
 
-    if (output_params.variable.compare("Sigma_diff") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Sigma_diff') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Sigma_diff";
@@ -993,9 +1017,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_+=3;
     }
 
-    if (output_params.variable.compare("Sigma_adv") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Sigma_adv') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Sigma_adv";
@@ -1005,9 +1029,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
     // The streaming velocity
-    if (output_params.variable.compare("Vc") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Vc') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Vc";
@@ -1033,9 +1057,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   if(TC_ENABLED){
 
-    if (output_params.variable.compare("Etc") == 0 || 
-      output_params.variable.compare("cons") == 0 ||
-      output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Etc') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Etc";
@@ -1045,9 +1069,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
    // comoving frame fram radiation flux vector
-    if (output_params.variable.compare("Ftc") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Ftc') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Ftc";
@@ -1056,9 +1080,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_+=3;
     }
 
-    if (output_params.variable.compare("Kappa") == 0 || 
-        output_params.variable.compare("cons") == 0 ||
-        output_params.variable.compare("prim") == 0) {
+      if (ContainVariable(output_params.variable, 'Kappa') ||
+          ContainVariable(output_params.variable, "prim") ||
+          ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Kappa";
@@ -1070,13 +1094,14 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   }// end Thermal Conduction
 
 
+
   // note, the Bcc variables are stored in a separate HDF5 dataset from the above Output
   // nodes, and it must come after those nodes in the linked list
   if (MAGNETIC_FIELDS_ENABLED) {
     // vector of cell-centered magnetic field
-    if (output_params.variable.compare("bcc") == 0 ||
-        output_params.variable.compare("prim") == 0 ||
-        output_params.variable.compare("cons") == 0) {
+    if (ContainVariable(output_params.variable, "bcc") ||
+        ContainVariable(output_params.variable, "prim") ||
+        ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "Bcc";
@@ -1098,7 +1123,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
     // each component of cell-centered magnetic field
-    if (output_params.variable.compare("bcc1") == 0) {
+    if (ContainVariable(output_params.variable, "bcc1")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Bcc1";
@@ -1106,7 +1131,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-    if (output_params.variable.compare("bcc2") == 0) {
+    if (ContainVariable(output_params.variable, "bcc2")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Bcc2";
@@ -1114,7 +1139,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-    if (output_params.variable.compare("bcc3") == 0) {
+    if (ContainVariable(output_params.variable, "bcc3")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "Bcc3";
@@ -1123,8 +1148,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_++;
     }
     // each component of face-centered magnetic field
-    if (output_params.variable.compare("b1") == 0
-        || output_params.variable.compare("b") == 0) {
+    if (ContainVariable(output_params.variable, "b1")
+        || ContainVariable(output_params.variable, "b")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "B1";
@@ -1132,8 +1157,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-    if (output_params.variable.compare("b2") == 0
-        || output_params.variable.compare("b") == 0) {
+    if (ContainVariable(output_params.variable, "b2")
+        || ContainVariable(output_params.variable, "b")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "B2";
@@ -1141,8 +1166,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-    if (output_params.variable.compare("b3") == 0
-        || output_params.variable.compare("b") == 0) {
+    if (ContainVariable(output_params.variable, "b3")
+        || ContainVariable(output_params.variable, "b")) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "B3";
@@ -1152,42 +1177,27 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
-  if (output_params.variable.compare(0, 3, "uov") == 0
-      || output_params.variable.compare(0, 12, "user_out_var") == 0) {
-    int iv, ns = 0, ne = pmb->nuser_out_var-1;
-    if (sscanf(output_params.variable.c_str(), "uov%d", &iv)>0) {
-      if (iv>=0 && iv<pmb->nuser_out_var)
-        ns=iv, ne=iv;
-    } else if (sscanf(output_params.variable.c_str(), "user_out_var%d", &iv)>0) {
-      if (iv>=0 && iv<pmb->nuser_out_var)
-        ns=iv, ne=iv;
-    }
-    for (int n = ns; n <= ne; ++n) {
+  bool output_all_uov = ContainVariable(output_params.variable, "uov")
+                        || ContainVariable(output_params.variable, "user_out_var");
+  for (int n = 0; n < pmb->nuser_out_var; ++n) {
+    char abbr_name[16], full_name[32];
+    std::snprintf(abbr_name, sizeof(abbr_name), "uov%d", n);
+    std::snprintf(full_name, sizeof(full_name), "user_out_var%d", n);
+    if (output_all_uov ||
+        (pmb->user_out_var_names_[n].length() != 0
+         && ContainVariable(output_params.variable, pmb->user_out_var_names_[n]))
+        || ContainVariable(output_params.variable, abbr_name)
+        || ContainVariable(output_params.variable, full_name)) {
       pod = new OutputData;
       pod->type = "SCALARS";
       if (pmb->user_out_var_names_[n].length() != 0) {
         pod->name = pmb->user_out_var_names_[n];
       } else {
-        char vn[16];
-        std::snprintf(vn, sizeof(vn), "user_out_var%d", n);
-        pod->name = vn;
+        pod->name = full_name;
       }
       pod->data.InitWithShallowSlice(pmb->user_out_var, 4, n, 1);
       AppendOutputDataNode(pod);
       num_vars_++;
-    }
-  }
-
-  for (int n = 0; n < pmb->nuser_out_var; ++n) {
-    if (pmb->user_out_var_names_[n].length() != 0) {
-      if (output_params.variable.compare(pmb->user_out_var_names_[n]) == 0) {
-        pod = new OutputData;
-        pod->type = "SCALARS";
-        pod->name = pmb->user_out_var_names_[n];
-        pod->data.InitWithShallowSlice(pmb->user_out_var, 4, n, 1);
-        AppendOutputDataNode(pod);
-        num_vars_++;
-      }
     }
   }
 
@@ -1265,17 +1275,17 @@ void OutputType::ClearOutputData() {
 //! \brief scans through singly linked list of OutputTypes and makes any outputs needed.
 
 void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
+  // wtflag = only true for making final outputs due to signal or wall-time/cycle/time
+  // limit. Used by restart file output to change suffix to .final
   bool first=true;
-  MeshBlock *pmb;
-  //calculate radiation quantities for dump
-  // Only need to do once for all output type
-  bool rad_mom=true;
   OutputType* ptype = pfirst_type_;
   while (ptype != nullptr) {
-    if ((pm->time == pm->start_time) ||
-        (pm->time >= ptype->output_params.next_time) ||
-        (pm->time >= pm->tlim) ||
-        (wtflag && ptype->output_params.file_type == "rst")) {
+    if (((pm->time == pm->start_time) // output initial conditions, unless next_time set
+         && (ptype->output_params.next_time <= pm->start_time ))
+      || (ptype->output_params.dt > 0.0 && pm->time >= ptype->output_params.next_time)
+      || (ptype->output_params.dcycle > 0 && pm->ncycle%ptype->output_params.dcycle == 0)
+      || (pm->time >= pm->tlim)
+      || (wtflag && ptype->output_params.file_type == "rst")) {
 
       if(rad_mom && (RADIATION_ENABLED || IM_RADIATION_ENABLED)){
         for(int b=0; b<pm->nblocal; ++b){
@@ -1287,13 +1297,14 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         rad_mom = false;           
       }
 
+
       if (first && ptype->output_params.file_type != "hst") {
         pm->ApplyUserWorkBeforeOutput(pin);
         first = false;
       }
       ptype->WriteOutputFile(pm, pin, wtflag);
     }
-    ptype = ptype->pnext_type; // move to next OutputType node in signly linked list
+    ptype = ptype->pnext_type; // move to next OutputType node in singly linked list
   }
 }
 
@@ -1570,4 +1581,17 @@ void OutputType::CalculateCartesianVector(AthenaArray<Real> &src, AthenaArray<Re
     }
   }
   return;
+}
+
+bool OutputType::ContainVariable(const std::string &haystack, const std::string &needle) {
+  if (haystack.compare(needle) == 0)
+    return true;
+  if (haystack.find(',' + needle + ',') != std::string::npos)
+    return true;
+  if (haystack.find(needle + ',') == 0)
+    return true;
+  if (haystack.find(',' + needle) != std::string::npos
+    && haystack.find(',' + needle) == haystack.length() - needle.length() - 1)
+    return true;
+  return false;
 }

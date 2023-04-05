@@ -217,6 +217,7 @@ void CellCenteredBoundaryVariable::SetShearingBoxBoundaryBuffers() {
   AthenaArray<Real> &pflux = pbval_->pflux_;
   int &xgh = pbval_->xgh_;
   int &xorder = pbval_->xorder_;
+  int nb_offset[2]{0, 4};
   int ib[2]{pmb->is - NGHOST, pmb->ie + 1};
   int js = pmb->js, je = pmb->je;
   int kl = pmb->ks, ku = pmb->ke;
