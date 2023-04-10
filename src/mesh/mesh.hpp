@@ -24,8 +24,8 @@
 #include "../athena_arrays.hpp"
 #include "../bvals/bvals.hpp"
 #include "../outputs/io_wrapper.hpp"
-#include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
+#include "../parameter_input.hpp"
 #include "../task_list/task_list.hpp"
 #include "../task_list/im_rad_task_list.hpp"
 #include "../utils/interp_table.hpp"
@@ -138,7 +138,6 @@ class MeshBlock {
 
   // functions
   std::size_t GetBlockSizeInBytes();
-  std::size_t GetBlockSizeInBytesGray();
   int GetNumberOfMeshBlockCells() {
     return block_size.nx1*block_size.nx2*block_size.nx3; }
   void SearchAndSetNeighbors(MeshBlockTree &tree, int *ranklist, int *nslist);
@@ -146,7 +145,7 @@ class MeshBlock {
                   AthenaArray<Real> &u_in1, AthenaArray<Real> &u_in2,
                   AthenaArray<Real> &u_in3, AthenaArray<Real> &u_in4,
                   const Real wght[5]);
-  
+
   // weightedAve for radiation variable
   void WeightedAve(AthenaArray<Real> &u_out, AthenaArray<Real> &u_in1,
                    AthenaArray<Real> &u_in2, const Real wght[3], int flag);
@@ -184,7 +183,7 @@ class MeshBlock {
   void AllocateIntUserMeshBlockDataField(int n);
   void AllocateUserOutputVariables(int n);
   void SetUserOutputVariableName(int n, const char *name);
-  void SetCostForLoadBalancing(Real cost);
+  void SetCostForLoadBalancing(double cost);
 
   //! defined in either the prob file or default_pgen.cpp in ../pgen/
   void ProblemGenerator(ParameterInput *pin);
@@ -247,7 +246,7 @@ class Mesh {
   my_blocks(0)->block_size.nx1*my_blocks(0)->block_size.nx2*my_blocks(0)->block_size.nx3;}
 
   // data
-  RegionSize mesh_size;
+  RegionSize mesh_size, block_size;
   BoundaryFlag mesh_bcs[6];
   const bool f2, f3; // flags indicating (at least) 2D or 3D Mesh
   const int ndim;     // number of dimensions
@@ -262,11 +261,8 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
-  std::vector<ParticleParameters> particle_params;
-  bool particle, particle_gravity;
 
   int step_since_lb;
-  int gflag;
   int turb_flag; // turbulence flag
   bool amr_updated;
   EosTable *peos_table;
@@ -345,9 +341,11 @@ class Mesh {
   // functions
   MeshGenFunc MeshGenerator_[3];
   BValFunc BoundaryFunction_[6];
+  // radiation boundaries
   RadBoundaryFunc RadBoundaryFunc_[6];
   CRBoundaryFunc CRBoundaryFunc_[6];
   TCBoundaryFunc TCBoundaryFunc_[6];
+
   AMRFlagFunc AMRFlag_;
   SrcTermFunc UserSourceTerm_;
   TimeStepFunc UserTimeStep_;
@@ -358,6 +356,7 @@ class Mesh {
   FieldDiffusionCoeffFunc FieldDiffusivity_;
   OrbitalVelocityFunc OrbitalVelocity_, OrbitalVelocityDerivative_[2];
   MGBoundaryFunc MGGravityBoundaryFunction_[6];
+  MGSourceMaskFunc MGGravitySourceMaskFunction_;
 
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
@@ -395,6 +394,8 @@ class Mesh {
   // often used (not defined) in prob file in ../pgen/
   void EnrollUserBoundaryFunction(BoundaryFace face, BValFunc my_func);
   void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir, MGBoundaryFunc my_bc);
+  void EnrollUserMGGravitySourceMaskFunction(MGSourceMaskFunc srcmask);
+
   void EnrollUserRadBoundaryFunction(BoundaryFace face, RadBoundaryFunc my_func);
   void EnrollUserCRBoundaryFunction(BoundaryFace face, CRBoundaryFunc my_func);
   void EnrollUserTCBoundaryFunction(BoundaryFace face, TCBoundaryFunc my_func);

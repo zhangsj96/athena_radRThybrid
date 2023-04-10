@@ -798,12 +798,13 @@ std::size_t MeshBlock::GetBlockSizeInBytesGray() {
 //! \fn void MeshBlock::SetCostForLoadBalancing(double cost)
 //! \brief stop time measurement and accumulate it in the MeshBlock cost
 
-void MeshBlock::SetCostForLoadBalancing(Real cost) {
+void MeshBlock::SetCostForLoadBalancing(double cost) {
   if (pmy_mesh->lb_manual_) {
     cost_ = std::min(cost, TINY_NUMBER);
     pmy_mesh->lb_flag_ = true;
   }
 }
+
 
 //----------------------------------------------------------------------------------------
 //! \fn void MeshBlock::ResetTimeMeasurement()
