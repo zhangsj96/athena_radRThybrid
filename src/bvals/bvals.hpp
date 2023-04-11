@@ -33,6 +33,7 @@ class MeshBlock;
 class MeshBlockTree;
 class ParameterInput;
 class Coordinates;
+class CellCenteredBoundaryVariable;
 struct RegionSize;
 
 //! free functions to return boundary flag given input string
@@ -41,6 +42,7 @@ BoundaryFlag GetBoundaryFlag(const std::string& input_string);
 std::string GetBoundaryString(BoundaryFlag input_flag);
 //! confirming that the MeshBlock's boundaries are all valid selections
 void CheckBoundaryFlag(BoundaryFlag block_flag, CoordinateDirection dir);
+BoundaryFlag GetMGBoundaryFlag(const std::string& input_string);
 
 //----------------------------------------------------------------------------------------
 //! \class BoundaryBase
@@ -93,6 +95,11 @@ class BoundaryBase {
   RegionSize block_size_;
   AthenaArray<Real> sarea_[2];
 
+  // if a BoundaryPhysics or user fn should be applied at each MeshBlock boundary
+  // false --> e.g. block, polar, (shear-) periodic boundaries (moved from BoundaryValues)
+  bool apply_bndry_fn_[6]{};   // C++11: in-class initializer of non-static member
+  // C++11: direct-list-initialization -> value init of array -> zero init of each scalar
+
  private:
   // calculate 3x shared static data members when constructing only the 1st class instance
   // int maxneighbor_=BufferID() computes ni[] and then calls bufid[]=CreateBufferID()
@@ -119,7 +126,8 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   std::vector<BoundaryVariable *> bvars_sts;
   //! subset of bvars that are exchanged in the FFTGravitySolverTaskList
   std::vector<BoundaryVariable *> bvars_fft_grav;
-
+  //! Pointer to the Gravity Boundary Variable
+  CellCenteredBoundaryVariable *pgbvar;
 
   // inherited functions (interface shared with BoundaryVariable objects):
   // ------
@@ -129,7 +137,7 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   // called before and during time-stepper:
   void StartReceiving(BoundaryCommSubset phase) final {return;};
   void ClearBoundary(BoundaryCommSubset phase) final {return;};
-  void StartReceivingShear(BoundaryCommSubset phase) final;
+  void StartReceivingShear(BoundaryCommSubset phase) final {return;};
   void ComputeShear(const Real time_fc, const Real time_int);
 
   // non-inhertied / unique functions (do not exist in BoundaryVariable objects):
@@ -143,6 +151,9 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
                                std::vector<BoundaryVariable *> bvars_subset);
   void ProlongateBoundaries(const Real time, const Real dt,
                             std::vector<BoundaryVariable *> bvars_subset);
+
+  // temporary workaround for self-gravity
+  void ProlongateGravityBoundaries(const Real time, const Real dt);
 
   // compute the shear at each integrator stage
   //! \todo (felker):
@@ -176,7 +187,7 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   // KGF: remove the redundancies in these variables:
   int shearing_box; // flag for shearing box: 0 = none, 1: xy, 2: xz
   int joverlap_, joverlap_flux_; // # of cells the shear runs over one block
-  Real ssize_;                   // # of ghost cells in x-z plane
+  Real ssize_;                  // # of ghost cells in x-z plane
   Real eps_, eps_flux_;          // fraction part of the shear
   Real qomL_;
   int xorder_, xgh_;
@@ -202,6 +213,11 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
       std::vector<BoundaryVariable *> bvars_subset);
   void ProlongateGhostCells(const NeighborBlock& nb,
                             int si, int ei, int sj, int ej, int sk, int ek);
+
+  // temporary workaround for self-gravity
+  void RestrictGravityGhostCellsOnSameLevel(const NeighborBlock& nb,
+                                            int nk, int nj, int ni);
+  void ProlongateGravityGhostCells(int si, int ei, int sj, int ej, int sk, int ek);
 
   void DispatchBoundaryFunctions(
       MeshBlock *pmb, Coordinates *pco, Real time, Real dt,

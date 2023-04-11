@@ -23,8 +23,7 @@
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
-#include "../particles/particles.hpp"
-#include "../task_list/fft_grav_task_list.hpp"
+#include "../task_list/grav_task_list.hpp"
 #include "fft_gravity.hpp"
 #include "gravity.hpp"
 
@@ -53,7 +52,7 @@ FFTGravityDriver::FFTGravityDriver(Mesh *pm, ParameterInput *pin)
 
   QuickCreatePlan();
 
-  gtlist_ = new FFTGravitySolverTaskList(pin, pm);
+  gtlist_ = new GravityBoundaryTaskList(pin, pm);
 }
 
 FFTGravityDriver::~FFTGravityDriver() {
@@ -70,21 +69,10 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   // Load the source
   int nbs = nslist_[Globals::my_rank];
   int nbe = nbs+nblist_[Globals::my_rank]-1;
-
-  for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
-    MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
-    in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-    if (pmy_mesh_->particle_gravity) {
-      AthenaArray<Real> rhosum(in);
-      for (Particles *ppar : pmb->ppar_grav) {
-        AthenaArray<Real> rhop(ppar->GetMassDensity());
-        for (int k = pmb->ks; k <= pmb->ke; ++k)
-          for (int j = pmb->js; j <= pmb->je; ++j)
-            for (int i = pmb->is; i <= pmb->ie; ++i)
-              rhosum(k,j,i) += rhop(k,j,i);
-      }
-      pfb->LoadSource(rhosum, 0, NGHOST, pmb->loc, pmb->block_size);
-    } else {
+  for (int igid=nbs; igid<=nbe; igid++) {
+    MeshBlock *pmb = pmy_mesh_->FindMeshBlock(igid);
+    if (pmb != nullptr) {
+      in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
       pfb->LoadSource(in, 0, NGHOST, pmb->loc, pmb->block_size);
     }
     //    else { // on another process

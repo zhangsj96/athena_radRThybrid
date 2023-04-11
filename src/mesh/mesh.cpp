@@ -36,7 +36,6 @@
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../globals.hpp"
-#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
@@ -104,14 +103,14 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
-    step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
+    step_since_lb(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
     gids_(), gide_(),
     tree(this),
     use_uniform_meshgen_fn_{true, true, true},
     nreal_user_mesh_data_(), nint_user_mesh_data_(), nuser_history_output_(),
-    four_pi_G_(), grav_eps_(-1.0),
+    four_pi_G_(-1.0),
     lb_flag_(true), lb_automatic_(), lb_manual_(),
     MeshGenerator_{UniformMeshGeneratorX1, UniformMeshGeneratorX2,
                    UniformMeshGeneratorX3},
@@ -524,13 +523,10 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
 
 
   if (SELF_GRAVITY_ENABLED == 1) {
-    gflag = 1; // set gravity flag
     pfgrd = new FFTGravityDriver(this, pin);
   } else if (SELF_GRAVITY_ENABLED == 2) {
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
-  } else if (SELF_GRAVITY_ENABLED == 3) {
-    gflag = 1; // set gravity flag
   }
 
   if(IM_RADIATION_ENABLED){
@@ -546,7 +542,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   for (int i=gids_; i<=gide_; i++) {
     SetBlockSizeAndBoundaries(loclist[i], block_size, block_bcs);
     my_blocks(i-gids_) = new MeshBlock(i, i-gids_, loclist[i], block_size, block_bcs,
-                                       this, pin, gflag);
+                                       this, pin);
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
 
@@ -599,14 +595,14 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
-    step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
+    step_since_lb(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
     gids_(), gide_(),
     tree(this),
     use_uniform_meshgen_fn_{true, true, true},
     nreal_user_mesh_data_(), nint_user_mesh_data_(), nuser_history_output_(),
-    four_pi_G_(), grav_eps_(-1.0),
+    four_pi_G_(-1.0),
     lb_flag_(true), lb_automatic_(), lb_manual_(),
     MeshGenerator_{UniformMeshGeneratorX1, UniformMeshGeneratorX2,
                    UniformMeshGeneratorX3},
@@ -767,7 +763,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   // read the ID list
-  listsize = sizeof(LogicalLocation)+sizeof(double);
+  listsize = sizeof(LogicalLocation)+sizeof(Real);
   //allocate the idlist buffer
   char *idlist = new char[listsize*nbtotal];
   if (Globals::my_rank == 0) { // only the master process reads the ID list
@@ -851,13 +847,10 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   if (SELF_GRAVITY_ENABLED == 1) {
-    gflag = 1; // set gravity flag
     pfgrd = new FFTGravityDriver(this, pin);
   } else if (SELF_GRAVITY_ENABLED == 2) {
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
-  } else if (SELF_GRAVITY_ENABLED == 3) {
-    gflag = 1; // set gravity flag
   }
 
   if(IM_RADIATION_ENABLED){
@@ -917,8 +910,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
         ATHENA_ERROR(msg);
     }
   }// end check getblocksizeinbytes
-
-
+  
   ResetLoadBalanceVariables();
 
   // clean up
@@ -1213,6 +1205,7 @@ void Mesh::EnrollUserMGGravitySourceMaskFunction(MGSourceMaskFunc srcmask) {
   return;
 }
 
+
 //----------------------------------------------------------------------------------------
 // radiation related boundaries
 
@@ -1505,8 +1498,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pmb->pbval->SetupPersistentMPI();
       // other BoundaryVariable objects:
       if (SELF_GRAVITY_ENABLED == 1
-        || (SELF_GRAVITY_ENABLED == 2 && pmb->pgrav->fill_ghost) 
-        || (SELF_GRAVITY_ENABLED == 3))
+        || (SELF_GRAVITY_ENABLED == 2 && pmb->pgrav->fill_ghost))
         pmb->pgrav->gbvar.SetupPersistentMPI();
       if(IM_RADIATION_ENABLED)
         pmb->prad->rad_bvar.SetupPersistentMPI();
@@ -1517,8 +1509,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pfgrd->Solve(1, 0);
     else if (SELF_GRAVITY_ENABLED == 2)
       pmgrd->Solve(1);
-    else if (SELF_GRAVITY_ENABLED == 3)
-      my_blocks(0)->pfft->Solve(1);
 
 #pragma omp parallel num_threads(nthreads)
     {
@@ -1534,10 +1524,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         }
         pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                     pbval->bvars_main_int);
-
         if(IM_RADIATION_ENABLED){
           pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
-        }// end im_RADIATION
       }
 
       // send conserved variables
@@ -1558,12 +1546,14 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pscalars->sbvar.SendBoundaryBuffers();
         }
 
+
         if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
           pmb->prad->rad_bvar.SendBoundaryBuffers();
         if(CR_ENABLED)
           pmb->pcr->cr_bvar.SendBoundaryBuffers();
         if(TC_ENABLED)
           pmb->ptc->tc_bvar.SendBoundaryBuffers();
+
 
       }
 
@@ -1584,17 +1574,17 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         if(TC_ENABLED)
           pmb->ptc->tc_bvar.ReceiveAndSetBoundariesWithWait();
 
-
         if (shear_periodic && orbital_advection==0) {
           pmb->phydro->hbvar.AddHydroShearForInit();
+
           if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
             pmb->prad->rad_bvar.AddRadShearForInit();
-
         }
         pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                    pbval->bvars_main_int);
         if(IM_RADIATION_ENABLED)
           pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);  
+
       }
 
       // With AMR/SMR GR send primitives to enable cons->prim before prolongation
@@ -1779,6 +1769,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 
 
    // ---------------------------------------------
+
 
 
       // Calc initial diffusion coefficients
@@ -2064,6 +2055,7 @@ void Mesh::CorrectMidpointInitialCondition() {
       pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
     }
 
+
     if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
       pmb->prad->rad_bvar.ReceiveAndSetBoundariesWithWait();
     if(CR_ENABLED)
@@ -2071,14 +2063,17 @@ void Mesh::CorrectMidpointInitialCondition() {
     if(TC_ENABLED)
       pmb->ptc->tc_bvar.ReceiveAndSetBoundariesWithWait();   
 
+
     if (shear_periodic && orbital_advection==0) {
       pmb->phydro->hbvar.AddHydroShearForInit();
 
       if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
         pmb->prad->rad_bvar.AddRadShearForInit();
+
     }
     pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                pbval->bvars_main_int);
+
 
     if(IM_RADIATION_ENABLED)
       pmb->prad->rad_bvar.ClearBoundary(BoundaryCommSubset::radiation);   
@@ -2134,12 +2129,13 @@ void Mesh::ReserveMeshBlockPhysIDs() {
   if (NSCALARS > 0) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
+
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED)
     ReserveTagPhysIDs(RadBoundaryVariable::max_phys_id);
   if(CR_ENABLED)
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   if(TC_ENABLED)
-    ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);  
+    ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id); 
   
 #endif
   return;

@@ -28,7 +28,6 @@
 #include "../fft/athena_fft.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
-#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
@@ -51,10 +50,9 @@
 //!                        and mesh refinement objects.
 
 MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_block,
-                     BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin,
-                     int igflag, bool ref_flag) :
+           BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, bool ref_flag) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
-    gid(igid), lid(ilid), gflag(igflag), nuser_out_var(),
+    gid(igid), lid(ilid), nuser_out_var(),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
     nreal_user_meshblock_data_(), nint_user_meshblock_data_(), cost_(1.0) {
@@ -64,13 +62,11 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   ncells1 = block_size.nx1 + 2*NGHOST;
   ncc1 = block_size.nx1/2 + 2*NGHOST;
-  int ndim=1;
   if (pmy_mesh->f2) {
     js = NGHOST;
     je = js + block_size.nx2 - 1;
     ncells2 = block_size.nx2 + 2*NGHOST;
     ncc2 = block_size.nx2/2 + 2*NGHOST;
-    ndim=2;
   } else {
     js = je = 0;
     ncells2 = 1;
@@ -82,7 +78,6 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     ke = ks + block_size.nx3 - 1;
     ncells3 = block_size.nx3 + 2*NGHOST;
     ncc3 = block_size.nx3/2 + 2*NGHOST;
-    ndim=3;
   } else {
     ks = ke = 0;
     ncells3 = 1;
@@ -127,7 +122,6 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   } else if (std::strcmp(COORDINATE_SYSTEM, "gr_user") == 0) {
     pcoord = new GRUser(this, pin, false);
   }
-
 
 
 //=================================================================
@@ -189,7 +183,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   }
   //========================================================
-  // the reconstruction constructor needs nfre_ang
+
 
   // Reconstruction: constructor may implicitly depend on Coordinates, and PPM variable
   // floors depend on EOS, but EOS isn't needed in Reconstruction constructor-> this is ok
@@ -230,8 +224,6 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
-    if (SELF_GRAVITY_ENABLED == 3)
-      pfft = new BlockFFTGravity(this, pin);
   }
   if (NSCALARS > 0) {
     // if (this->scalars_block)
@@ -303,10 +295,9 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
 MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
                      LogicalLocation iloc, RegionSize input_block,
-                     BoundaryFlag *input_bcs,
-                     double icost, char *mbdata, int igflag) :
+                     BoundaryFlag *input_bcs, double icost, char *mbdata) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
-    gid(igid), lid(ilid), gflag(igflag), nuser_out_var(),
+    gid(igid), lid(ilid), nuser_out_var(),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
     nreal_user_meshblock_data_(), nint_user_meshblock_data_(), cost_(icost) {
@@ -316,13 +307,11 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   ncells1 = block_size.nx1 + 2*NGHOST;
   ncc1 = block_size.nx1/2 + 2*NGHOST;
-  int ndim = 1;
   if (pmy_mesh->f2) {
     js = NGHOST;
     je = js + block_size.nx2 - 1;
     ncells2 = block_size.nx2 + 2*NGHOST;
     ncc2 = block_size.nx2/2 + 2*NGHOST;
-    ndim = 2;
   } else {
     js = je = 0;
     ncells2 = 1;
@@ -334,7 +323,6 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     ke = ks + block_size.nx3 - 1;
     ncells3 = block_size.nx3 + 2*NGHOST;
     ncc3 = block_size.nx3/2 + 2*NGHOST;
-    ndim = 3;
   } else {
     ks = ke = 0;
     ncells3 = 1;
@@ -436,6 +424,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
   
 
+
   // Reconstruction (constructor may implicitly depend on Coordinates)
   precon = new Reconstruction(this, pin);
 
@@ -463,8 +452,6 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
-    if (SELF_GRAVITY_ENABLED == 3)
-      pfft = new BlockFFTGravity(this, pin);
   }
 
   if (NSCALARS > 0) {
@@ -597,7 +584,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += ptc->u_tc.GetSizeInBytes();      
   }
 
-  
+
 
   // (conserved variable) Passive scalars:
   if (NSCALARS > 0) {
@@ -633,6 +620,7 @@ MeshBlock::~MeshBlock() {
   delete peos;
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
+  if (SELF_GRAVITY_ENABLED == 2) delete pmg;
   if (NSCALARS > 0) delete pscalars;
 
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED) delete prad;
@@ -734,8 +722,6 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  for (int ipar=0; ipar < Particles::num_particles; ++ipar)
-    size += ppar[ipar]->GetSizeInBytes();
   if (NSCALARS > 0)
     size += pscalars->s.GetSizeInBytes();
 
@@ -745,7 +731,6 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
     size += pcr->u_cr.GetSizeInBytes();
   if(TC_ENABLED)
     size += ptc->u_tc.GetSizeInBytes();
-  
 
   // calculate user MeshBlock data size
   for (int n=0; n<nint_user_meshblock_data_; n++)
@@ -755,6 +740,7 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
 
   return size;
 }
+
 
 std::size_t MeshBlock::GetBlockSizeInBytesGray() {
   std::size_t size;
@@ -804,7 +790,6 @@ void MeshBlock::SetCostForLoadBalancing(double cost) {
     pmy_mesh->lb_flag_ = true;
   }
 }
-
 
 //----------------------------------------------------------------------------------------
 //! \fn void MeshBlock::ResetTimeMeasurement()

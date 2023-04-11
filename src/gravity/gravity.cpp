@@ -29,8 +29,10 @@
 #include "mg_gravity.hpp"
 
 //! constructor, initializes data structures and parameters
-
 // TODO(felker): change "MeshBlock *pmb" to reference member, set in initializer list
+//----------------------------------------------------------------------------------------
+//! \fn Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin)
+//! \brief Gravity constructor
 Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
     pmy_block(pmb), phi(pmb->ncells3, pmb->ncells2, pmb->ncells1),
     coarse_phi(NHYDRO, pmb->ncc3, pmb->ncc2, pmb->ncc1,
@@ -70,17 +72,15 @@ Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
   }
 
   // using Gravity as an example of: containing full object members instead of pointer
-  // memebers, construting BoundaryVariaable composite obj (no default ctor) in Gravity
+  // memebers, construting BoundaryVariable composite obj (no default ctor) in Gravity
   // ctor initializer list, avoiding dynamically-managed memory and the need for a
   // user-provided dtor.
 
   // Enroll CellCenteredBoundaryVariable object
   gbvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&gbvar);
-  pmb->pbval->bvars_fft_grav.push_back(&gbvar);
   pmb->pbval->pgbvar = &gbvar;
 }
-
 
 
 //----------------------------------------------------------------------------------------
@@ -420,3 +420,4 @@ void Gravity::ExpandPhysicalBoundaries() {
 
   return;
 }
+

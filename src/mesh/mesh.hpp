@@ -61,7 +61,6 @@ class FFTDriver;
 class FFTGravityDriver;
 class TurbulenceDriver;
 class OrbitalAdvection;
-class BlockFFTGravity;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -84,11 +83,10 @@ class MeshBlock {
 
  public:
   MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_size,
-            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, int igflag,
+            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin,
             bool ref_flag = false);
   MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin, LogicalLocation iloc,
-            RegionSize input_block, BoundaryFlag *input_bcs, double icost,
-            char *mbdata, int igflag);
+            RegionSize input_block, BoundaryFlag *input_bcs, double icost, char *mbdata);
   ~MeshBlock();
 
   // data
@@ -132,12 +130,13 @@ class MeshBlock {
   PassiveScalars *pscalars;
   EquationOfState *peos;
   OrbitalAdvection *porb;
-  BlockFFTGravity *pfft;
+
   // pointer to particle classes
   std::vector<Particles *> ppar, ppar_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();
+  std::size_t GetBlockSizeInBytesGray();
   int GetNumberOfMeshBlockCells() {
     return block_size.nx1*block_size.nx2*block_size.nx3; }
   void SearchAndSetNeighbors(MeshBlockTree &tree, int *ranklist, int *nslist);
@@ -228,7 +227,6 @@ class Mesh {
   friend class HydroDiffusion;
   friend class FieldDiffusion;
   friend class OrbitalAdvection;
-  friend class BlockFFTGravity;
   friend class Particles;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
@@ -331,7 +329,7 @@ class Mesh {
   UserHistoryOperation *user_history_ops_;
 
   // global constants
-  Real four_pi_G_, grav_eps_;
+  Real four_pi_G_;
 
   // variables for load balancing control
   bool lb_flag_, lb_automatic_, lb_manual_;
@@ -403,7 +401,6 @@ class Mesh {
   //! \deprecated (felker):
   //! * provide trivial overload for old-style BoundaryFace enum argument
   void EnrollUserBoundaryFunction(int face, BValFunc my_func);
-  void EnrollUserMGGravityBoundaryFunction(int dir, MGBoundaryFunc my_bc);
   void EnrollUserRadBoundaryFunction(int face, RadBoundaryFunc my_func);
   void EnrollUserCRBoundaryFunction(int face, CRBoundaryFunc my_func);
   void EnrollUserTCBoundaryFunction(int face, TCBoundaryFunc my_func);
@@ -423,7 +420,7 @@ class Mesh {
   void EnrollOrbitalVelocityDerivative(int i, OrbitalVelocityFunc my_func);
   void SetGravitationalConstant(Real g) { four_pi_G_=4.0*PI*g; }
   void SetFourPiG(Real fpg) { four_pi_G_=fpg; }
-  void SetGravityThreshold(Real eps) { grav_eps_=eps; }
+
 };
 
 

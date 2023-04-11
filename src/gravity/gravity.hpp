@@ -24,7 +24,7 @@ class ParameterInput;
 class Coordinates;
 class GravityBoundaryValues;
 class MGGravity;
-class MGGRavityDriver;
+class MGGravityDriver;
 
 //! \class Gravity
 //! \brief gravitational potential data and functions
@@ -41,15 +41,9 @@ class Gravity {
   bool output_defect;
   bool fill_ghost;
 
-
-  bool srcterm;
-
   // TODO(felker): consider creating a CellCentered.. derived class, and changing to
   //GravityBoundaryVariable *pgbval;
   CellCenteredBoundaryVariable gbvar;
-
-  void Initialize(ParameterInput *pin);
-  void Solver(const AthenaArray<Real> &u);
 
   void SaveFaceBoundaries();
   void RestoreFaceBoundaries();

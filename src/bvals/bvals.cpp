@@ -114,9 +114,8 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
   if (STS_ENABLED) {
     bvars_sts.reserve(1);
   }
-  if (SELF_GRAVITY_ENABLED) {
-    bvars_fft_grav.reserve(1);
-  }
+
+
 
   // Matches initial value of Mesh::next_phys_id_
   // reserve phys=0 for former TAG_AMR=8; now hard-coded in Mesh::CreateAMRMPITag()
@@ -339,6 +338,7 @@ void BoundaryValues::CheckUserBoundaries() {
             << "is not enrolled in direction " << i  << " (in [0,6])." << std::endl;
         ATHENA_ERROR(msg);
       }
+
       if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
         if (pmy_mesh_->RadBoundaryFunc_[i] == nullptr) {
           std::stringstream msg;
@@ -387,66 +387,34 @@ void BoundaryValues::StartReceivingSubset(BoundaryCommSubset phase,
   // KGF: begin shearing-box exclusive section of original StartReceivingForInit()
   // find send_block_id and recv_block_id;
   if (shearing_box != 0) {
-    StartReceivingShear(phase);
-  }
-  return;
-}
-
-//----------------------------------------------------------------------------------------
-//! \fn void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase)
-//! \brief initiate MPI_Irecv() for shearing box
-//!
-//! \note
-//! - cannot simply combine StartReceivingShear() at end of StartReceiving()
-//!   (which is done for ClearBoundary), because the "shared"/non-virtual fn
-//!   BoundaryValues::FindShearBlock() must be called in between 2x fns
-//! - shearing box is currently incompatible with both GR and AMR
-void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
-  switch (phase) {
-    case BoundaryCommSubset::mesh_init:
-      //FindShearBlock(pmy_mesh_->time);
-      break;
-    case BoundaryCommSubset::radiation:
-      break;
-    case BoundaryCommSubset::radhydro:
-      for (auto bvar : bvars_main_int) {
-        bvar->StartReceivingShear(phase);
-      }
-      break;        
-    case BoundaryCommSubset::all:
-      // KGF: must pass "time" parameter from time_integrator.cpp
-      //FindShearBlock(time);
-
-      // KGF: cannot simply combine StartReceivingShear() at end of StartReceiving()
-      // (which is done for ClearBoundary), because the "shared"/non-virtual fn
-      // BoundaryValues::FindShearBlock() must be called in between 2x fns
-
-      //! \todo (felker):
-      //! * consider calling FindShearBlock() at the beginning of this fn,
-      //!   which will allow the 2x StartReceiving() to be combined
-      for (auto bvar : bvars_main_int) {
-        bvar->StartReceivingShear(phase);
-      }
-      break;
-    case BoundaryCommSubset::poisson:
-      for (auto bvar : bvars_fft_grav) {
-        bvar->StartReceivingShear(phase);
-      }
-      break;
-    case BoundaryCommSubset::orbital:
-      for (auto bvar : bvars_main_int) {
-        bvar->StartReceivingShear(phase);
-      }
-      break;
-    case BoundaryCommSubset::gr_amr:
-      // shearing box is currently incompatible with both GR and AMR
-      std::stringstream msg;
-      msg << "### FATAL ERROR in BoundaryValues::StartReceiving" << std::endl
-          << "BoundaryCommSubset::gr_amr was passed as the 'phase' argument while\n"
-          << "SHEARING_BOX=1 is enabled. Shearing box calculations are currently\n"
-          << "incompatible with both AMR and GR" << std::endl;
-      ATHENA_ERROR(msg);
-      break;
+    switch (phase) {
+      case BoundaryCommSubset::mesh_init:
+        break;
+      case BoundaryCommSubset::radiation:
+        break;
+      case BoundaryCommSubset::radhydro:
+        for (auto bvars_it = bvars_subset.begin(); bvars_it != bvars_subset.end();
+             ++bvars_it) {
+          (*bvars_it)->StartReceivingShear(phase);
+        }
+        break;
+      case BoundaryCommSubset::all:
+      case BoundaryCommSubset::orbital:
+        for (auto bvars_it = bvars_subset.begin(); bvars_it != bvars_subset.end();
+             ++bvars_it) {
+          (*bvars_it)->StartReceivingShear(phase);
+        }
+        break;
+      case BoundaryCommSubset::gr_amr:
+        // shearing box is currently incompatible with both GR and AMR
+        std::stringstream msg;
+        msg << "### FATAL ERROR in BoundaryValues::StartReceiving" << std::endl
+            << "BoundaryCommSubset::gr_amr was passed as the 'phase' argument while\n"
+            << "SHEARING_BOX=1 is enabled. Shearing box calculations are currently\n"
+            << "incompatible with both AMR and GR" << std::endl;
+        ATHENA_ERROR(msg);
+        break;
+    }
   }
   return;
 }
@@ -522,6 +490,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     ps = pmb->pscalars;
   }
 
+
   Radiation *prad = nullptr;
   RadBoundaryVariable *pradbvar = nullptr;
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
@@ -542,6 +511,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     ptc = pmb->ptc;
     ptcbvar = &(ptc->tc_bvar);
   }
+
 
 
   // Apply boundary function on inner-x1 and update W,bcc (if not periodic)
@@ -610,14 +580,14 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
       if(prad->rotate_theta == 1){
         pradbvar->RotateHPi_InnerX2(time, dt, bis, bie, pmb->js, bks, bke, NGHOST);
       }
-    }// end radiation        
+    }// end radiation   
 
     // Apply boundary function on outer-x2 and update W,bcc (if not periodic)
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, prad->ir, pcr->u_cr, ptc->u_tc, 
-                                BoundaryFace::outer_x2, bvars_subset);
+                                ph->w, pf->b, BoundaryFace::outer_x2,
+                                bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
         pmb->pfield->CalculateCellCenteredField(pf->b, pf->bcc, pco,
@@ -631,13 +601,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
             ps->r, ph->u, ps->s, pco, bis, bie, pmb->je+1, pmb->je+NGHOST, bks, bke);
       }
     }
-    if((RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
-           (block_bcs[BoundaryFace::outer_x2] != BoundaryFlag::block)){
-      if(prad->rotate_theta == 1){
-        pradbvar->RotateHPi_OuterX2(time, dt, bis, bie, pmb->je, bks, bke, NGHOST);
-      }
-    }// end radiation
-
   }
 
   if (pmb->block_size.nx3 > 1) { // 3D
@@ -672,7 +635,6 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
         pradbvar->RotatePi_InnerX3(time, dt, bis, bie, bjs, bje, pmb->ks,NGHOST);
       }
     }// end radiation
-
 
     // Apply boundary function on outer-x3 and update W,bcc (if not periodic)
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
@@ -713,12 +675,12 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
 void BoundaryValues::DispatchBoundaryFunctions(
     MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
     int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-    AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &ir, 
-    AthenaArray<Real> &u_cr, AthenaArray<Real> &u_tc, BoundaryFace face,
+    AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
     std::vector<BoundaryVariable *> bvars_subset) {
   if (block_bcs[face] ==  BoundaryFlag::user) {  // user-enrolled BCs
     pmy_mesh_->BoundaryFunction_[face](pmb, pco, prim, b, time, dt,
                                        il, iu, jl, ju, kl, ku, NGHOST);
+
     // user-defined  boundary for radiation
     if((RADIATION_ENABLED || IM_RADIATION_ENABLED)){
       pmy_mesh_->RadBoundaryFunc_[face](pmb,pco,pmb->prad,prim,b, ir,time,dt,
