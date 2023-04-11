@@ -1524,7 +1524,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         }
         pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                     pbval->bvars_main_int);
-        if(IM_RADIATION_ENABLED){
+        if(IM_RADIATION_ENABLED)
           pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
       }
 
@@ -2007,7 +2007,7 @@ void Mesh::CorrectMidpointInitialCondition() {
     pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                 pbval->bvars_main_int);
 
-    if(IM_RADIATION_ENABLED){
+    if(IM_RADIATION_ENABLED)
       pmb->prad->rad_bvar.StartReceiving(BoundaryCommSubset::radiation);
 
   }

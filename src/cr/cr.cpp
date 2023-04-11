@@ -210,7 +210,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     coarse_cr_(NCR,pmb->ncc3, pmb->ncc2, pmb->ncc1,
              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
               AthenaArray<Real>::DataStatus::empty)),
-    cr_bvar(pmb, &u_cr, &coarse_cr_, flux){
+    cr_bvar(pmb, &u_cr, &coarse_cr_, flux, true){
 
   Mesh *pm = pmy_block->pmy_mesh;
 

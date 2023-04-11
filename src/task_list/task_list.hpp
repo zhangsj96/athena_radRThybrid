@@ -124,6 +124,7 @@ class TaskList {
 //! \brief data and function definitions for TimeIntegratorTaskList derived class
 
 class TimeIntegratorTaskList : public TaskList {
+  friend class IMRadiation;
  public:
   TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm);
 

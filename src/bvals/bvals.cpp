@@ -586,8 +586,8 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::outer_x2,
-                                bvars_subset);
+                                ph->w, pf->b, prad->ir, pcr->u_cr, ptc->u_tc, 
+                                BoundaryFace::outer_x2, bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
         pmb->pfield->CalculateCellCenteredField(pf->b, pf->bcc, pco,
@@ -675,7 +675,8 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
 void BoundaryValues::DispatchBoundaryFunctions(
     MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
     int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-    AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
+    AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &ir,
+    AthenaArray<Real> &u_cr, AthenaArray<Real> &u_tc, BoundaryFace face,
     std::vector<BoundaryVariable *> bvars_subset) {
   if (block_bcs[face] ==  BoundaryFlag::user) {  // user-enrolled BCs
     pmy_mesh_->BoundaryFunction_[face](pmb, pco, prim, b, time, dt,

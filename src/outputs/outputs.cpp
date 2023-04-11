@@ -971,7 +971,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   if(CR_ENABLED){
 
-      if (ContainVariable(output_params.variable, 'Ec') ||
+      if (ContainVariable(output_params.variable, "Ec") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -983,7 +983,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
    // comoving frame fram radiation flux vector
-      if (ContainVariable(output_params.variable, 'Fc') ||
+      if (ContainVariable(output_params.variable, "Fc") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1006,7 +1006,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
     }
 
-      if (ContainVariable(output_params.variable, 'Sigma_diff') ||
+      if (ContainVariable(output_params.variable, "Sigma_diff") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1017,7 +1017,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_+=3;
     }
 
-      if (ContainVariable(output_params.variable, 'Sigma_adv') ||
+      if (ContainVariable(output_params.variable, "Sigma_adv") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1029,7 +1029,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
     // The streaming velocity
-      if (ContainVariable(output_params.variable, 'Vc') ||
+      if (ContainVariable(output_params.variable, "Vc") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1057,7 +1057,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 
   if(TC_ENABLED){
 
-      if (ContainVariable(output_params.variable, 'Etc') ||
+      if (ContainVariable(output_params.variable, "Etc") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1069,7 +1069,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
    // comoving frame fram radiation flux vector
-      if (ContainVariable(output_params.variable, 'Ftc') ||
+      if (ContainVariable(output_params.variable, "Ftc") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1080,7 +1080,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_+=3;
     }
 
-      if (ContainVariable(output_params.variable, 'Kappa') ||
+      if (ContainVariable(output_params.variable, "Kappa") ||
           ContainVariable(output_params.variable, "prim") ||
           ContainVariable(output_params.variable, "cons")) {
       pod = new OutputData;
@@ -1278,6 +1278,8 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
   // wtflag = only true for making final outputs due to signal or wall-time/cycle/time
   // limit. Used by restart file output to change suffix to .final
   bool first=true;
+  MeshBlock *pmb;
+  bool rad_mom=true;
   OutputType* ptype = pfirst_type_;
   while (ptype != nullptr) {
     if (((pm->time == pm->start_time) // output initial conditions, unless next_time set

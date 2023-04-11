@@ -3,7 +3,7 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = thermal_multigroup.cpp
+PROBLEM_FILE = thermal_relaxation.cpp
 COORDINATES_FILE = cartesian.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
@@ -13,9 +13,9 @@ MPIFFT_FILE =
 
 # General compiler specifications
 
-CXX := g++
+CXX := mpicxx
 CPPFLAGS := 
-CXXFLAGS := -O0 -g -std=c++11
+CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
 LDLIBS :=  -lhdf5
 GCOV_CMD := gcov
@@ -61,7 +61,6 @@ SRC_FILES := $(wildcard src/*.cpp) \
     $(wildcard src/multigrid/*.cpp) \
     $(wildcard src/orbital_advection/*.cpp) \
     $(wildcard src/outputs/*.cpp) \
-    $(wildcard src/particles/*.cpp) \
     src/pgen/default_pgen.cpp \
     src/pgen/$(PROBLEM_FILE) \
     $(wildcard src/reconstruct/*.cpp) \

@@ -62,11 +62,13 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   ncells1 = block_size.nx1 + 2*NGHOST;
   ncc1 = block_size.nx1/2 + 2*NGHOST;
+  int ndim = 1;
   if (pmy_mesh->f2) {
     js = NGHOST;
     je = js + block_size.nx2 - 1;
     ncells2 = block_size.nx2 + 2*NGHOST;
     ncc2 = block_size.nx2/2 + 2*NGHOST;
+    ndim = 2;
   } else {
     js = je = 0;
     ncells2 = 1;
@@ -78,6 +80,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     ke = ks + block_size.nx3 - 1;
     ncells3 = block_size.nx3 + 2*NGHOST;
     ncc3 = block_size.nx3/2 + 2*NGHOST;
+    ndim = 3;
   } else {
     ks = ke = 0;
     ncells3 = 1;
@@ -241,26 +244,6 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   //! * Compare both private member variables via BoundaryValues::CheckCounterPhysID
 
   peos = new EquationOfState(this, pin);
-  if (pm->particle) {
-    for (ParticleParameters pp : pm->particle_params) {
-      Particles *newppar;
-      if (pp.partype.compare("dust") == 0) {
-        newppar = new DustParticles(this, pin, &pp);
-      } else if (pp.partype.compare("tracer") == 0) {
-        newppar = new TracerParticles(this, pin, &pp);
-      } else if (pp.partype.compare("star") == 0) {
-        newppar = new StarParticles(this, pin, &pp);
-      } else {
-        std::stringstream msg;
-        msg << "### FATAL ERROR in MeshBlock::MeshBlock" << std::endl
-            << "partype=" << pp.partype << " is not supported " << std::endl;
-        ATHENA_ERROR(msg);
-      }
-      ppar.push_back(newppar);
-      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
-      pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
-    }
-  }
 
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
@@ -307,11 +290,13 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   ncells1 = block_size.nx1 + 2*NGHOST;
   ncc1 = block_size.nx1/2 + 2*NGHOST;
+  int ndim = 1;
   if (pmy_mesh->f2) {
     js = NGHOST;
     je = js + block_size.nx2 - 1;
     ncells2 = block_size.nx2 + 2*NGHOST;
     ncc2 = block_size.nx2/2 + 2*NGHOST;
+    ndim = 2;
   } else {
     js = je = 0;
     ncells2 = 1;
@@ -323,6 +308,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     ke = ks + block_size.nx3 - 1;
     ncells3 = block_size.nx3 + 2*NGHOST;
     ncc3 = block_size.nx3/2 + 2*NGHOST;
+    ndim = 3;
   } else {
     ks = ke = 0;
     ncells3 = 1;
@@ -461,26 +447,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
 
   peos = new EquationOfState(this, pin);
-  if (pm->particle) {
-    for (ParticleParameters pp : pm->particle_params) {
-      Particles *newppar;
-      if (pp.partype.compare("dust") == 0) {
-        newppar = new DustParticles(this, pin, &pp);
-      } else if (pp.partype.compare("tracer") == 0) {
-        newppar = new TracerParticles(this, pin, &pp);
-      } else if (pp.partype.compare("star") == 0) {
-        newppar = new StarParticles(this, pin, &pp);
-      } else {
-        std::stringstream msg;
-        msg << "### FATAL ERROR in MeshBlock::MeshBlock" << std::endl
-            << "partype=" << pp.partype << " is not supported " << std::endl;
-        ATHENA_ERROR(msg);
-      }
-      ppar.push_back(newppar);
-      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
-      pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
-    }
-  }
+
 
   if(RADIATION_ENABLED || IM_RADIATION_ENABLED){
        //radiation constructor needs the parameter nfre_ang 
@@ -753,8 +720,7 @@ std::size_t MeshBlock::GetBlockSizeInBytesGray() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  for (int ipar=0; ipar < Particles::num_particles; ++ipar)
-    size += ppar[ipar]->GetSizeInBytes();
+
   if (NSCALARS > 0)
     size += pscalars->s.GetSizeInBytes();
 

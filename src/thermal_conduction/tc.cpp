@@ -117,7 +117,7 @@ ThermalConduction::ThermalConduction(MeshBlock *pmb, ParameterInput *pin):
     coarse_tc_(NTC,pmb->ncc3, pmb->ncc2, pmb->ncc1,
              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
               AthenaArray<Real>::DataStatus::empty)),
-    tc_bvar(pmb, &u_tc, &coarse_tc_, flux){
+    tc_bvar(pmb, &u_tc, &coarse_tc_, flux, true){
 
     Mesh *pm=pmy_block->pmy_mesh;
 
