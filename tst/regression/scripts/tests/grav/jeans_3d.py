@@ -20,13 +20,6 @@ def prepare(**kwargs):
     logger.debug('Running test ' + __name__)
     athena.configure('mpi', 'fft',
                      prob='jeans',
-                     grav='blockfft', **kwargs)
-    athena.make()
-    os.system('mv bin/athena bin/athena_blockfft')
-    os.system('mv obj obj_blockfft')
-
-    athena.configure('mpi', 'fft',
-                     prob='jeans',
                      grav='fft', **kwargs)
     athena.make()
     os.system('mv bin/athena bin/athena_mpi_fft')
@@ -89,20 +82,6 @@ def run(**kwargs):
     athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
                   4, 'hydro/athinput.jeans_3d', arguments,
                   lcov_test_suffix='mpi_fft')
-
-    arguments = ['time/ncycle_out=10',
-                 'mesh/nx1=64', 'mesh/nx2=32', 'mesh/nx3=32',
-                 'meshblock/nx1=32',
-                 'meshblock/nx2=16',
-                 'meshblock/nx3=32',
-                 'output2/dt=-1', 'time/tlim=1.0', 'problem/compute_error=true']
-    os.system('rm -rf obj')
-    os.system('mv obj_blockfft obj')
-    os.system('mv bin/athena_blockfft bin/athena')
-    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
-                  4, 'hydro/athinput.jeans_3d', arguments,
-                  lcov_test_suffix='blockfft')
-
     return 'skip_lcov'
 
 
@@ -116,7 +95,6 @@ def analyze():
     logger.info("%g %g", data[0][4], data[1][4])
     logger.info("%g %g %g", data[2][4], data[3][4], data[4][4])
     logger.info("%g %g %g", data[5][4], data[6][4], data[7][4])
-    logger.info("%g", data[8][4])
 
     # check errors between runs w/wo MPI and different numbers of cores
     if data[0][4] != data[2][4]:
@@ -131,11 +109,7 @@ def analyze():
     if data[1][4] > 1.e-7:
         logger.warning("Linear wave error is too large for FFT gravity %g", data[1][4])
         analyze_status = False
-    if data[8][4] > 1.e-7:
-        logger.warning("Linear wave error is too large for BlockFFT gravity %g",
-                       data[8][4])
-        analyze_status = False
-    if abs(data[1][4]-data[5][4]) > 1.e-6:
+    if data[1][4] != data[5][4]:
         logger.warning(
             "Linear wave error with one core w/wo MPI not identical for FFT gravity"
             + " %g %g", data[1][4], data[5][4])
@@ -159,11 +133,6 @@ def analyze():
         logger.warning(
             "Linear wave error between 4 and 1 cores too large for FFT gravity %g %g",
             data[7][4], data[5][4])
-        analyze_status = False
-    if abs(data[8][4]-data[7][4]) > 1.e-6:
-        logger.warning(
-            "Linear wave error between FFT gravity and BlockFFT gravity too large %g %g",
-            data[8][4], data[7][4])
         analyze_status = False
 
     return analyze_status

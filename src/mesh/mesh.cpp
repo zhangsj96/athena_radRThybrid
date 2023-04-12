@@ -895,7 +895,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
   delete [] mbdata;
   // check consistency
-  if(my_blocks(0)->prad->restart_from_gray > 0){
+  if( (RADIATION_ENABLED || IM_RADIATION_ENABLED) && 
+                    my_blocks(0)->prad->restart_from_gray > 0){
     if (datasize != my_blocks(0)->GetBlockSizeInBytesGray()) {
         msg << "### FATAL ERROR in Mesh constructor" << std::endl
             << "The restart file is broken or input parameters are inconsistent."
