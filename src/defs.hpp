@@ -15,17 +15,17 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "ssheet"
+#define PROBLEM_GENERATOR "beam"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
 
 // Riemann solver
-#define RIEMANN_SOLVER "hlle"
+#define RIEMANN_SOLVER "hllc"
 
 // configure.py dict(definitions) Boolean values:
 // Equation of state
-#define EQUATION_OF_STATE "isothermal"
+#define EQUATION_OF_STATE "adiabatic"
 
 // use general EOS framework default=0 (false).
 #define GENERAL_EOS 0
@@ -34,7 +34,7 @@
 #define EOS_TABLE_ENABLED 0
 
 // non-barotropic equation of state (i.e. P not simply a func of rho)? default=1 (true)
-#define NON_BAROTROPIC_EOS 0
+#define NON_BAROTROPIC_EOS 1
 
 // include magnetic fields? default=0 (false)
 #define MAGNETIC_FIELDS_ENABLED 0
@@ -46,7 +46,7 @@
 #define SELF_GRAVITY_ENABLED 0
 
 // include radiative transfer? default=0 (false)
-#define RADIATION_ENABLED 0
+#define RADIATION_ENABLED 1
 
 #define IM_RADIATION_ENABLED 0
 
@@ -78,13 +78,13 @@
 #define NO_FFT
 
 // MPI parallelization (MPI_PARALLEL or NOT_MPI_PARALLEL)
-#define NOT_MPI_PARALLEL
+#define MPI_PARALLEL
 
 // OpenMP parallelization (OPENMP_PARALLEL or NOT_OPENMP_PARALLEL)
 #define NOT_OPENMP_PARALLEL
 
 // HDF5 output (HDF5OUTPUT or NO_HDF5OUTPUT)
-#define NO_HDF5OUTPUT
+#define HDF5OUTPUT
 
 // debug build macros (DEBUG or NOT_DEBUG)
 #define NOT_DEBUG
@@ -97,15 +97,15 @@
 
 // compiler options
 #define COMPILED_WITH "g++"
-#define COMPILER_COMMAND "g++"
-#define COMPILED_WITH_OPTIONS " -O3 -std=c++11  " // NOLINT
+#define COMPILER_COMMAND "mpicxx"
+#define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
 
 //----------------------------------------------------------------------------------------
 // macros associated with numerical algorithm (rarely modified)
 
-#define NHYDRO 4
+#define NHYDRO 5
 #define NFIELD 0
-#define NWAVE 4
+#define NWAVE 5
 #define NSCALARS 0
 #define NGHOST 2
 #define NGRAV 0

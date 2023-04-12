@@ -3,21 +3,21 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = ssheet.cpp
+PROBLEM_FILE = beam.cpp
 COORDINATES_FILE = cartesian.cpp
-EOS_FILE = isothermal_hydro.cpp
+EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
-RSOLVER_FILE = hlle.cpp
+RSOLVER_FILE = hllc.cpp
 RSOLVER_DIR = hydro/
 MPIFFT_FILE =  
 
 # General compiler specifications
 
-CXX := g++
+CXX := mpicxx
 CPPFLAGS := 
 CXXFLAGS := -O3 -std=c++11
 LDFLAGS := 
-LDLIBS := 
+LDLIBS :=  -lhdf5
 GCOV_CMD := gcov
 
 # Preliminary definitions
