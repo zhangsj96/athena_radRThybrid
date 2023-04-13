@@ -27,7 +27,7 @@
 RadBoundaryVariable::RadBoundaryVariable(MeshBlock *pmb, 
     AthenaArray<Real> *var_rad, AthenaArray<Real> *coarse_var,
     AthenaArray<Real> *var_flux) :
-    CellCenteredBoundaryVariable(pmb, var_rad, coarse_var, var_flux, 1){
+    CellCenteredBoundaryVariable(pmb, var_rad, coarse_var, var_flux, true, 1){
 
     // the radiation array is (k,j,i,n)
     // the number of variables is GetDim1

@@ -33,6 +33,10 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
   CellCenteredBoundaryVariable(MeshBlock *pmb,
                                AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
                                AthenaArray<Real> *var_flux, bool fflux);
+    //override function for arrays need different initialization of nu_
+  CellCenteredBoundaryVariable(MeshBlock *pmb,
+                               AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
+                               AthenaArray<Real> *var_flux, bool fflux, int flag);
   ~CellCenteredBoundaryVariable();
 
   //! \note
