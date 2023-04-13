@@ -24,8 +24,8 @@
 #include "../athena_arrays.hpp"
 #include "../bvals/bvals.hpp"
 #include "../outputs/io_wrapper.hpp"
-#include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
+#include "../parameter_input.hpp"
 #include "../task_list/task_list.hpp"
 #include "../task_list/im_rad_task_list.hpp"
 #include "../utils/interp_table.hpp"
@@ -61,7 +61,6 @@ class FFTDriver;
 class FFTGravityDriver;
 class TurbulenceDriver;
 class OrbitalAdvection;
-class BlockFFTGravity;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -84,11 +83,10 @@ class MeshBlock {
 
  public:
   MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_size,
-            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, int igflag,
+            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin,
             bool ref_flag = false);
   MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin, LogicalLocation iloc,
-            RegionSize input_block, BoundaryFlag *input_bcs, double icost,
-            char *mbdata, int igflag);
+            RegionSize input_block, BoundaryFlag *input_bcs, double icost, char *mbdata);
   ~MeshBlock();
 
   // data
@@ -132,7 +130,7 @@ class MeshBlock {
   PassiveScalars *pscalars;
   EquationOfState *peos;
   OrbitalAdvection *porb;
-  BlockFFTGravity *pfft;
+
   // pointer to particle classes
   std::vector<Particles *> ppar, ppar_grav;
 
@@ -146,7 +144,7 @@ class MeshBlock {
                   AthenaArray<Real> &u_in1, AthenaArray<Real> &u_in2,
                   AthenaArray<Real> &u_in3, AthenaArray<Real> &u_in4,
                   const Real wght[5]);
-  
+
   // weightedAve for radiation variable
   void WeightedAve(AthenaArray<Real> &u_out, AthenaArray<Real> &u_in1,
                    AthenaArray<Real> &u_in2, const Real wght[3], int flag);
@@ -184,7 +182,7 @@ class MeshBlock {
   void AllocateIntUserMeshBlockDataField(int n);
   void AllocateUserOutputVariables(int n);
   void SetUserOutputVariableName(int n, const char *name);
-  void SetCostForLoadBalancing(Real cost);
+  void SetCostForLoadBalancing(double cost);
 
   //! defined in either the prob file or default_pgen.cpp in ../pgen/
   void ProblemGenerator(ParameterInput *pin);
@@ -229,7 +227,6 @@ class Mesh {
   friend class HydroDiffusion;
   friend class FieldDiffusion;
   friend class OrbitalAdvection;
-  friend class BlockFFTGravity;
   friend class Particles;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
@@ -247,7 +244,7 @@ class Mesh {
   my_blocks(0)->block_size.nx1*my_blocks(0)->block_size.nx2*my_blocks(0)->block_size.nx3;}
 
   // data
-  RegionSize mesh_size;
+  RegionSize mesh_size, block_size;
   BoundaryFlag mesh_bcs[6];
   const bool f2, f3; // flags indicating (at least) 2D or 3D Mesh
   const int ndim;     // number of dimensions
@@ -262,11 +259,8 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
-  std::vector<ParticleParameters> particle_params;
-  bool particle, particle_gravity;
 
   int step_since_lb;
-  int gflag;
   int turb_flag; // turbulence flag
   bool amr_updated;
   EosTable *peos_table;
@@ -335,7 +329,7 @@ class Mesh {
   UserHistoryOperation *user_history_ops_;
 
   // global constants
-  Real four_pi_G_, grav_eps_;
+  Real four_pi_G_;
 
   // variables for load balancing control
   bool lb_flag_, lb_automatic_, lb_manual_;
@@ -345,9 +339,11 @@ class Mesh {
   // functions
   MeshGenFunc MeshGenerator_[3];
   BValFunc BoundaryFunction_[6];
+  // radiation boundaries
   RadBoundaryFunc RadBoundaryFunc_[6];
   CRBoundaryFunc CRBoundaryFunc_[6];
   TCBoundaryFunc TCBoundaryFunc_[6];
+
   AMRFlagFunc AMRFlag_;
   SrcTermFunc UserSourceTerm_;
   TimeStepFunc UserTimeStep_;
@@ -358,6 +354,7 @@ class Mesh {
   FieldDiffusionCoeffFunc FieldDiffusivity_;
   OrbitalVelocityFunc OrbitalVelocity_, OrbitalVelocityDerivative_[2];
   MGBoundaryFunc MGGravityBoundaryFunction_[6];
+  MGSourceMaskFunc MGGravitySourceMaskFunction_;
 
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
@@ -395,6 +392,8 @@ class Mesh {
   // often used (not defined) in prob file in ../pgen/
   void EnrollUserBoundaryFunction(BoundaryFace face, BValFunc my_func);
   void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir, MGBoundaryFunc my_bc);
+  void EnrollUserMGGravitySourceMaskFunction(MGSourceMaskFunc srcmask);
+
   void EnrollUserRadBoundaryFunction(BoundaryFace face, RadBoundaryFunc my_func);
   void EnrollUserCRBoundaryFunction(BoundaryFace face, CRBoundaryFunc my_func);
   void EnrollUserTCBoundaryFunction(BoundaryFace face, TCBoundaryFunc my_func);
@@ -402,7 +401,6 @@ class Mesh {
   //! \deprecated (felker):
   //! * provide trivial overload for old-style BoundaryFace enum argument
   void EnrollUserBoundaryFunction(int face, BValFunc my_func);
-  void EnrollUserMGGravityBoundaryFunction(int dir, MGBoundaryFunc my_bc);
   void EnrollUserRadBoundaryFunction(int face, RadBoundaryFunc my_func);
   void EnrollUserCRBoundaryFunction(int face, CRBoundaryFunc my_func);
   void EnrollUserTCBoundaryFunction(int face, TCBoundaryFunc my_func);
@@ -422,7 +420,7 @@ class Mesh {
   void EnrollOrbitalVelocityDerivative(int i, OrbitalVelocityFunc my_func);
   void SetGravitationalConstant(Real g) { four_pi_G_=4.0*PI*g; }
   void SetFourPiG(Real fpg) { four_pi_G_=fpg; }
-  void SetGravityThreshold(Real eps) { grav_eps_=eps; }
+
 };
 
 

@@ -32,11 +32,11 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
  public:
   CellCenteredBoundaryVariable(MeshBlock *pmb,
                                AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-                               AthenaArray<Real> *var_flux);
+                               AthenaArray<Real> *var_flux, bool fflux);
     //override function for arrays need different initialization of nu_
   CellCenteredBoundaryVariable(MeshBlock *pmb,
                                AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-                               AthenaArray<Real> *var_flux, int flag);
+                               AthenaArray<Real> *var_flux, bool fflux, int flag);
   ~CellCenteredBoundaryVariable();
 
   //! \note
@@ -79,7 +79,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
   //!@{
   //! BoundaryBuffer:
   void SendFluxCorrection() override;
-   bool ReceiveFluxCorrection() override;
+  bool ReceiveFluxCorrection() override;
   //!@}
 
   //!@{
@@ -201,6 +201,7 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
 
   friend class ParticleMeshBoundaryVariable;
   friend class RadBoundaryVariable;
+  
 };
 
 #endif // BVALS_CC_BVALS_CC_HPP_

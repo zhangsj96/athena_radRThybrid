@@ -29,8 +29,14 @@ class TaskID;
 //! - these 4x declarations can be nested in TaskList if MGTaskList is derived
 
 // constants = return codes for functions working on individual Tasks and TaskList
-enum class TaskStatus {fail, success, next};
 enum class TaskListStatus {running, stuck, complete, nothing_to_do};
+enum class TaskStatus {fail, success, next};
+// success vs. next: They are different (only) when there are more than one MeshBlock per
+// node.  When a task returns “next”, then the code processes the next Task in the same
+// MeshBlock; when it returns “success”, then the TaskList processes the next MeshBlock.
+// “next” should be used when you want to immediately start the next task, for example,
+// start sending the data just calculated in the previous task.  Otherwise, use “success”
+// to process MeshBlocks as evenly as possible.
 
 //----------------------------------------------------------------------------------------
 //! \class TaskID
@@ -56,6 +62,7 @@ class TaskID {  // POD but not aggregate (there is a user-provided ctor)
   friend class MultigridTaskList;
   friend class IMRadTaskList;
   friend class IMRadHydroTaskList;
+
 };
 
 
@@ -154,7 +161,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus IntegrateHydro(MeshBlock *pmb, int stage);
   TaskStatus IntegrateField(MeshBlock *pmb, int stage);
 
-  TaskStatus AddSourceTermsHydro(MeshBlock *pmb, int stage);
+  TaskStatus AddSourceTerms(MeshBlock *pmb, int stage);
 
   TaskStatus DiffuseHydro(MeshBlock *pmb, int stage);
   TaskStatus DiffuseField(MeshBlock *pmb, int stage);
@@ -203,6 +210,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus SendFieldOrbital(MeshBlock *pmb, int stage);
   TaskStatus ReceiveFieldOrbital(MeshBlock *pmb, int stage);
   TaskStatus CalculateFieldOrbital(MeshBlock *pmb, int stage);
+
 
 // Tasks for radiation transport
   TaskStatus CalculateRadFlux(MeshBlock *pmb, int stage);
@@ -312,13 +320,14 @@ const TaskID RECV_HYDFLX(10);
 const TaskID RECV_FLDFLX(11);
 const TaskID RECV_RADFLX(12);
 const TaskID RECV_CRTCFLX(13);
+
 // const TaskID RECV_CHMFLX(13);
 
-const TaskID SRCTERM_HYD(14);
+const TaskID SRC_TERM(14);
 const TaskID SRCTERM_CRTC(15);
 const TaskID SRCTERM_RAD(16);
-// const TaskID SRCTERM_CHM(17);
 
+// const TaskID SRCTERM_CHM(17);
 const TaskID INT_CRTC(17);
 const TaskID INT_HYD(18);
 const TaskID INT_FLD(19);
@@ -329,20 +338,21 @@ const TaskID SEND_CRTC(21);
 const TaskID SEND_HYD(22);
 const TaskID SEND_FLD(23);
 const TaskID SEND_RAD(24);
-// const TaskID SEND_CHM(25);
 
+// const TaskID SEND_CHM(25);
 const TaskID RECV_CRTC(25);
 const TaskID RECV_HYD(26);
 const TaskID RECV_FLD(27);
 const TaskID RECV_RAD(28);
+// const TaskID RECV_RAD(28);
 // const TaskID RECV_CHM(29);
-
 const TaskID SETB_CRTC(29);
 const TaskID SETB_HYD(30);
 const TaskID SETB_FLD(31);
 const TaskID SETB_RAD(32);
-// const TaskID SETB_CHM(33);
 const TaskID CALC_CRTCFLX(33);
+// const TaskID SETB_RAD(32);
+// const TaskID SETB_CHM(33);
 
 const TaskID PROLONG(34);
 const TaskID CONS2PRIM(35);

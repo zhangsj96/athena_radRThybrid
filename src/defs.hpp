@@ -15,7 +15,7 @@
 
 // configure.py dict(definitions) string values:
 // problem generator
-#define PROBLEM_GENERATOR "thermal_multigroup"
+#define PROBLEM_GENERATOR "beam"
 
 // coordinate system
 #define COORDINATE_SYSTEM "cartesian"
@@ -46,9 +46,9 @@
 #define SELF_GRAVITY_ENABLED 0
 
 // include radiative transfer? default=0 (false)
-#define RADIATION_ENABLED 0
+#define RADIATION_ENABLED 1
 
-#define IM_RADIATION_ENABLED 1
+#define IM_RADIATION_ENABLED 0
 
 // include cosmic ray transport? default=0 (false)
 #define CR_ENABLED 0
@@ -78,7 +78,7 @@
 #define NO_FFT
 
 // MPI parallelization (MPI_PARALLEL or NOT_MPI_PARALLEL)
-#define NOT_MPI_PARALLEL
+#define MPI_PARALLEL
 
 // OpenMP parallelization (OPENMP_PARALLEL or NOT_OPENMP_PARALLEL)
 #define NOT_OPENMP_PARALLEL
@@ -97,7 +97,7 @@
 
 // compiler options
 #define COMPILED_WITH "g++"
-#define COMPILER_COMMAND "g++"
+#define COMPILER_COMMAND "mpicxx"
 #define COMPILED_WITH_OPTIONS " -O3 -std=c++11   -lhdf5" // NOLINT
 
 //----------------------------------------------------------------------------------------
@@ -124,8 +124,8 @@
 #define ONE_OVER_SQRT2 0.70710678118654752
 #define ONE_3RD 0.33333333333333333
 #define TWO_3RD 0.66666666666666667
-#define TINY_NUMBER 1.0e-20
-#define HUGE_NUMBER 1.0e+36
+#define TINY_NUMBER Real(1.0e-20)
+#define HUGE_NUMBER Real(1.0e+36)
 #define SQR(x) ( (x)*(x) )
 #define SIGN(x) ( ((x) < 0.0) ? -1.0 : 1.0 )
 #define PI_FOUR_POWER 97.409091034002415

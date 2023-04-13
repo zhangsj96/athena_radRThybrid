@@ -61,7 +61,6 @@ SRC_FILES := $(wildcard src/*.cpp) \
     $(wildcard src/multigrid/*.cpp) \
     $(wildcard src/orbital_advection/*.cpp) \
     $(wildcard src/outputs/*.cpp) \
-    $(wildcard src/particles/*.cpp) \
     src/pgen/default_pgen.cpp \
     src/pgen/$(PROBLEM_FILE) \
     $(wildcard src/reconstruct/*.cpp) \

@@ -40,10 +40,10 @@
 
 CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
     MeshBlock *pmb, AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-    AthenaArray<Real> *var_flux)
-    : BoundaryVariable(pmb), var_cc(var), coarse_buf(coarse_var), x1flux(var_flux[X1DIR]),
-      x2flux(var_flux[X2DIR]), x3flux(var_flux[X3DIR]), nl_(0), nu_(var->GetDim4() -1),
-      flip_across_pole_(nullptr) {
+    AthenaArray<Real> *var_flux, bool fflux)
+    : BoundaryVariable(pmb, fflux), var_cc(var), coarse_buf(coarse_var),
+      x1flux(var_flux[X1DIR]), x2flux(var_flux[X2DIR]), x3flux(var_flux[X3DIR]),
+      nl_(0), nu_(var->GetDim4() -1), flip_across_pole_(nullptr) {
   //! \note
   //! CellCenteredBoundaryVariable should only be used w/ 4D or 3D (nx4=1) AthenaArray
   //! For now, assume that full span of 4th dim of input AthenaArray should be used:
@@ -57,18 +57,25 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
     ATHENA_ERROR(msg);
   }
 
+  // KT: fflux is a flag and it is true (false) when flux correction is (not) needed.
+  //     I have not implemented it for shearing box, leaving it to Tomohiro.
+
+
   InitBoundaryData(bd_var_, BoundaryQuantity::cc);
 #ifdef MPI_PARALLEL
   // KGF: dead code, leaving for now:
   // cc_phys_id_ = pbval_->ReserveTagVariableIDs(1);
   cc_phys_id_ = pbval_->bvars_next_phys_id_;
 #endif
-  if ((pmy_mesh_->multilevel)
-      || (pbval_->shearing_box != 0)) { // SMR or AMR or SHEARING_BOX
+  if (fflux_ && ((pmy_mesh_->multilevel)
+      || (pbval_->shearing_box != 0))) { // SMR or AMR or SHEARING_BOX
+    fflux_ = true;
     InitBoundaryData(bd_var_flcor_, BoundaryQuantity::cc_flcor);
 #ifdef MPI_PARALLEL
     cc_flx_phys_id_ = cc_phys_id_ + 1;
 #endif
+  } else {
+    fflux_ = false;
   }
 
   if (pbval_->shearing_box != 0) {
@@ -117,8 +124,8 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
 
 CellCenteredBoundaryVariable::~CellCenteredBoundaryVariable() {
   DestroyBoundaryData(bd_var_);
-  if ((pmy_mesh_->multilevel)
-      || (pbval_->shearing_box != 0))
+  if (fflux_ && ((pmy_mesh_->multilevel)
+      || (pbval_->shearing_box != 0)))
     DestroyBoundaryData(bd_var_flcor_);
 
   // TODO(KGF): this should be a part of DestroyBoundaryData()
@@ -138,19 +145,31 @@ CellCenteredBoundaryVariable::~CellCenteredBoundaryVariable() {
   }
 }
 
+// override constructor
+// for radiation quantites with different order
 
-
- // override constructor
 CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
     MeshBlock *pmb, AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-    AthenaArray<Real> *var_flux, int flag)
-    : BoundaryVariable(pmb), var_cc(var), coarse_buf(coarse_var), x1flux(var_flux[X1DIR]),
-      x2flux(var_flux[X2DIR]), x3flux(var_flux[X3DIR]), nl_(0), nu_(var->GetDim1() -1),
-      flip_across_pole_(nullptr) {
-  // CellCenteredBoundaryVariable should only be used w/ 4D or 3D (nx4=1) AthenaArray
-  // For now, assume that full span of 4th dim of input AthenaArray should be used:
-  // ---> get the index limits directly from the input AthenaArray
-  // <=nu_ (inclusive), <nx4 (exclusive)
+    AthenaArray<Real> *var_flux, bool fflux, int flag)
+    : BoundaryVariable(pmb, fflux), var_cc(var), coarse_buf(coarse_var),
+      x1flux(var_flux[X1DIR]), x2flux(var_flux[X2DIR]), x3flux(var_flux[X3DIR]),
+      nl_(0), nu_(var->GetDim1() -1), flip_across_pole_(nullptr) {
+  //! \note
+  //! CellCenteredBoundaryVariable should only be used w/ 4D or 3D (nx4=1) AthenaArray
+  //! For now, assume that full span of 4th dim of input AthenaArray should be used:
+  //! ---> get the index limits directly from the input AthenaArray
+  //! <=nu_ (inclusive), <nx4 (exclusive)
+  if (nu_ < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in CellCenteredBoundaryVariable constructor" << std::endl
+        << "An 'AthenaArray<Real> *var' of nx4_ = " << var->GetDim4() << " was passed\n"
+        << "Should be nx4 >= 1 (likely uninitialized)." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // KT: fflux is a flag and it is true (false) when flux correction is (not) needed.
+  //     I have not implemented it for shearing box, leaving it to Tomohiro.
+
 
   InitBoundaryData(bd_var_, BoundaryQuantity::cc);
 #ifdef MPI_PARALLEL
@@ -158,14 +177,16 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
   // cc_phys_id_ = pbval_->ReserveTagVariableIDs(1);
   cc_phys_id_ = pbval_->bvars_next_phys_id_;
 #endif
-  if ((pmy_mesh_->multilevel)
-      || (pbval_->shearing_box != 0)) { // SMR or AMR or SHEARING_BOX
+  if (fflux_ && ((pmy_mesh_->multilevel)
+      || (pbval_->shearing_box != 0))) { // SMR or AMR or SHEARING_BOX
+    fflux_ = true;
     InitBoundaryData(bd_var_flcor_, BoundaryQuantity::cc_flcor);
 #ifdef MPI_PARALLEL
     cc_flx_phys_id_ = cc_phys_id_ + 1;
 #endif
+  } else {
+    fflux_ = false;
   }
-
 
   if (pbval_->shearing_box != 0) {
 #ifdef MPI_PARALLEL
@@ -178,7 +199,7 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
     int &xgh = pbval_->xgh_;
     for (int upper=0; upper<2; upper++) {
       if (pbval_->is_shear[upper]) {
-        shear_cc_[upper].NewAthenaArray(nc3, NGHOST, nc2+2*xgh+1,nu_+1);
+       shear_cc_[upper].NewAthenaArray(nc3, NGHOST, nc2+2*xgh+1,nu_+1);
         shear_var_flx_[upper].NewAthenaArray(nc3, nc2,nu_+1);
         shear_map_flx_[upper].NewAthenaArray(nc3, 1, nc2+2*xgh+1,nu_+1);
 
@@ -206,9 +227,9 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
         }
       } // end "if is a shearing boundary"
     }  // end loop over inner, outer shearing boundaries
-  } // end shearing box component  
-
+  } // end shearing box component
 }
+
 
 //----------------------------------------------------------------------------------------
 //! \fn int CellCenteredBoundaryVariable::ComputeVariableBufferSize(
@@ -642,7 +663,7 @@ void CellCenteredBoundaryVariable::SetupPersistentMPI() {
                     nb.snb.rank, tag, MPI_COMM_WORLD, &(bd_var_.req_recv[nb.bufid]));
 
       // hydro flux correction: bd_var_flcor_
-      if (nb.ni.type == NeighborConnect::face) {
+      if (fflux_ && nb.ni.type == NeighborConnect::face) {
         if (nb.snb.level != mylevel) {
           int size;
           if (nb.fid == 0 || nb.fid == 1)
@@ -705,11 +726,11 @@ void CellCenteredBoundaryVariable::StartReceiving(BoundaryCommSubset phase) {
     NeighborBlock& nb = pbval_->neighbor[n];
     if (nb.snb.rank != Globals::my_rank) {
       MPI_Start(&(bd_var_.req_recv[nb.bufid]));
-      if ((phase == BoundaryCommSubset::all) 
-            && nb.ni.type == NeighborConnect::face) {
+      if (fflux_ && phase == BoundaryCommSubset::all
+                 && nb.ni.type == NeighborConnect::face) {
         if ((nb.shear&&(nb.fid == BoundaryFace::inner_x1
-             || nb.fid == BoundaryFace::outer_x1)
-            && pbval_->shearing_box==1) || nb.snb.level > mylevel) {
+                     || nb.fid == BoundaryFace::outer_x1)
+          && pbval_->shearing_box==1) || nb.snb.level > mylevel) {
           MPI_Start(&(bd_var_flcor_.req_recv[nb.bufid]));
         } else { // no recv
           bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::completed;
@@ -782,7 +803,7 @@ void CellCenteredBoundaryVariable::ClearBoundary(BoundaryCommSubset phase) {
     bd_var_.flag[nb.bufid] = BoundaryStatus::waiting;
     bd_var_.sflag[nb.bufid] = BoundaryStatus::waiting;
 
-    if (nb.ni.type == NeighborConnect::face) {
+    if (fflux_ && nb.ni.type == NeighborConnect::face) {
       bd_var_flcor_.flag[nb.bufid] = BoundaryStatus::waiting;
       bd_var_flcor_.sflag[nb.bufid] = BoundaryStatus::waiting;
     }
@@ -792,11 +813,11 @@ void CellCenteredBoundaryVariable::ClearBoundary(BoundaryCommSubset phase) {
     if (nb.snb.rank != Globals::my_rank) {
       // Wait for Isend
       MPI_Wait(&(bd_var_.req_send[nb.bufid]), MPI_STATUS_IGNORE);
-      if (phase == BoundaryCommSubset::all  
-          && nb.ni.type == NeighborConnect::face) {
+      if (fflux_ && phase == BoundaryCommSubset::all
+                 && nb.ni.type == NeighborConnect::face) {
         if ((nb.shear && (nb.fid == BoundaryFace::inner_x1
-                          || nb.fid == BoundaryFace::outer_x1)
-            && pbval_->shearing_box==1) || nb.snb.level < mylevel) {
+                       || nb.fid == BoundaryFace::outer_x1)
+             && pbval_->shearing_box==1) || nb.snb.level < mylevel) {
           MPI_Wait(&(bd_var_flcor_.req_send[nb.bufid]), MPI_STATUS_IGNORE);
         }
       }

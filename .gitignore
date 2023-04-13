@@ -18,4 +18,6 @@ src/task_list/.DS_Store
 src/task_list/.Rapp.history
 inputs/.DS_Store
 src/pgen/.DS_Store
+src/defs.hpp
+Makefile
 

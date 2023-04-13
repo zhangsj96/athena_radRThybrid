@@ -31,7 +31,7 @@
 class FaceCenteredBoundaryVariable : public BoundaryVariable {
  public:
   FaceCenteredBoundaryVariable(MeshBlock *pmb, FaceField *var, FaceField &coarse_buf,
-                               EdgeField &var_flux);
+                               EdgeField &var_flux, bool fflux);
   ~FaceCenteredBoundaryVariable();
 
   //! \note
@@ -129,6 +129,7 @@ class FaceCenteredBoundaryVariable : public BoundaryVariable {
                       int il, int iu, int jl, int ju, int kl, int ngh) override;
   void VacuumOuterX3(Real time, Real dt,
                       int il, int iu, int jl, int ju, int ku, int ngh) override;
+
 
   void PolarWedgeInnerX2(Real time, Real dt,
                          int il, int iu, int jl, int kl, int ku, int ngh) override;
