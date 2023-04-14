@@ -60,6 +60,7 @@ class ParameterInput;
 class FFTBlock;
 class FFTDriver;
 class TurbulenceDriver;
+class PerturbationGenerator;
 
 class AthenaFFTIndex{
  public:
@@ -144,6 +145,7 @@ class FFTBlock {
   Real dkx[3], dx1, dx2, dx3;
 
   friend class TurbulenceDriver;
+  friend class PerturbationGenerator;
   friend class FFTDriver;
   friend class Mesh;
 

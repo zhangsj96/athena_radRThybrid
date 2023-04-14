@@ -68,6 +68,7 @@ class BlockFFT {
 
  protected:
   MeshBlock *pmy_block_;
+  Mesh *pmy_mesh_;
   std::complex<Real> *in_;
 };
 

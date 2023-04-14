@@ -162,7 +162,6 @@ FFT3d::FFT3d(MPI_Comm user_comm, int user_precision)
 
   remap_prefast = remap_fastmid = remap_midslow = remap_postslow = NULL;
   remap_preslow = remap_slowmid = remap_midfast = remap_postfast = NULL;
-  remap_premid = remap_fastslow = remap_slowfast = remap_postmid = NULL;
   fft_fast = fft_mid = fft_slow = NULL;
 
   memusage = 0;
@@ -506,11 +505,6 @@ void FFT3d::deallocate_setup()
   deallocate_remap(remap_midfast);
   deallocate_remap(remap_postfast);
 
-  deallocate_remap(remap_premid);
-  deallocate_remap(remap_fastslow);
-  deallocate_remap(remap_slowfast);
-  deallocate_remap(remap_postmid);
-
   deallocate_ffts();
   delete fft_fast;
   delete fft_mid;
@@ -518,7 +512,6 @@ void FFT3d::deallocate_setup()
 
   remap_prefast = remap_fastmid = remap_midslow = remap_postslow = NULL;
   remap_preslow = remap_slowmid = remap_midfast = remap_postfast = NULL;
-  remap_premid = remap_fastslow = remap_slowfast = remap_postmid = NULL;
 
   fft_fast = fft_mid = fft_slow = NULL;
 }
@@ -1254,30 +1247,6 @@ void FFT3d::remap_forward_create(int &sendsize, int &recvsize)
     recvsize = MAX(recvsize,rsize);
     remap_postslow->remap3d_extra = NULL;
   }
-
-  remap_premid = new Remap;
-  remap_premid->remap3d = new Remap3d(world);
-  remap_premid->remap3d->collective = collective_bp;
-  remap_premid->remap3d->packflag = packflag;
-  remap_premid->remap3d->
-    setup(in_ilo,in_ihi,in_jlo,in_jhi,in_klo,in_khi,
-          mid_ilo,mid_ihi,mid_jlo,mid_jhi,mid_klo,mid_khi,
-          2,1,0,ssize,rsize);
-  sendsize = MAX(sendsize,ssize);
-  recvsize = MAX(recvsize,rsize);
-  remap_premid->remap3d_extra = NULL;
-
-  remap_fastslow = new Remap;
-  remap_fastslow->remap3d = new Remap3d(world);
-  remap_fastslow->remap3d->collective = collective_pp;
-  remap_fastslow->remap3d->packflag = packflag;
-  remap_fastslow->remap3d->
-    setup(fast_ilo,fast_ihi,fast_jlo,fast_jhi,fast_klo,fast_khi,
-          slow_ilo,slow_ihi,slow_jlo,slow_jhi,slow_klo,slow_khi,
-          2,2,0,ssize,rsize);
-  sendsize = MAX(sendsize,ssize);
-  recvsize = MAX(recvsize,rsize);
-  remap_fastslow->remap3d_extra = NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -1415,30 +1384,6 @@ void FFT3d::remap_inverse_create(int &sendsize, int &recvsize)
     recvsize = MAX(recvsize,rsize);
     remap_postfast->remap3d_extra = NULL;
   }
-
-  remap_slowfast = new Remap;
-  remap_slowfast->remap3d = new Remap3d(world);
-  remap_slowfast->remap3d->collective = collective_pp;
-  remap_slowfast->remap3d->packflag = packflag;
-  remap_slowfast->remap3d->
-    setup(slow_klo,slow_khi,slow_ilo,slow_ihi,slow_jlo,slow_jhi,
-          fast_klo,fast_khi,fast_ilo,fast_ihi,fast_jlo,fast_jhi,
-          2,1,0,ssize,rsize);
-  sendsize = MAX(sendsize,ssize);
-  recvsize = MAX(recvsize,rsize);
-  remap_slowfast->remap3d_extra = NULL;
-
-  remap_postmid = new Remap;
-  remap_postmid->remap3d = new Remap3d(world);
-  remap_postmid->remap3d->collective = collective_bp;
-  remap_postmid->remap3d->packflag = packflag;
-  remap_postmid->remap3d->
-    setup(mid_jlo,mid_jhi,mid_klo,mid_khi,mid_ilo,mid_ihi,
-          in_jlo,in_jhi,in_klo,in_khi,in_ilo,in_ihi,
-          2,2,0,ssize,rsize);
-  sendsize = MAX(sendsize,ssize);
-  recvsize = MAX(recvsize,rsize);
-  remap_postmid->remap3d_extra = NULL;
 }
 
 /* ----------------------------------------------------------------------

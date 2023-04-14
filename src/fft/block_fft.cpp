@@ -9,6 +9,7 @@
 // C headers
 
 // C++ headers
+#include <algorithm>  // max
 #include <complex>
 #include <iostream>
 #include <sstream>
@@ -39,10 +40,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     in_jhi((static_cast<int>(pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
     in_klo(static_cast<int>(pmb->loc.lx3)*pmb->block_size.nx3),
     in_khi((static_cast<int>(pmb->loc.lx3+1)*pmb->block_size.nx3)-1),
-    pmy_block_(pmb) {
-  int cnt = nx1*nx2*nx3;
-  in_ = new std::complex<Real>[cnt];
-
+    pmy_block_(pmb), pmy_mesh_(pmb->pmy_mesh) {
 #ifdef FFT
   if (ndim==3) {
 #ifdef MPI_PARALLEL
@@ -107,6 +105,20 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi,
                 permute, fftsize, sendsize, recvsize);
+
+    // initialize arrays
+    // Depending on configuration, the domain may not be evenly pencil-decomposed.
+    // For example, consider 128x128x192 Mesh evenly devided into 64^3 Meshblock.
+    // In z-pencil decomposition, there will be 8 Meshblocks with size 43x32x192
+    // and 4 Meshblocks with size 42x32x192.
+    // Because 43x32x192 > 64^3, we need to prepare the FFT buffer with largest
+    // possible size of the pencil-decompositions.
+    int cnt = nx1*nx2*nx3;
+    cnt = std::max(cnt, fast_nx1*fast_nx2*fast_nx3);
+    cnt = std::max(cnt, mid_nx1*mid_nx2*mid_nx3);
+    cnt = std::max(cnt, slow_nx1*slow_nx2*slow_nx3);
+    in_ = new std::complex<Real>[cnt];
+
 #else // serial
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFT::BlockFFT" << std::endl
@@ -127,12 +139,12 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 // destructor
 
 BlockFFT::~BlockFFT() {
-  delete[] in_;
 #ifdef FFT
-  fftw_cleanup();
 #ifdef MPI_PARALLEL
+  delete[] in_;
   delete pf3d;
 #endif
+  fftw_cleanup();
 #endif
 }
 
@@ -225,7 +237,8 @@ void BlockFFT::ExecuteBackward() {
   // fast2block
   if (pf3d->remap_postfast) pf3d->remap(data,data,pf3d->remap_postfast);
   // multiply norm factor
-  for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] /= (Nx1*Nx2*Nx3);
+  for (int i=0; i<2*nx1*nx2*nx3; ++i)
+    data[i] /= (Nx1*Nx2*Nx3);
 #endif
 #endif
 

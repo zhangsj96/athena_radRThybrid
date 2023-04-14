@@ -116,11 +116,6 @@ class FFT3d {
 
   Remap *remap_prefast,*remap_fastmid,*remap_midslow,*remap_postslow;
   Remap *remap_preslow,*remap_slowmid,*remap_midfast,*remap_postfast;
-  // shearing sheet gravity solver performs:
-  // FFT(y) -> PhaseShift -> FFT(x) -> FFT(z) -> ApplyKernel
-  // -> FFT(z) -> FFT(x) -> PhaseShift -> FFT(y)
-  // and requires additional remap plans as follows:
-  Remap *remap_premid,*remap_fastslow,*remap_slowfast,*remap_postmid;
   int remap_preflag,remap_postflag;
 
   FFT_SCALAR *sendbuf;              // buffer for remap sends

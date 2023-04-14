@@ -55,8 +55,11 @@ Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
     output_defect = pin->GetOrAddBoolean("gravity", "output_defect", false);
     if (output_defect)
       def.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+    if (pmb->pmy_mesh->particle)
+      fill_ghost = true;
     if (pmb->pmy_mesh->multilevel) {
-      fill_ghost = pin->GetOrAddBoolean("gravity", "fill_ghost", false);
+      fill_ghost = (pmb->pmy_mesh->particle) ? true
+                 : pin->GetOrAddBoolean("gravity", "fill_ghost", false);
       if (fill_ghost) {
         int nf1 = pmb->block_size.nx2*pmb->block_size.nx3;
         int nf2 = pmb->block_size.nx1*pmb->block_size.nx3;

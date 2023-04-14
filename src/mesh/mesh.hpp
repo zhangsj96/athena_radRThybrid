@@ -130,6 +130,8 @@ class MeshBlock {
   PassiveScalars *pscalars;
   EquationOfState *peos;
   OrbitalAdvection *porb;
+  BlockFFTGravity *pfft;
+
 
   // pointer to particle classes
   std::vector<Particles *> ppar, ppar_grav;

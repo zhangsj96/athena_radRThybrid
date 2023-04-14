@@ -1498,7 +1498,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       // BoundaryVariable objects evolved in main TimeIntegratorTaskList:
       pmb->pbval->SetupPersistentMPI();
       // other BoundaryVariable objects:
-      if (SELF_GRAVITY_ENABLED == 1
+      if (SELF_GRAVITY_ENABLED == 1 || (SELF_GRAVITY_ENABLED == 3) 
         || (SELF_GRAVITY_ENABLED == 2 && pmb->pgrav->fill_ghost))
         pmb->pgrav->gbvar.SetupPersistentMPI();
       if(IM_RADIATION_ENABLED)
@@ -1510,6 +1510,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pfgrd->Solve(1, 0);
     else if (SELF_GRAVITY_ENABLED == 2)
       pmgrd->Solve(1);
+    else if (SELF_GRAVITY_ENABLED == 3)
+      my_blocks(0)->pfft->Solve(1);
 
 #pragma omp parallel num_threads(nthreads)
     {

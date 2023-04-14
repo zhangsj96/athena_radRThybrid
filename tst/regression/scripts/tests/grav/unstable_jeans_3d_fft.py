@@ -7,6 +7,7 @@
 
 # Modules
 import logging
+import os
 import numpy as np
 import scripts.utils.athena as athena
 import sys
@@ -19,6 +20,13 @@ logger = logging.getLogger('athena' + __name__[7:])  # set logger name based on 
 # Prepare Athena++
 def prepare(**kwargs):
     logger.debug('Running test ' + __name__)
+    athena.configure('mpi', 'fft',
+                     prob='jeans',
+                     grav='blockfft', **kwargs)
+    athena.make()
+    os.system('mv bin/athena bin/athena_blockfft')
+    os.system('mv obj obj_blockfft')
+
     athena.configure('fft',
                      prob='jeans',
                      grav='fft',
@@ -48,6 +56,22 @@ def run(**kwargs):
     athena.run('hydro/athinput.jeans_3d', arg_res(32))
     athena.run('hydro/athinput.jeans_3d', arg_res(64))
 
+    os.system('rm -rf obj')
+    os.system('mv obj_blockfft obj')
+    os.system('mv bin/athena_blockfft bin/athena')
+    args = arg_res(32)
+    args[3] = 'meshblock/nx1='+str(32)
+    args[4] = 'meshblock/nx2='+str(16)
+    args[5] = 'meshblock/nx3='+str(32)
+    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
+                  4, 'hydro/athinput.jeans_3d', args)
+    args = arg_res(64)
+    args[3] = 'meshblock/nx1='+str(64)
+    args[4] = 'meshblock/nx2='+str(32)
+    args[5] = 'meshblock/nx3='+str(64)
+    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
+                  4, 'hydro/athinput.jeans_3d', args)
+
 
 # Analyze outputs
 def analyze():
@@ -57,7 +81,7 @@ def analyze():
     logger.info(str(data))
     result = True
     # error
-    for i in range(len(data)):
+    for i in range(4):
         if data[i][4] > 1.e-7:
             logger.warning("FFT Gravity Linear Jeans instability error is too large: %g",
                            data[i][4])
@@ -67,7 +91,7 @@ def analyze():
     err_tol = 1.5
     warn_tol = 1.1
     # 2nd order convergence: doubling resolution should decrease error by 4.0
-    for i in range(len(data)-1):
+    for i in [0, 2]:
         slope = np.log(data[i+1][4]/data[i][4])/np.log(2.0)
         if data[i+1][4] > (err_tol*data[i][4]/(4.0)):
             logger.warning(
