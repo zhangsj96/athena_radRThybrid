@@ -76,6 +76,8 @@ struct Task { // aggregate and POD
                      //!> HydroIntegratorTaskNames
   TaskStatus (TaskList::*TaskFunc)(MeshBlock*, int);  //!> ptr to member function
   bool lb_time; //!> flag for automatic load balancing based on timing
+  double task_time;
+  std::string task_name;
 };
 
 //---------------------------------------------------------------------------------------

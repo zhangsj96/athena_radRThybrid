@@ -39,6 +39,7 @@ class ParameterInput;
 
 class ParticleMesh {
 friend class Particles;
+friend class ParticleMeshBoundaryVariable;
 friend class DustParticles;
 friend class TracerParticles;
 friend class StarParticles;
@@ -50,50 +51,47 @@ friend class OutputType;
   explicit ParticleMesh(Particles *ppar, MeshBlock *pmb);
   ~ParticleMesh();
 
-  // Accessor
-  Real FindMaximumWeight() const;
-
-  // methods
-  int AddMeshAux();
+  // Interface
+  void ComputePMDensity(bool include_momentum=false);
+  void DepositPMtoMesh(int stage);
+  Real FindMaximumDensity() const;
+  AthenaArray<Real> GetMassDensity() const { return dens_; }
+  AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; }
+  AthenaArray<Real> GetMomentumDensityX2() const { return mom2_; }
+  AthenaArray<Real> GetMomentumDensityX3() const { return mom3_; }
+  AthenaArray<Real> GetVelocityField() const;
 
   ParticleMeshBoundaryVariable *pmbvar;
 
-  int nmeshaux;  //!> number of auxiliaries to the meshblock
-  int iweight;   //!> index to weight in meshaux
-  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
-  int imass; //!> index to mass density in meshaux
+  bool updated; //!> flag whether pm is recalculated
 
-  bool updated; //!> flag whether pm is recacluated
-
- protected:
-  // Instance variables
-  AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
-  int is, ie, js, je, ks, ke;  // beginning and ending indices
-  AthenaArray<Real> weight, density;    //!> shorthand to weight in meshaux
-
+ private:
   // Instance methods
+  int AddMeshAux();
   void InterpolateMeshToParticles(
            const AthenaArray<Real>& meshsrc, int ms1,
            AthenaArray<Real>& par, int p1, int nprop);
-  void AssignParticlesToMeshAux(
+  void DepositParticlesToMeshAux(
            const AthenaArray<Real>& par, int p1, int ma1, int nprop);
-  void InterpolateMeshAndAssignParticles(
-           const AthenaArray<Real>& meshsrc, int ms1,
-           AthenaArray<Real>& pardst, int pd1, int ni,
-           const AthenaArray<Real>& parsrc, int ps1, int ma1, int na);
   void DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop);
 
- private:
   // Instance Variables
+  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
+  int idens;   //!> index to density in meshaux
+
+  int nmeshaux_;  //!> number of auxiliaries to the meshblock
+  int is, ie, js, je, ks, ke;  // beginning and ending indices
   bool active1_, active2_, active3_;  // active dimensions
   Real dxi1_, dxi2_, dxi3_;           // range of influence from a particle cloud
   int nx1_, nx2_, nx3_;               // number of cells in meshaux in each dimension
   int ncells_;                        // total number of cells in meshaux
   int npc1_, npc2_, npc3_;            // size of a particle cloud
 
-  int my_ipar_;                //!> index to my particle container
   Particles *ppar_;            //!> ptr to my Particles instance
   MeshBlock *pmb_;             //!> ptr to my MeshBlock
   Mesh *pmesh_;                //!> ptr to my Mesh
+
+  AthenaArray<Real> meshaux_, coarse_meshaux_;   //!> auxiliaries to the meshblock
+  AthenaArray<Real> dens_, mom1_, mom2_, mom3_;    //!> shorthand to density and momentum
 };
 #endif  // PARTICLES_PARTICLE_MESH_HPP_

@@ -36,8 +36,8 @@ friend class Particles;
   // Instance variables
   int* ibuf;   //!> ptr to integer buffer
   Real* rbuf;   //!> ptr to real buffer
-  int nparmax;  //!> maximum number of particles
-  int npar;     //!> actual number of particles in the buffer
+  int nparmax_;  //!> maximum number of particles
+  int npar_;     //!> actual number of particles in the buffer
 #ifdef MPI_PARALLEL
   MPI_Request reqn, reqi, reqr;  //!> MPI request handles
   int flagn;               //!> Flag indicating if the incoming number is known

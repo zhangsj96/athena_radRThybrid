@@ -36,6 +36,7 @@
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../globals.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"

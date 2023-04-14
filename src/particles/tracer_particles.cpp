@@ -28,13 +28,9 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
-  // Define mass.
-  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
-
-  // allocate memory
-  Particles::AllocateMemory();
-
-  // Assign shorthands (need to do this for every constructor of a derived class)
+  // Allocate memory and assign shorthands (shallow slices).
+  // Every derived Particles need to call these two functions.
+  AllocateMemory();
   AssignShorthands();
 }
 
@@ -48,19 +44,10 @@ TracerParticles::~TracerParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void TracerParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::AssignShorthands()
+//! \fn void TracerParticles::AssignShorthandsForDerived()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void TracerParticles::AssignShorthands() {
-  Particles::AssignShorthands();
+void TracerParticles::AssignShorthandsForDerived() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);
@@ -75,9 +62,17 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
 
   // Transform the gas velocity into Cartesian.
   const Coordinates *pc = pmy_block->pcoord;
+  for (int k = 0; k < npar_; ++k) {
+    Real x1, x2, x3;
+    //! \todo (ccyang):
+    //! - using (xp0, yp0, zp0) is a temporary hack.
+    pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
+    pc->MeshCoordsToCartesianVector(x1, x2, x3, wx(k), wy(k), wz(k),
+                                                wx(k), wy(k), wz(k));
+  }
 
   // Tracer particles
-  for (int k = 0; k < npar; ++k) {
+  for (int k = 0; k < npar_; ++k) {
     Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
     vpx(k) = wx(k);
     vpy(k) = wy(k);
@@ -103,17 +98,6 @@ void __attribute__((weak)) TracerParticles::UserSourceTerms(
 //! \brief Reacts to meshaux before boundary communications.
 
 void TracerParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
-  // Nothing to do for tracers
-  return;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::DepositToMesh(Real t, Real dt,
-//!              const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst);
-//! \brief Deposits meshaux to Mesh.
-
-void TracerParticles::DepositToMesh(
-         Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
   // Nothing to do for tracers
   return;
 }

@@ -28,6 +28,7 @@
 #include "../fft/athena_fft.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"

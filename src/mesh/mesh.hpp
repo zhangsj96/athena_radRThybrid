@@ -61,6 +61,7 @@ class FFTDriver;
 class FFTGravityDriver;
 class TurbulenceDriver;
 class OrbitalAdvection;
+class BlockFFTGravity;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -133,8 +134,9 @@ class MeshBlock {
   BlockFFTGravity *pfft;
 
 
+
   // pointer to particle classes
-  std::vector<Particles *> ppar, ppar_grav;
+  std::vector<Particles *> ppars, ppars_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();
@@ -229,6 +231,7 @@ class Mesh {
   friend class HydroDiffusion;
   friend class FieldDiffusion;
   friend class OrbitalAdvection;
+  friend class BlockFFTGravity;
   friend class Particles;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
@@ -261,6 +264,8 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
+  std::vector<ParticleParameters> particle_params;
+  bool particle, particle_gravity;
 
   int step_since_lb;
   int turb_flag; // turbulence flag
