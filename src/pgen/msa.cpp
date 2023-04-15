@@ -103,8 +103,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
     gconst = nJ*SQR(cs);
     SetGravitationalConstant(gconst);
-    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
-    SetGravityThreshold(eps);
   }
   return;
 }

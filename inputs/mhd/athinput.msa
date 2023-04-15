@@ -56,7 +56,7 @@ qshear       = 1.0     # shear rate
 Omega0       = 1.0   # angular velocity of the system
 shboxcoord   = 1       # 1=xy (default); 2=xz
 
-<self_gravity>
+<gravity>
 grav_bc = periodic
 
 <problem>
