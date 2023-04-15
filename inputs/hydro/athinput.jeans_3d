@@ -61,6 +61,7 @@ ix2_bc          = periodic
 ox2_bc          = periodic
 ix3_bc          = periodic
 ox3_bc          = periodic
+grav_bc = periodic
 
 <problem>
 amp             = 1.e-6
