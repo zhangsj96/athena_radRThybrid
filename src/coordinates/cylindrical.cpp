@@ -458,7 +458,7 @@ void Cylindrical::AxisDirection(int *axisx, int *axisy, int *axisz)
 void Cylindrical::ConvertAngle(MeshBlock *pmb, const int nang,
                                 AthenaArray<Real> &mu)
 {
-  if(RADIATION_ENABLED){
+  if(RADIATION_ENABLED||IM_RADIATION_ENABLED){
     int n1z = pmb->ncells1, n2z = pmb->ncells2, n3z = pmb->ncells3; 
     int ndim=1;
     if(n2z > 1) ndim = 2;
