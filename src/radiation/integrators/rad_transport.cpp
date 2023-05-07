@@ -370,17 +370,14 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             if(npsi == 0) psi_limit=1;
 
             for(int m=0; m<psi_limit; ++m){
-#pragma omp simd
               for(int n=0; n<nzeta*2; ++n){
                 int ang_num = ifr*nang + n*psi_limit+m;
                 q_zeta_(n+NGHOST) = ir(k,j,i,ang_num);
               }// end nzeta
               // Add ghost zones
-#pragma omp simd
               for(int n=1; n<=NGHOST; ++n){
                 q_zeta_(NGHOST-n) = q_zeta_(NGHOST+n-1);
               }      
-#pragma omp simd
               for(int n=1; n<=NGHOST; ++n){
                 q_zeta_(2*nzeta+NGHOST+n-1) = q_zeta_(2*nzeta+NGHOST-n);
               }  
@@ -423,7 +420,7 @@ void RadIntegrator::CalculateFluxes(AthenaArray<Real> &w,
     for(int k=ks; k<=ke; ++k){
       for(int j=js; j<=je; ++j){
         for(int i=is; i<=ie; ++i){
-          for(int ifr=0; ifr<nang; ++ifr){
+          for(int ifr=0; ifr<nfreq; ++ifr){
 
             int &nzeta = prad->nzeta;
             int &npsi = prad->npsi;
