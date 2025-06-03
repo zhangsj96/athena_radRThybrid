@@ -3,8 +3,8 @@
 
 # Files for conditional compilation
 
-PROBLEM_FILE = beam.cpp
-COORDINATES_FILE = cartesian.cpp
+PROBLEM_FILE = disk_radiation_taubc_tanh_hybrid.cpp
+COORDINATES_FILE = spherical_polar.cpp
 EOS_FILE = adiabatic_hydro.cpp
 GENERAL_EOS_FILE = noop.cpp
 RSOLVER_FILE = hllc.cpp
